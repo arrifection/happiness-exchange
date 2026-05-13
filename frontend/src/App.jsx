@@ -1,71 +1,147 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import LoginPage from './pages/LoginPage.jsx'
+import SignupPage from './pages/SignupPage.jsx'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
+const ME_ENDPOINT = `${API_BASE}/api/me`
+const TOKEN_KEY = 'happiness_exchange_token'
 
 export default function App() {
-  const [health, setHealth] = useState(null)   // null = loading
-  const [error, setError]   = useState(false)
+  const [view, setView] = useState('signup')
+  const [statusInfo, setStatusInfo] = useState(null)
+  const [statusError, setStatusError] = useState('')
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authError, setAuthError] = useState('')
+  const [loadingUser, setLoadingUser] = useState(false)
 
   useEffect(() => {
-    async function checkHealth() {
+    async function loadStatus() {
       try {
-        const res  = await fetch(STATUS_ENDPOINT)
-        const data = await res.json()
-        setHealth(data)
+        const response = await fetch(STATUS_ENDPOINT)
+        const data = await response.json()
+        setStatusInfo(data)
       } catch {
-        setError(true)
+        setStatusError(`Could not reach ${STATUS_ENDPOINT}`)
       }
     }
-    checkHealth()
+
+    loadStatus()
   }, [])
 
-  // Derive display values
-  const statusLabel  = error ? 'Unreachable' : health ? 'Online' : 'Checking…'
-  const statusClass  = error ? 'status-dot--error' : health ? 'status-dot--ok' : 'status-dot--loading'
-  const projectLabel = health?.project ?? '—'
+  useEffect(() => {
+    if (!token) {
+      setCurrentUser(null)
+      return
+    }
+
+    async function loadCurrentUser() {
+      setLoadingUser(true)
+      setAuthError('')
+
+      try {
+        const response = await fetch(ME_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.detail || 'Could not load current user.')
+        }
+
+        const data = await response.json()
+        setCurrentUser(data)
+      } catch (error) {
+        localStorage.removeItem(TOKEN_KEY)
+        setToken('')
+        setCurrentUser(null)
+        setAuthError(error.message)
+      } finally {
+        setLoadingUser(false)
+      }
+    }
+
+    loadCurrentUser()
+  }, [token])
+
+  function handleAuthSuccess(data) {
+    localStorage.setItem(TOKEN_KEY, data.access_token)
+    setToken(data.access_token)
+    setCurrentUser(data.user)
+    setAuthError('')
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(TOKEN_KEY)
+    setToken('')
+    setCurrentUser(null)
+    setAuthError('')
+  }
 
   return (
-    <>
-      <main className="page">
-        <section className="hero">
-          <p className="hero__badge">MVP · v0.1</p>
+    <main className="auth-page">
+      <section className="auth-card">
+        <p className="eyebrow">Happiness Exchange</p>
+        <h1>Authentication Foundation</h1>
+        <p className="intro">
+          Create an account, log in, receive a token, and confirm access to a protected route.
+        </p>
 
-          <h1 className="hero__title">Happiness Exchange</h1>
-
-          <p className="hero__subtitle">
-            Give what you don't need. Receive what you do.&nbsp;
-            A free item donation and exchange platform.
-          </p>
-
-          {/* ── Backend health card ── */}
-          <div className="health-card" role="status" aria-live="polite">
-            <p className="health-card__label">Backend Status</p>
-
-            <p className="health-card__status">
-              <span className={`status-dot ${statusClass}`} />
-              {statusLabel}
+        <section className="status-panel">
+          <h2>Backend status</h2>
+          {statusInfo ? (
+            <p>
+              {statusInfo.status} - {statusInfo.project}
             </p>
-
-            {health && (
-              <p className="health-card__db">
-                Project: <span>{projectLabel}</span>
-              </p>
-            )}
-
-            {error && (
-              <p className="health-card__db" style={{ color: 'var(--color-error)' }}>
-                Could not reach {STATUS_ENDPOINT}
-              </p>
-            )}
-          </div>
+          ) : (
+            <p>{statusError || 'Checking backend status...'}</p>
+          )}
         </section>
-      </main>
 
-      <footer className="footer">
-        © 2026 Happiness Exchange — MVP build
-      </footer>
-    </>
+        {currentUser ? (
+          <section className="user-panel">
+            <h2>Logged in</h2>
+            <p>Name: {currentUser.name}</p>
+            <p>Email: {currentUser.email}</p>
+            <p className="token-label">Token stored in localStorage.</p>
+            <button type="button" onClick={handleLogout}>
+              Log out
+            </button>
+          </section>
+        ) : (
+          <>
+            <div className="view-switcher">
+              <button
+                type="button"
+                className={view === 'signup' ? 'active' : ''}
+                onClick={() => setView('signup')}
+              >
+                Signup
+              </button>
+              <button
+                type="button"
+                className={view === 'login' ? 'active' : ''}
+                onClick={() => setView('login')}
+              >
+                Login
+              </button>
+            </div>
+
+            {view === 'signup' ? (
+              <SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} />
+            ) : (
+              <LoginPage apiBase={API_BASE} onSuccess={handleAuthSuccess} />
+            )}
+          </>
+        )}
+
+        {loadingUser && <p className="message">Loading current user...</p>}
+        {authError && <p className="message error">{authError}</p>}
+      </section>
+    </main>
   )
 }

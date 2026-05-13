@@ -1,10 +1,11 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
 import logging
+
+from motor.motor_asyncio import AsyncIOMotorClient
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Module-level holder so other parts of the app can import `db`
 client: AsyncIOMotorClient | None = None
 db = None
 
@@ -18,13 +19,13 @@ async def connect_to_mongo() -> None:
     try:
         logger.info("Connecting to MongoDB...")
         client = AsyncIOMotorClient(settings.MONGODB_URI)
-        # Lightweight ping - fails fast if the URI is wrong
         await client.admin.command("ping")
         db = client[settings.DB_NAME]
+        await db.users.create_index("email", unique=True)
         logger.info("MongoDB connected - database: '%s'", settings.DB_NAME)
     except Exception as exc:
         logger.error("MongoDB connection failed: %s", exc)
-        # We log but don't crash - the /api/status endpoint will still respond
+        # We log but do not crash the app during startup.
 
 
 async def close_mongo_connection() -> None:
@@ -36,12 +37,12 @@ async def close_mongo_connection() -> None:
 
 
 def get_db():
-    """
-    Dependency helper for FastAPI routes.
-
-    Usage in a route:
-        from app.db.mongodb import get_db
-        ...
-        db = get_db()
-    """
+    """Return the current MongoDB database object."""
     return db
+
+
+def get_users_collection():
+    """Return the MongoDB collection used for application users."""
+    if db is None:
+        return None
+    return db.users

@@ -1,124 +1,103 @@
-/* ─────────────────────────────────────────────────────────────────────────
-   App.css — Page-level layout and component styles
-───────────────────────────────────────────────────────────────────────── */
-
-/* ── Page wrapper ────────────────────────────────────────────────────── */
-.page {
+.auth-page {
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  padding: var(--sp-lg) var(--sp-sm);
-  text-align: center;
+  padding: 2rem 1rem;
 }
 
-/* ── Hero section ────────────────────────────────────────────────────── */
-.hero {
-  max-width: 640px;
+.auth-card {
   width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
 }
 
-.hero__badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--color-primary);
-  background: rgba(108, 99, 255, 0.12);
-  border: 1px solid rgba(108, 99, 255, 0.3);
-  border-radius: 999px;
-  padding: 0.35em 1em;
-  margin-bottom: var(--sp-md);
+  letter-spacing: 0.08em;
+  color: #0f766e;
 }
 
-.hero__title {
-  font-size: clamp(2.4rem, 8vw, 4rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #e8eaf0 30%, var(--color-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: var(--sp-sm);
+.intro {
+  margin-bottom: 1.5rem;
+  color: #475569;
 }
 
-.hero__subtitle {
-  font-size: 1.1rem;
-  color: var(--color-muted);
-  margin-bottom: var(--sp-lg);
-  line-height: 1.7;
+.status-panel,
+.user-panel,
+.auth-form {
+  border: 1px solid #d8dee8;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f8fafc;
+  margin-bottom: 1rem;
 }
 
-/* ── Health card ─────────────────────────────────────────────────────── */
-.health-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--sp-md) var(--sp-lg);
-  margin-top: var(--sp-md);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 280px;
-  transition: box-shadow 0.3s ease;
-}
-
-.health-card:hover {
-  box-shadow: var(--shadow-glow);
-}
-
-.health-card__label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.health-card__status {
-  font-size: 0.95rem;
-  font-weight: 500;
+.view-switcher {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.view-switcher button,
+.auth-form button,
+.user-panel button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  background: #0f766e;
+  color: #ffffff;
+  font: inherit;
+  cursor: pointer;
 }
 
-.status-dot--ok       { background: var(--color-success); box-shadow: 0 0 6px var(--color-success); }
-.status-dot--error    { background: var(--color-error);   box-shadow: 0 0 6px var(--color-error); }
-.status-dot--loading  { background: var(--color-muted); animation: pulse 1.2s infinite; }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
+.view-switcher button {
+  flex: 1;
+  background: #dbe4ea;
+  color: #0f172a;
 }
 
-/* ── DB status row ───────────────────────────────────────────────────── */
-.health-card__db {
-  font-size: 0.8rem;
-  color: var(--color-muted);
+.view-switcher button.active {
+  background: #0f766e;
+  color: #ffffff;
 }
 
-.health-card__db span {
-  color: var(--color-text);
-  font-weight: 500;
+.auth-form {
+  display: grid;
+  gap: 0.9rem;
 }
 
-/* ── Footer ──────────────────────────────────────────────────────────── */
-.footer {
-  padding: var(--sp-sm);
-  text-align: center;
-  font-size: 0.78rem;
-  color: var(--color-muted);
-  border-top: 1px solid var(--color-border);
+.auth-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.auth-form input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+}
+
+.message {
+  margin: 0.75rem 0 0;
+  color: #334155;
+}
+
+.message.error {
+  color: #b91c1c;
+}
+
+.token-label {
+  color: #475569;
+  font-size: 0.95rem;
 }
