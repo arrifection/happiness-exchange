@@ -1,0 +1,14 @@
+# fastapi — web framework
+fastapi==0.115.12
+
+# uvicorn — ASGI server to run FastAPI
+uvicorn[standard]==0.34.2
+
+# motor — async MongoDB driver (built on top of pymongo)
+motor==3.7.0
+
+# pydantic-settings — env-based config management
+pydantic-settings==2.9.1
+
+# python-dotenv — loads .env file automatically
+python-dotenv==1.1.0

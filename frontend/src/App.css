@@ -1,0 +1,124 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   App.css — Page-level layout and component styles
+───────────────────────────────────────────────────────────────────────── */
+
+/* ── Page wrapper ────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: var(--sp-lg) var(--sp-sm);
+  text-align: center;
+}
+
+/* ── Hero section ────────────────────────────────────────────────────── */
+.hero {
+  max-width: 640px;
+  width: 100%;
+}
+
+.hero__badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: rgba(108, 99, 255, 0.12);
+  border: 1px solid rgba(108, 99, 255, 0.3);
+  border-radius: 999px;
+  padding: 0.35em 1em;
+  margin-bottom: var(--sp-md);
+}
+
+.hero__title {
+  font-size: clamp(2.4rem, 8vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e8eaf0 30%, var(--color-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--sp-sm);
+}
+
+.hero__subtitle {
+  font-size: 1.1rem;
+  color: var(--color-muted);
+  margin-bottom: var(--sp-lg);
+  line-height: 1.7;
+}
+
+/* ── Health card ─────────────────────────────────────────────────────── */
+.health-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-md) var(--sp-lg);
+  margin-top: var(--sp-md);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 280px;
+  transition: box-shadow 0.3s ease;
+}
+
+.health-card:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.health-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.health-card__status {
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--ok       { background: var(--color-success); box-shadow: 0 0 6px var(--color-success); }
+.status-dot--error    { background: var(--color-error);   box-shadow: 0 0 6px var(--color-error); }
+.status-dot--loading  { background: var(--color-muted); animation: pulse 1.2s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── DB status row ───────────────────────────────────────────────────── */
+.health-card__db {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.health-card__db span {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+.footer {
+  padding: var(--sp-sm);
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  border-top: 1px solid var(--color-border);
+}

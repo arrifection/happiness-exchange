@@ -1,0 +1,65 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Happiness Exchange — Global Styles
+   Stack: Vanilla CSS, Google Fonts (Inter)
+───────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ── Reset & base ─────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Colour palette */
+  --color-bg:        #0d0f14;
+  --color-surface:   #161a24;
+  --color-border:    #252b3b;
+  --color-primary:   #6c63ff;
+  --color-primary-h: #856dff;
+  --color-accent:    #ff6584;
+  --color-text:      #e8eaf0;
+  --color-muted:     #7b82a0;
+  --color-success:   #4caf7d;
+  --color-error:     #ff5c6a;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Spacing scale */
+  --sp-xs: 0.5rem;
+  --sp-sm: 1rem;
+  --sp-md: 1.5rem;
+  --sp-lg: 2.5rem;
+  --sp-xl: 4rem;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+
+  /* Shadows */
+  --shadow-glow: 0 0 40px rgba(108, 99, 255, 0.25);
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100dvh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
