@@ -31,6 +31,7 @@ async def signup(payload: SignupRequest):
         "name": payload.name.strip(),
         "email": normalized_email,
         "hashed_password": hash_password(payload.password),
+        "account_type": payload.account_type,
         "created_at": now,
         "updated_at": now,
     }
@@ -47,6 +48,7 @@ async def signup(payload: SignupRequest):
         "_id": result.inserted_id,
         "name": user_document["name"],
         "email": user_document["email"],
+        "account_type": user_document["account_type"],
     }
     user_response = serialize_user(created_user)
     token = create_access_token(user_response["id"], user_response["email"])

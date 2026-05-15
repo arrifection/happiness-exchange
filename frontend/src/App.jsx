@@ -132,9 +132,17 @@ export default function App() {
             </div>
 
             {view === 'signup' ? (
-              <SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} />
+              <SignupPage
+                apiBase={API_BASE}
+                onSuccess={handleAuthSuccess}
+                onSwitchToLogin={() => setView('login')}
+              />
             ) : (
-              <LoginPage apiBase={API_BASE} onSuccess={handleAuthSuccess} />
+              <LoginPage
+                apiBase={API_BASE}
+                onSuccess={handleAuthSuccess}
+                onSwitchToSignup={() => setView('signup')}
+              />
             )}
           </>
         )}

@@ -54,6 +54,7 @@ def serialize_user(user: dict) -> dict:
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
+        "account_type": user.get("account_type"),
     }
 
 
