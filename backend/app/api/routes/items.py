@@ -99,3 +99,98 @@ async def get_item(item_id: str):
         )
 
     return serialize_item(item)
+
+
+@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_item(
+    item_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete an item listing. Only the owner can delete."""
+    items_collection = get_items_collection()
+    if items_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    object_id = parse_object_id(item_id)
+    if object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid item id.",
+        )
+
+    item = await items_collection.find_one({"_id": object_id})
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found.",
+        )
+
+    if item["owner_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this item.",
+        )
+
+    await items_collection.delete_one({"_id": object_id})
+
+    # Clean up associated requests
+    requests_collection = get_requests_collection()
+    if requests_collection is not None:
+        await requests_collection.delete_many({"item_id": item_id})
+
+    return
+
+
+@router.patch("/items/{item_id}/complete", response_model=ItemResponse)
+async def complete_item(
+    item_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Mark an item as successfully taken/completed. Only the owner can do this."""
+    items_collection = get_items_collection()
+    if items_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    object_id = parse_object_id(item_id)
+    if object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid item id.",
+        )
+
+    item = await items_collection.find_one({"_id": object_id})
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found.",
+        )
+
+    if item["owner_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this item.",
+        )
+
+    await items_collection.update_one(
+        {"_id": object_id},
+        {"$set": {"status": "completed"}},
+    )
+
+    requests_collection = get_requests_collection()
+    if requests_collection is not None:
+        await requests_collection.update_many(
+            {
+                "item_id": item_id,
+                "status": "pending",
+            },
+            {"$set": {"status": "rejected"}},
+        )
+
+    updated_item = await items_collection.find_one({"_id": object_id})
+    return serialize_item(updated_item)

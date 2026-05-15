@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -10,6 +11,10 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     account_type: AccountType | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    can_change_username: bool = False
+    username_change_deadline: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,3 +40,7 @@ class TokenResponse(BaseModel):
 class TokenPayload(BaseModel):
     sub: str
     email: EmailStr
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)

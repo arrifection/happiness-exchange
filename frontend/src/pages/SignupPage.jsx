@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 
@@ -7,167 +7,20 @@ const accountOptions = [
   {
     value: 'giver',
     title: 'I want to give items',
-    description: 'List items you no longer need and help someone nearby.',
-    background: 'linear-gradient(180deg, rgba(228, 244, 235, 0.92), rgba(255, 255, 255, 0.96))',
+    description: 'List items you no longer need.',
   },
   {
     value: 'receiver',
     title: 'I want to receive items',
-    description: 'Browse free items and request what you need.',
-    background: 'linear-gradient(180deg, rgba(229, 241, 248, 0.96), rgba(255, 251, 247, 0.96))',
+    description: 'Browse items and request what you need.',
   },
 ]
 
-const styles = {
-  form: {
-    display: 'grid',
-    gap: '18px',
-  },
-  label: {
-    display: 'grid',
-    gap: '8px',
-    fontSize: '0.95rem',
-    fontWeight: 700,
-    color: '#274038',
-  },
-  input: {
-    minHeight: '54px',
-    borderRadius: '18px',
-    border: '1px solid #dfd6c8',
-    background: '#fffdfa',
-    padding: '0 16px',
-    font: 'inherit',
-    color: '#1f3730',
-    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)',
-  },
-  accountFieldset: {
-    margin: 0,
-    padding: 0,
-    border: 0,
-    display: 'grid',
-    gap: '12px',
-  },
-  accountLegend: {
-    marginBottom: '4px',
-    fontSize: '0.95rem',
-    fontWeight: 700,
-    color: '#274038',
-  },
-  accountGrid: {
-    display: 'grid',
-    gap: '12px',
-  },
-  accountButton: {
-    position: 'relative',
-    overflow: 'hidden',
-    borderRadius: '24px',
-    border: '1px solid #e5dccd',
-    padding: '18px',
-    textAlign: 'left',
-    font: 'inherit',
-    cursor: 'pointer',
-    transition: 'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
-  },
-  accountTick: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '999px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '0.8rem',
-    fontWeight: 700,
-  },
-  accountTitle: {
-    margin: 0,
-    fontSize: '1rem',
-    fontWeight: 700,
-    color: '#20352e',
-  },
-  accountDescription: {
-    margin: '8px 0 0',
-    fontSize: '0.94rem',
-    lineHeight: 1.8,
-    color: '#60706a',
-  },
-  note: {
-    borderRadius: '24px',
-    border: '1px solid #e7dfd2',
-    background: 'linear-gradient(180deg, #fffaf4, #fffdf9)',
-    padding: '16px 18px',
-    fontSize: '0.94rem',
-    lineHeight: 1.8,
-    color: '#5f6d68',
-  },
-  submit: {
-    minHeight: '54px',
-    borderRadius: '999px',
-    border: 0,
-    background: '#1d6b57',
-    color: '#ffffff',
-    font: 'inherit',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: '0 18px 40px rgba(29, 107, 87, 0.22)',
-  },
-  footerButton: {
-    border: 0,
-    background: 'transparent',
-    color: '#1d6b57',
-    font: 'inherit',
-    fontWeight: 700,
-    cursor: 'pointer',
-    padding: 0,
-  },
-  message: {
-    margin: 0,
-    fontSize: '0.94rem',
-    fontWeight: 600,
-    color: '#1d6b57',
-  },
-  error: {
-    margin: 0,
-    fontSize: '0.94rem',
-    fontWeight: 600,
-    color: '#b04e43',
-  },
+function formatApiError(errorData, fallbackMessage) {
+  return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
 }
 
-function AccountTypeCard({ option, selected, onSelect }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(option.value)}
-      style={{
-        ...styles.accountButton,
-        background: option.background,
-        borderColor: selected ? '#1d6b57' : '#e5dccd',
-        boxShadow: selected ? '0 18px 45px rgba(29, 107, 87, 0.14)' : '0 12px 28px rgba(40, 51, 46, 0.06)',
-        transform: selected ? 'translateY(-1px)' : 'none',
-      }}
-      aria-pressed={selected}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-        <div
-          style={{
-            ...styles.accountTick,
-            background: selected ? '#1d6b57' : '#ffffff',
-            color: selected ? '#ffffff' : 'transparent',
-            border: selected ? '1px solid #1d6b57' : '1px solid #cabdac',
-          }}
-        >
-          ✓
-        </div>
-        <div>
-          <h3 style={styles.accountTitle}>{option.title}</h3>
-          <p style={styles.accountDescription}>{option.description}</p>
-        </div>
-      </div>
-    </button>
-  )
-}
-
-export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, currentUser }) {
+export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -175,17 +28,7 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
     account_type: 'giver',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-
-  const submitStyle = useMemo(
-    () => ({
-      ...styles.submit,
-      opacity: submitting ? 0.7 : 1,
-      cursor: submitting ? 'wait' : 'pointer',
-    }),
-    [submitting],
-  )
 
   if (currentUser) {
     return <Navigate to="/dashboard" replace />
@@ -199,17 +42,9 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
     }))
   }
 
-  function handleAccountTypeSelect(accountType) {
-    setFormData((current) => ({
-      ...current,
-      account_type: accountType,
-    }))
-  }
-
   async function handleSubmit(event) {
     event.preventDefault()
     setSubmitting(true)
-    setMessage('')
     setError('')
 
     try {
@@ -223,10 +58,9 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
 
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.detail || 'Signup failed.')
+        throw new Error(formatApiError(data, 'Signup failed.'))
       }
 
-      setMessage('Account created successfully.')
       onSuccess(data)
     } catch (submitError) {
       setError(submitError.message)
@@ -237,52 +71,61 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
 
   return (
     <AuthShell
-      eyebrow="Join the exchange"
-      title="Choose how you want to show up for your community."
-      description="Create a generous giver account or a hopeful receiver account. This first step sets the tone while keeping the rest of the auth system intact."
-      formEyebrow="Sign up"
-      formTitle="Create your community account"
-      formDescription="Pick the role that fits you today. We keep the signup request beginner-readable and preserve the existing token login flow."
+      eyebrow="Join the Movement"
+      title="Create Your Account"
+      description="Be part of a community that believes in sharing. Whether you want to give or receive, there's a place for you here."
+      formEyebrow="Getting Started"
+      formTitle="Personal Details"
+      formDescription="Fill in your information to set up your community profile."
       footer={(
-        <p style={{ margin: 0 }}>
-          Already have an account?{' '}
-          <button type="button" onClick={onSwitchToLogin} style={styles.footerButton}>
-            Log in
-          </button>
+        <p className="m-0">
+          Already a member?
+          {' '}
+          <Link className="ml-1 font-bold text-[#8b4cf6] hover:underline" to="/login">
+            Sign in here
+          </Link>
         </p>
       )}
     >
-      <form style={styles.form} onSubmit={handleSubmit}>
-        <label htmlFor="signup-name" style={styles.label}>
-          <span>Name</span>
+      <form className="grid gap-5" onSubmit={handleSubmit}>
+        <div className="grid gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-name">
+            Full Name
+          </label>
           <input
             id="signup-name"
             name="name"
+            type="text"
             value={formData.name}
             onChange={handleChange}
             placeholder="Jane Doe"
             autoComplete="name"
             required
-            style={styles.input}
+            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
           />
-        </label>
+        </div>
 
-        <label htmlFor="signup-email" style={styles.label}>
-          <span>Email</span>
+        <div className="grid gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-email">
+            Email Address
+          </label>
           <input
             id="signup-email"
             name="email"
+            type="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="jane@example.com"
+            placeholder="name@example.com"
             autoComplete="email"
             required
-            style={styles.input}
+            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
           />
-        </label>
+        </div>
 
-        <label htmlFor="signup-password" style={styles.label}>
-          <span>Password</span>
+        <div className="grid gap-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-password">
+            Password
+          </label>
           <input
             id="signup-password"
             name="password"
@@ -292,34 +135,53 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
             placeholder="At least 8 characters"
             autoComplete="new-password"
             required
-            style={styles.input}
+            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
           />
-        </label>
-
-        <fieldset style={styles.accountFieldset}>
-          <legend style={styles.accountLegend}>Account type</legend>
-          <div style={styles.accountGrid}>
-            {accountOptions.map((option) => (
-              <AccountTypeCard
-                key={option.value}
-                option={option}
-                selected={formData.account_type === option.value}
-                onSelect={handleAccountTypeSelect}
-              />
-            ))}
-          </div>
-        </fieldset>
-
-        <div style={styles.note}>
-          Your choice is saved as part of the account record so we can shape the right experience in the next product step.
         </div>
 
-        <button type="submit" disabled={submitting} style={submitStyle}>
-          {submitting ? 'Creating account...' : 'Create account'}
+        <div className="grid gap-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">Account type</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {accountOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFormData((current) => ({ ...current, account_type: option.value }))}
+                className={`relative flex flex-col items-start rounded-xl border p-4 text-left transition-all ${
+                  formData.account_type === option.value
+                    ? 'border-[#8b4cf6] bg-[#efe7ff] ring-4 ring-[#8b4cf6]/10'
+                    : 'border-[#f1e2b8] bg-[#fffdf7] hover:border-[#d6bc73]'
+                }`}
+              >
+                {formData.account_type === option.value && (
+                  <div className="absolute right-3 top-3">
+                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8b4cf6] text-white">
+                      <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+                <p className="text-[13px] font-bold text-[#1f3328]">{option.title}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#68766d]">{option.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="relative mt-2 flex min-h-11 w-full items-center justify-center overflow-hidden rounded-xl bg-[#8b4cf6] px-6 text-[13px] font-bold uppercase tracking-widest text-white shadow-lg shadow-[#8b4cf6]/20 transition-all hover:bg-[#7b40e6] hover:shadow-xl hover:shadow-[#8b4cf6]/30 active:scale-[0.98] disabled:opacity-60"
+        >
+          {submitting ? 'Creating account...' : 'Create Account'}
         </button>
 
-        {message ? <p style={styles.message}>{message}</p> : null}
-        {error ? <p style={styles.error}>{error}</p> : null}
+        {error ? (
+          <div className="rounded-xl border border-[#c65d4a]/20 bg-[#c65d4a]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#c65d4a]">
+            {error}
+          </div>
+        ) : null}
       </form>
     </AuthShell>
   )

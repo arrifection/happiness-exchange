@@ -6,17 +6,23 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import GiverHomePage from './pages/GiverHomePage.jsx'
 import HomePage from './pages/HomePage.jsx'
+import ItemDetailsPage from './pages/ItemDetailsPage.jsx'
 import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
+import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
+import BrandLogo from './components/BrandLogo.jsx'
+import SplashScreen from './components/SplashScreen.jsx'
 import { Button, Surface } from './components/ui.jsx'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
 const ME_ENDPOINT = `${API_BASE}/api/me`
 const ITEMS_ENDPOINT = `${API_BASE}/api/items`
 const MY_ITEMS_ENDPOINT = `${API_BASE}/api/items/my`
 const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
+const PROFILE_ENDPOINT = `${API_BASE}/api/me`
 const TOKEN_KEY = 'happiness_exchange_token'
 
 const emptyItemForm = {
@@ -26,273 +32,285 @@ const emptyItemForm = {
   condition: '',
   location: '',
   image_url: '',
+  owner_name: '',
 }
 
-function navClassName(isActive) {
+const tabItems = [
+  { to: '/', label: 'Home' },
+  { to: '/browse', label: 'Browse' },
+  { to: '/give', label: 'Give' },
+  { to: '/requests', label: 'Activity' },
+  { to: '/dashboard', label: 'Profile' },
+]
+
+function formatApiError(errorData, fallbackMessage) {
+  const detail = errorData?.detail
+
+  if (typeof detail === 'string' && detail.trim()) {
+    return detail
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const readableIssues = detail
+      .map((issue) => {
+        if (typeof issue === 'string') {
+          return issue
+        }
+
+        const fieldPath = Array.isArray(issue?.loc) ? issue.loc.slice(1).join(' ') : ''
+        const message = typeof issue?.msg === 'string' ? issue.msg : ''
+        return [fieldPath, message].filter(Boolean).join(': ')
+      })
+      .filter(Boolean)
+
+    if (readableIssues.length > 0) {
+      return readableIssues.join(' ')
+    }
+  }
+
+  if (detail && typeof detail === 'object' && typeof detail.msg === 'string' && detail.msg.trim()) {
+    return detail.msg
+  }
+
+  return fallbackMessage
+}
+
+function appTabClass(isActive) {
   return [
-    'rounded-full px-4 py-2 text-sm font-medium transition duration-300',
+    'px-3 py-1.5 rounded-xl text-[12px] font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap',
     isActive
-      ? 'bg-white text-[#1f443a] shadow-[0_10px_30px_rgba(32,53,46,0.12)]'
-      : 'text-[#5d6b66] hover:bg-white/70 hover:text-[#20352e]',
+      ? 'text-[#8b4cf6] bg-[#efe7ff] shadow-sm'
+      : 'text-[#8c755f] hover:text-[#1f1f1f] hover:bg-[#fff3cc]',
   ].join(' ')
 }
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true)
   const [statusInfo, setStatusInfo] = useState(null)
   const [statusError, setStatusError] = useState('')
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
   const [currentUser, setCurrentUser] = useState(null)
   const [authError, setAuthError] = useState('')
   const [loadingUser, setLoadingUser] = useState(false)
+
   const [items, setItems] = useState([])
+  const [loadingItems, setLoadingItems] = useState(false)
   const [itemsError, setItemsError] = useState('')
-  const [loadingItems, setLoadingItems] = useState(true)
+
   const [myItems, setMyItems] = useState([])
-  const [myItemsError, setMyItemsError] = useState('')
   const [loadingMyItems, setLoadingMyItems] = useState(false)
-  const [itemForm, setItemForm] = useState(emptyItemForm)
+  const [myItemsError, setMyItemsError] = useState('')
+  const [ownerItemsMessage, setOwnerItemsMessage] = useState('')
+  const [ownerItemsError, setOwnerItemsError] = useState('')
+  const [ownerActionItemId, setOwnerActionItemId] = useState('')
+
+  const [itemForm, setItemForm] = useState({ ...emptyItemForm })
+  const [creatingItem, setCreatingItem] = useState(false)
   const [itemMessage, setItemMessage] = useState('')
   const [itemError, setItemError] = useState('')
-  const [creatingItem, setCreatingItem] = useState(false)
   const [lastPublishedItem, setLastPublishedItem] = useState(null)
+
   const [myRequests, setMyRequests] = useState([])
   const [ownerRequests, setOwnerRequests] = useState([])
-  const [requestsError, setRequestsError] = useState('')
-  const [requestsMessage, setRequestsMessage] = useState('')
   const [loadingRequests, setLoadingRequests] = useState(false)
+  const [requestsMessage, setRequestsMessage] = useState('')
+  const [requestsError, setRequestsError] = useState('')
+  const [profileUpdating, setProfileUpdating] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+  const [profileError, setProfileError] = useState('')
 
   useEffect(() => {
-    async function loadStatus() {
+    const timeoutId = window.setTimeout(() => {
+      setShowSplash(false)
+    }, 1800)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
+    async function checkStatus() {
       try {
         const response = await fetch(STATUS_ENDPOINT)
         const data = await response.json()
-        setStatusInfo(data)
-      } catch {
-        setStatusError(`Could not reach ${STATUS_ENDPOINT}`)
-      }
-    }
-
-    loadStatus()
-  }, [])
-
-  useEffect(() => {
-    loadItems()
-  }, [])
-
-  useEffect(() => {
-    if (!token) {
-      setCurrentUser(null)
-      setMyItems([])
-      setMyRequests([])
-      setOwnerRequests([])
-      return
-    }
-
-    async function loadCurrentUser() {
-      setLoadingUser(true)
-      setAuthError('')
-
-      try {
-        const response = await fetch(ME_ENDPOINT, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.detail || 'Could not load current user.')
+        if (response.ok) {
+          setStatusInfo(data)
+        } else {
+          setStatusError('Platform is undergoing maintenance.')
         }
-
-        const data = await response.json()
-        setCurrentUser(data)
-      } catch (error) {
-        localStorage.removeItem(TOKEN_KEY)
-        setToken('')
-        setCurrentUser(null)
-        setAuthError(error.message)
-      } finally {
-        setLoadingUser(false)
+      } catch (err) {
+        setStatusError('Unable to connect to community servers.')
       }
     }
+    checkStatus()
+  }, [])
 
-    loadCurrentUser()
+  useEffect(() => {
+    if (token) {
+      loadUserData()
+    } else {
+      setCurrentUser(null)
+    }
   }, [token])
 
   useEffect(() => {
-    if (!currentUser || !token) {
-      return
+    if (currentUser) {
+      loadItems()
+      loadMyItems()
+      loadRequestData()
+      setItemForm((current) => ({
+        ...current,
+        owner_name: current.owner_name || currentUser.name,
+      }))
     }
+  }, [currentUser])
 
-    loadMyItems(currentUser, token)
-  }, [currentUser, token])
-
-  useEffect(() => {
-    if (!currentUser || !token) {
-      return
+  async function loadUserData() {
+    setLoadingUser(true)
+    setAuthError('')
+    try {
+      const response = await fetch(ME_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setCurrentUser(data)
+      } else {
+        handleLogout()
+        setAuthError(formatApiError(data, 'Session expired.'))
+      }
+    } catch (err) {
+      setAuthError('Connection lost.')
+    } finally {
+      setLoadingUser(false)
     }
-
-    loadRequestData(currentUser, token)
-  }, [currentUser, token, myItems])
+  }
 
   async function loadItems() {
     setLoadingItems(true)
     setItemsError('')
-
     try {
       const response = await fetch(ITEMS_ENDPOINT)
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Could not load items.')
-      }
-
       const data = await response.json()
-      setItems(data)
-    } catch (error) {
-      setItemsError(error.message)
+      if (response.ok) {
+        setItems(data)
+      } else {
+        setItemsError('Failed to load items.')
+      }
+    } catch (err) {
+      setItemsError('Unable to fetch community items.')
     } finally {
       setLoadingItems(false)
     }
   }
 
-  async function loadMyItems(user = currentUser, authToken = token) {
-    if (!user || !authToken) {
+  async function loadMyItems() {
+    if (!currentUser) {
       return
     }
-
     setLoadingMyItems(true)
     setMyItemsError('')
-
     try {
       const response = await fetch(MY_ITEMS_ENDPOINT, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Could not load your items.')
-      }
-
       const data = await response.json()
-      setMyItems(data)
-    } catch (error) {
-      setMyItemsError(error.message)
+      if (response.ok) {
+        setMyItems(data)
+      } else {
+        setMyItemsError('Failed to load your items.')
+      }
+    } catch (err) {
+      setMyItemsError('Connection issue.')
     } finally {
       setLoadingMyItems(false)
     }
   }
 
-  async function loadRequestData(user = currentUser, authToken = token) {
-    if (!user || !authToken) {
+  async function loadRequestData() {
+    if (!currentUser) {
       return
     }
-
     setLoadingRequests(true)
     setRequestsError('')
-
     try {
-      const myRequestsResponse = await fetch(MY_REQUESTS_ENDPOINT, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+      const myResponse = await fetch(MY_REQUESTS_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
       })
+      const myData = await myResponse.json()
 
-      if (!myRequestsResponse.ok) {
-        const errorData = await myRequestsResponse.json()
-        throw new Error(errorData.detail || 'Could not load your requests.')
+      const ownerResponse = await fetch(`${API_BASE}/api/requests/incoming`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const ownerData = await ownerResponse.json()
+
+      if (myResponse.ok && ownerResponse.ok) {
+        setMyRequests(myData)
+        setOwnerRequests(ownerData)
+      } else {
+        setRequestsError('Failed to sync activity.')
       }
-
-      const myRequestsData = await myRequestsResponse.json()
-      setMyRequests(myRequestsData)
-
-      const ownedItems = myItems.filter((item) => item.owner_id === user.id)
-      const ownerRequestLists = await Promise.all(
-        ownedItems.map(async (item) => {
-          const response = await fetch(`${API_BASE}/api/items/${item.id}/requests`, {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.detail || 'Could not load item requests.')
-          }
-
-          return response.json()
-        }),
-      )
-
-      setOwnerRequests(ownerRequestLists.flat())
-    } catch (error) {
-      setRequestsError(error.message)
+    } catch (err) {
+      setRequestsError('Unable to sync activity.')
     } finally {
       setLoadingRequests(false)
     }
-  }
-
-  function handleAuthSuccess(data) {
-    localStorage.setItem(TOKEN_KEY, data.access_token)
-    setToken(data.access_token)
-    setCurrentUser(data.user)
-    setAuthError('')
   }
 
   function handleLogout() {
     localStorage.removeItem(TOKEN_KEY)
     setToken('')
     setCurrentUser(null)
+    setItems([])
     setMyItems([])
-    setMyItemsError('')
-    setAuthError('')
-    setRequestsMessage('')
-    setItemMessage('')
+    setMyRequests([])
+    setOwnerRequests([])
+    setOwnerItemsMessage('')
+    setOwnerItemsError('')
+    setOwnerActionItemId('')
+    setProfileMessage('')
+    setProfileError('')
+  }
+
+  function handleAuthSuccess(data) {
+    if (data.access_token) {
+      localStorage.setItem(TOKEN_KEY, data.access_token)
+      setToken(data.access_token)
+    }
   }
 
   function handleItemChange(event) {
     const { name, value } = event.target
-    setItemForm((current) => ({
-      ...current,
-      [name]: value,
-    }))
+    setItemForm((current) => ({ ...current, [name]: value }))
   }
 
   async function handleCreateItem(event) {
     event.preventDefault()
     setCreatingItem(true)
-    setItemMessage('')
     setItemError('')
+    setItemMessage('')
 
     try {
-      const payload = {
-        ...itemForm,
-        image_url: itemForm.image_url.trim() || null,
-      }
-
       const response = await fetch(ITEMS_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(itemForm),
       })
 
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.detail || 'Could not create item.')
+      if (response.ok) {
+        setItemMessage('Item published successfully!')
+        setLastPublishedItem(data)
+        setItemForm({ ...emptyItemForm })
+        await loadItems()
+        await loadMyItems()
+        return data
       }
-
-      setItems((current) => [data, ...current])
-      setMyItems((current) => [data, ...current])
-      setLastPublishedItem(data)
-      setItemForm(emptyItemForm)
-      setItemMessage('Your free listing is now live for the community.')
-      return data
-    } catch (error) {
-      setItemError(error.message)
+      throw new Error(formatApiError(data, 'Publishing failed.'))
+    } catch (err) {
+      setItemError(err.message)
       return null
     } finally {
       setCreatingItem(false)
@@ -300,9 +318,8 @@ export default function App() {
   }
 
   async function handleCreateRequest(itemId) {
-    setRequestsMessage('')
     setRequestsError('')
-
+    setRequestsMessage('')
     try {
       const response = await fetch(`${API_BASE}/api/requests/${itemId}`, {
         method: 'POST',
@@ -310,23 +327,23 @@ export default function App() {
           Authorization: `Bearer ${token}`,
         },
       })
-
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.detail || 'Could not create request.')
+        throw new Error(formatApiError(data, 'Request failed.'))
       }
-
-      setMyRequests((current) => [data, ...current])
-      setRequestsMessage('Your interest was shared with the item owner.')
-    } catch (error) {
-      setRequestsError(error.message)
+      setRequestsMessage('Request sent to owner!')
+      await loadItems()
+      await loadRequestData()
+      return data
+    } catch (err) {
+      setRequestsError(err.message)
+      return null
     }
   }
 
   async function handleRequestAction(requestId, action) {
-    setRequestsMessage('')
     setRequestsError('')
-
+    setRequestsMessage('')
     try {
       const response = await fetch(`${API_BASE}/api/requests/${requestId}/${action}`, {
         method: 'PATCH',
@@ -334,12 +351,10 @@ export default function App() {
           Authorization: `Bearer ${token}`,
         },
       })
-
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.detail || `Could not ${action} request.`)
+        throw new Error(formatApiError(data, 'Action failed.'))
       }
-
       setRequestsMessage(
         action === 'approve'
           ? 'That request has been approved and the item is now reserved.'
@@ -355,161 +370,313 @@ export default function App() {
     }
   }
 
+  function replaceItemAcrossLists(updatedItem) {
+    setItems((current) => current.map((item) => (item.id === updatedItem.id ? updatedItem : item)))
+    setMyItems((current) => current.map((item) => (item.id === updatedItem.id ? updatedItem : item)))
+  }
+
+  async function handleDeleteItem(item) {
+    if (!window.confirm(`Delete "${item.title}"? This action cannot be undone.`)) {
+      return false
+    }
+
+    setOwnerActionItemId(item.id)
+    setOwnerItemsError('')
+    setOwnerItemsMessage('')
+
+    try {
+      const response = await fetch(`${ITEMS_ENDPOINT}/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        let errorData = null
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = null
+        }
+        throw new Error(formatApiError(errorData, 'Unable to delete this item.'))
+      }
+
+      setItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
+      setMyItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
+      setOwnerRequests((current) => current.filter((request) => request.item_id !== item.id))
+      setOwnerItemsMessage(`"${item.title}" was deleted successfully.`)
+      return true
+    } catch (error) {
+      setOwnerItemsError(error.message)
+      return false
+    } finally {
+      setOwnerActionItemId('')
+    }
+  }
+
+  async function handleCompleteItem(item) {
+    setOwnerActionItemId(item.id)
+    setOwnerItemsError('')
+    setOwnerItemsMessage('')
+
+    try {
+      const response = await fetch(`${ITEMS_ENDPOINT}/${item.id}/complete`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(formatApiError(data, 'Unable to mark this item as completed.'))
+      }
+
+      replaceItemAcrossLists(data)
+      setOwnerItemsMessage(`"${item.title}" is now marked as successfully taken.`)
+      await loadRequestData()
+      return data
+    } catch (error) {
+      setOwnerItemsError(error.message)
+      return null
+    } finally {
+      setOwnerActionItemId('')
+    }
+  }
+
+  async function handleProfileUpdate(nextName) {
+    setProfileUpdating(true)
+    setProfileMessage('')
+    setProfileError('')
+
+    try {
+      const response = await fetch(PROFILE_ENDPOINT, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: nextName }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(formatApiError(data, 'Unable to update your profile.'))
+      }
+
+      setCurrentUser(data)
+      setMyItems((current) =>
+        current.map((item) => (item.owner_id === data.id ? { ...item, owner_name: data.name } : item)),
+      )
+      setItems((current) =>
+        current.map((item) => (item.owner_id === data.id ? { ...item, owner_name: data.name } : item)),
+      )
+      setMyRequests((current) =>
+        current.map((request) => (request.requester_id === data.id ? { ...request, requester_name: data.name } : request)),
+      )
+      setOwnerRequests((current) =>
+        current.map((request) => {
+          const nextRequest = { ...request }
+          if (request.requester_id === data.id) {
+            nextRequest.requester_name = data.name
+          }
+          if (request.owner_id === data.id) {
+            nextRequest.owner_name = data.name
+          }
+          return nextRequest
+        }),
+      )
+      setProfileMessage('Profile updated successfully.')
+      return data
+    } catch (error) {
+      setProfileError(error.message)
+      return null
+    } finally {
+      setProfileUpdating(false)
+    }
+  }
+
   function getMyRequestForItem(itemId) {
     return myRequests.find((request) => request.item_id === itemId)
   }
 
   return (
-    <div className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(237,180,145,0.28),transparent_52%)]" />
-      <div className="pointer-events-none absolute right-[-8rem] top-24 -z-10 h-72 w-72 rounded-full bg-[#f0b89d]/35 blur-3xl" />
-      <div className="pointer-events-none absolute left-[-6rem] top-[34rem] -z-10 h-80 w-80 rounded-full bg-[#9cc2ae]/30 blur-3xl" />
+    <div className="flex min-h-screen flex-col bg-[#fffaf0]">
+      <SplashScreen visible={showSplash} />
+      {currentUser ? (
+        <div className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
+          <header className="sticky top-0 z-50 border-b border-[#f1e2b8] bg-white/85 shadow-sm backdrop-blur-xl">
+            <div className="app-shell flex h-14 items-center justify-between gap-4 sm:h-16">
+              <BrandLogo size="sm" className="min-w-0" />
 
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 pb-12 pt-4 sm:px-6 lg:px-8">
-        <Surface className="sticky top-4 z-30 mb-8 px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="mt-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1d6b57,#8ab59f)] text-lg font-semibold text-white shadow-[0_18px_45px_rgba(29,107,87,0.32)]">
-                HE
-              </div>
-              <div>
-                <p className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-lg font-semibold tracking-[-0.03em] text-[#20352e]">
-                  Happiness Exchange
-                </p>
-                <p className="mt-1 max-w-md text-sm text-[#6d7975]">
-                  A beautiful place to give freely, receive kindly, and keep useful things in the community.
-                </p>
-              </div>
-            </div>
+              <nav className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                {tabItems.map((item) => (
+                  <NavLink key={item.to} className={({ isActive }) => appTabClass(isActive)} to={item.to}>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
 
-            <div className="flex flex-col gap-4 lg:items-end">
-              <div className="flex flex-wrap items-center gap-2 rounded-full bg-[#f7f1e8]/90 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                <NavLink className={({ isActive }) => navClassName(isActive)} to="/">
-                  Home
+              <div className="flex items-center gap-2">
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) => [
+                    'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[#8c755f] transition-all duration-300 hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-sm' : '',
+                  ].join(' ')}
+                  aria-label="Open profile settings"
+                >
+                  <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                  </svg>
                 </NavLink>
-                <NavLink className={({ isActive }) => navClassName(isActive)} to="/browse">
-                  Browse
-                </NavLink>
-                <NavLink className={({ isActive }) => navClassName(isActive)} to="/give">
-                  Give Item
-                </NavLink>
-                <NavLink className={({ isActive }) => navClassName(isActive)} to="/dashboard">
-                  Dashboard
-                </NavLink>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-xs font-semibold text-[#5c6a65] shadow-sm">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[#6fa784]" />
-                  {statusInfo ? `${statusInfo.status} backend` : statusError || 'Checking backend'}
-                </span>
-
-                {currentUser ? (
-                  <>
-                    <span className="inline-flex items-center rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm text-[#4f615b] shadow-sm">
-                      Signed in as {currentUser.name}
-                    </span>
-                    <Button variant="ghost" onClick={handleLogout}>
-                      Logout
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button as="link" to="/login" variant="ghost">
-                      Login
-                    </Button>
-                    <Button as="link" to="/signup">
-                      Signup
-                    </Button>
-                  </>
-                )}
+                <Button variant="ghost" className="h-9 min-h-0 px-3 text-[10px] font-bold uppercase tracking-widest text-[#c65d4a] hover:bg-[#c65d4a]/5" onClick={handleLogout}>
+                  Logout
+                </Button>
               </div>
             </div>
-          </div>
-        </Surface>
+          </header>
 
-        <main className="flex-1">
-          <Routes>
-            <Route
-              path="/"
-              element={(
-                <HomePage
-                  items={items}
-                  currentUser={currentUser}
-                  getMyRequestForItem={getMyRequestForItem}
-                  onCreateRequest={handleCreateRequest}
-                  loadingItems={loadingItems}
-                  itemsError={itemsError}
-                  myRequests={myRequests}
-                  ownerRequests={ownerRequests}
-                />
-              )}
-            />
-            <Route
-              path="/browse"
-              element={(
-                <BrowseItemsPage
-                  items={items}
-                  currentUser={currentUser}
-                  getMyRequestForItem={getMyRequestForItem}
-                  onCreateRequest={handleCreateRequest}
-                  onRefreshItems={loadItems}
-                  loadingItems={loadingItems}
-                  itemsError={itemsError}
-                />
-              )}
-            />
-            <Route
-              path="/give"
-              element={(
-                <GiveItemPage
-                  currentUser={currentUser}
-                  itemForm={itemForm}
-                  onItemChange={handleItemChange}
-                  onCreateItem={handleCreateItem}
-                  creatingItem={creatingItem}
-                  itemMessage={itemMessage}
-                  itemError={itemError}
-                />
-              )}
-            />
-            <Route
-              path="/item-listed-success"
-              element={(
-                <ItemListedSuccessPage
-                  currentUser={currentUser}
-                  publishedItem={lastPublishedItem}
-                />
-              )}
-            />
-            <Route
-              path="/dashboard"
-              element={(
-                currentUser?.account_type === 'giver' ? (
-                  <GiverHomePage
+          <main className="app-shell flex-1 py-8">
+            <Routes>
+              <Route
+                path="/"
+                element={(
+                  <HomePage
+                    items={items}
                     currentUser={currentUser}
-                    myItems={myItems}
-                    myItemsError={myItemsError}
-                    loadingMyItems={loadingMyItems}
-                    ownerRequests={ownerRequests}
-                    onRequestAction={handleRequestAction}
-                    loadingRequests={loadingRequests}
-                    requestsMessage={requestsMessage}
-                    requestsError={requestsError}
-                  />
-                ) : (
-                  <DashboardPage
-                    currentUser={currentUser}
+                    getMyRequestForItem={getMyRequestForItem}
+                    onCreateRequest={handleCreateRequest}
+                    loadingItems={loadingItems}
+                    itemsError={itemsError}
                     myRequests={myRequests}
                     ownerRequests={ownerRequests}
-                    onRequestAction={handleRequestAction}
+                  />
+                )}
+              />
+              <Route
+                path="/browse"
+                element={(
+                  <BrowseItemsPage
+                    items={items}
+                    currentUser={currentUser}
+                    getMyRequestForItem={getMyRequestForItem}
+                    onCreateRequest={handleCreateRequest}
+                    onRefreshItems={loadItems}
+                    loadingItems={loadingItems}
+                    itemsError={itemsError}
+                  />
+                )}
+              />
+              <Route
+                path="/give"
+                element={(
+                  <GiveItemPage
+                    currentUser={currentUser}
+                    itemForm={itemForm}
+                    onItemChange={handleItemChange}
+                    onCreateItem={handleCreateItem}
+                    creatingItem={creatingItem}
+                    itemMessage={itemMessage}
+                    itemError={itemError}
+                  />
+                )}
+              />
+              <Route
+                path="/items/:itemId"
+                element={(
+                  <ItemDetailsPage
+                    currentUser={currentUser}
+                    items={items}
+                    myItems={myItems}
+                    getMyRequestForItem={getMyRequestForItem}
+                    onCreateRequest={handleCreateRequest}
+                    onDeleteItem={handleDeleteItem}
+                    onCompleteItem={handleCompleteItem}
+                    ownerActionItemId={ownerActionItemId}
+                  />
+                )}
+              />
+              <Route
+                path="/item-listed-success"
+                element={(
+                  <ItemListedSuccessPage
+                    currentUser={currentUser}
+                    publishedItem={lastPublishedItem}
+                  />
+                )}
+              />
+              <Route
+                path="/dashboard"
+                element={(
+                  currentUser?.account_type === 'giver' ? (
+                    <GiverHomePage
+                      currentUser={currentUser}
+                      myItems={myItems}
+                      myItemsError={myItemsError}
+                      loadingMyItems={loadingMyItems}
+                      ownerItemsMessage={ownerItemsMessage}
+                      ownerItemsError={ownerItemsError}
+                      ownerActionItemId={ownerActionItemId}
+                      onDeleteItem={handleDeleteItem}
+                      onCompleteItem={handleCompleteItem}
+                      ownerRequests={ownerRequests}
+                      onRequestAction={handleRequestAction}
+                      loadingRequests={loadingRequests}
+                      requestsMessage={requestsMessage}
+                      requestsError={requestsError}
+                    />
+                  ) : (
+                    <DashboardPage
+                      currentUser={currentUser}
+                      myRequests={myRequests}
+                      ownerRequests={ownerRequests}
+                      onRequestAction={handleRequestAction}
+                      loadingRequests={loadingRequests}
+                      requestsMessage={requestsMessage}
+                      requestsError={requestsError}
+                    />
+                  )
+                )}
+              />
+              <Route
+                path="/requests"
+                element={(
+                  <RequestsPage
+                    currentUser={currentUser}
+                    ownerRequests={ownerRequests}
+                    myItems={myItems}
                     loadingRequests={loadingRequests}
                     requestsMessage={requestsMessage}
                     requestsError={requestsError}
+                    onRequestAction={handleRequestAction}
                   />
-                )
-              )}
-            />
+                )}
+              />
+              <Route
+                path="/profile"
+                element={(
+                  <ProfilePage
+                    currentUser={currentUser}
+                    onUpdateProfile={handleProfileUpdate}
+                    profileUpdating={profileUpdating}
+                    profileMessage={profileMessage}
+                    profileError={profileError}
+                  />
+                )}
+              />
+              <Route
+                path="/settings"
+                element={<Navigate to="/profile" replace />}
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+        </div>
+      ) : (
+        <main className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
+          <Routes>
             <Route
               path="/login"
               element={(
@@ -530,22 +697,20 @@ export default function App() {
                 />
               )}
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
+      )}
 
-        {(loadingUser || authError) ? (
-          <div className="mt-8">
-            <Surface className="mx-auto max-w-3xl p-6">
-              <h2 className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-xl font-semibold text-[#20352e]">
-                Activity
-              </h2>
-              {loadingUser ? <p className="mt-3 text-sm text-[#687670]">Loading your account...</p> : null}
-              {authError ? <p className="mt-3 text-sm font-medium text-[#b04e43]">{authError}</p> : null}
-            </Surface>
-          </div>
-        ) : null}
-      </div>
+      {(loadingUser || authError) ? (
+        <div className="fixed bottom-6 right-6 z-50 w-64">
+          <Surface className="border-[#8b4cf6]/10 p-4 shadow-xl ring-1 ring-[#8b4cf6]/5">
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">System Notification</h2>
+            {loadingUser ? <p className="mt-1 text-xs text-[#68766d]">Verifying profile...</p> : null}
+            {authError ? <p className="mt-1 text-xs font-medium text-[#c65d4a]">{authError}</p> : null}
+          </Surface>
+        </div>
+      ) : null}
     </div>
   )
 }

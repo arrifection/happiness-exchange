@@ -14,13 +14,13 @@ export function Button({
   ...props
 }) {
   const baseClassName = classes(
-    'inline-flex min-h-11 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition duration-300 ease-out',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d86d4f]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+    'inline-flex min-h-9 items-center justify-center rounded-xl px-4 py-2 text-[13px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-[0.98]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b4cf6]/20',
     'disabled:cursor-not-allowed disabled:opacity-60',
-    variant === 'primary' && 'bg-[#1d6b57] text-white shadow-[0_18px_40px_rgba(29,107,87,0.24)] hover:-translate-y-0.5 hover:bg-[#155441]',
-    variant === 'secondary' && 'border border-white/70 bg-white/80 text-[#21453c] shadow-[0_12px_28px_rgba(58,59,92,0.08)] backdrop-blur hover:-translate-y-0.5 hover:bg-white',
-    variant === 'ghost' && 'border border-[#d9d7d1] bg-white/55 text-[#21453c] hover:bg-white/80',
-    variant === 'danger' && 'bg-[#c65d4a] text-white shadow-[0_16px_32px_rgba(198,93,74,0.24)] hover:-translate-y-0.5 hover:bg-[#b14d3d]',
+    variant === 'primary' && 'bg-[#8b4cf6] text-white shadow-lg shadow-[#8b4cf6]/20 hover:bg-[#7b40e6] hover:shadow-xl hover:shadow-[#8b4cf6]/25',
+    variant === 'secondary' && 'border border-[#f1e2b8] bg-white text-[#1f1f1f] hover:bg-[#fffaf0]',
+    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
+    variant === 'danger' && 'bg-[#c65d4a] text-white hover:bg-[#ae4e3d]',
     className,
   )
 
@@ -41,19 +41,19 @@ export function Button({
 
 export function StatusBadge({ status, className = '' }) {
   const palette = {
-    available: 'bg-emerald-100/90 text-emerald-800 ring-1 ring-emerald-200',
-    reserved: 'bg-amber-100/95 text-amber-800 ring-1 ring-amber-200',
-    completed: 'bg-sky-100/95 text-sky-800 ring-1 ring-sky-200',
-    pending: 'bg-violet-100/95 text-violet-800 ring-1 ring-violet-200',
-    approved: 'bg-emerald-100/90 text-emerald-800 ring-1 ring-emerald-200',
-    rejected: 'bg-rose-100/95 text-rose-700 ring-1 ring-rose-200',
+    available: 'bg-[#fff6d9] text-[#8c6900] ring-[#ffcc22]/50',
+    reserved: 'bg-[#f8edff] text-[#8b4cf6] ring-[#8b4cf6]/20',
+    completed: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25',
+    pending: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35',
+    approved: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25',
+    rejected: 'bg-rose-50 text-rose-700 ring-rose-200/50',
   }
 
   return (
     <span
       className={classes(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-[0.02em]',
-        palette[status] || 'bg-stone-100 text-stone-700 ring-1 ring-stone-200',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1',
+        palette[status] || 'bg-stone-50 text-stone-600 ring-stone-200/50',
         className,
       )}
     >
@@ -70,17 +70,17 @@ export function SectionHeading({
   align = 'between',
 }) {
   return (
-    <div className={classes('flex flex-col gap-4 md:flex-row md:items-end', align === 'between' && 'md:justify-between')}>
-      <div className="max-w-2xl">
+    <div className={classes('flex flex-col gap-3 sm:flex-row sm:items-end', align === 'between' && 'sm:justify-between')}>
+      <div className="max-w-xl">
         {eyebrow ? (
-          <p className="mb-3 inline-flex rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#b35d3c] shadow-sm backdrop-blur">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a07d22]">
             {eyebrow}
           </p>
         ) : null}
-        <h2 className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-3xl font-semibold tracking-[-0.04em] text-[#20352e] sm:text-4xl">
+        <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f] sm:text-xl">
           {title}
         </h2>
-        {description ? <p className="mt-3 max-w-2xl text-base leading-7 text-[#5f6d68]">{description}</p> : null}
+        {description ? <p className="mt-1 text-xs leading-relaxed text-[#68766d]">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -89,12 +89,12 @@ export function SectionHeading({
 
 export function EmptyState({ title, description, action }) {
   return (
-    <div className="rounded-[28px] border border-dashed border-[#d6cfbf] bg-white/70 p-8 text-center shadow-[0_12px_30px_rgba(36,41,48,0.06)] backdrop-blur">
-      <h3 className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-xl font-semibold text-[#243b34]">
+    <div className="rounded-2xl border border-[#f1e2b8] bg-[#fffdf7] p-6 text-center">
+      <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-base font-bold text-[#1f1f1f]">
         {title}
       </h3>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#6b7873]">{description}</p>
-      {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
+      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-relaxed text-[#68766d]">{description}</p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
   )
 }
@@ -102,7 +102,7 @@ export function EmptyState({ title, description, action }) {
 export function Surface({ className = '', children, ...props }) {
   return (
     <section className={classes(
-      'rounded-[32px] border border-white/70 bg-white/75 shadow-[0_18px_50px_rgba(34,37,43,0.08)] backdrop-blur-xl',
+      'rounded-2xl border border-[#f1e2b8] bg-white shadow-sm transition-shadow duration-300 hover:shadow-md',
       className,
     )}
       {...props}
@@ -124,8 +124,8 @@ export function TextField({
   ...props
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#29413b]" htmlFor={id}>
-      <span>{label}</span>
+    <label className="grid gap-1.5" htmlFor={id}>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">{label}</span>
       <input
         id={id}
         name={name}
@@ -135,7 +135,7 @@ export function TextField({
         placeholder={placeholder}
         required={required}
         {...props}
-        className="min-h-12 rounded-2xl border border-[#e4ddd1] bg-[#fffdfa] px-4 text-[#1f3730] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-[#d58663] focus:ring-4 focus:ring-[#f6d8c8]"
+        className="min-h-10 rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-3.5 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
       />
     </label>
   )
@@ -148,12 +148,12 @@ export function TextAreaField({
   value,
   onChange,
   placeholder,
-  rows = 5,
+  rows = 4,
   required = false,
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#29413b]" htmlFor={id}>
-      <span>{label}</span>
+    <label className="grid gap-1.5" htmlFor={id}>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">{label}</span>
       <textarea
         id={id}
         name={name}
@@ -162,8 +162,45 @@ export function TextAreaField({
         placeholder={placeholder}
         rows={rows}
         required={required}
-        className="rounded-2xl border border-[#e4ddd1] bg-[#fffdfa] px-4 py-3 text-[#1f3730] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-[#d58663] focus:ring-4 focus:ring-[#f6d8c8]"
+        className="rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-3.5 py-3 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
       />
+    </label>
+  )
+}
+
+export function SelectField({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+  options = [],
+  required = false,
+  placeholder,
+}) {
+  return (
+    <label className="grid gap-1.5" htmlFor={id}>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">{label}</span>
+      <div className="relative">
+        <select
+          id={id}
+          name={name}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="h-10 w-full appearance-none rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-3.5 pr-10 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
+        >
+          {placeholder && <option value="" disabled>{placeholder}</option>}
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
     </label>
   )
 }

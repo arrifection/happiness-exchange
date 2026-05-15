@@ -85,6 +85,23 @@ async def list_my_requests(current_user: dict = Depends(get_current_user)):
     return [serialize_request(request) for request in requests]
 
 
+@router.get("/requests/incoming", response_model=list[RequestResponse])
+async def list_incoming_requests(current_user: dict = Depends(get_current_user)):
+    """Return requests for items owned by the logged-in user."""
+    requests_collection = get_requests_collection()
+    if requests_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    cursor = requests_collection.find(
+        {"owner_id": current_user["id"]},
+    ).sort("created_at", DESCENDING)
+    requests = await cursor.to_list(length=100)
+    return [serialize_request(request) for request in requests]
+
+
 @router.get("/items/{item_id}/requests", response_model=list[RequestResponse])
 async def list_item_requests(
     item_id: str,

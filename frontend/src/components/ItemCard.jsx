@@ -1,40 +1,91 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { Button, StatusBadge } from './ui.jsx'
 
-function categoryPalette(category = '') {
-  const key = category.toLowerCase()
+function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPending }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
 
-  if (key.includes('furniture')) {
-    return 'bg-amber-100 text-amber-800'
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!menuRef.current?.contains(event.target)) {
+        setMenuOpen(false)
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  async function handleAction(action) {
+    setMenuOpen(false)
+    await action?.(item)
   }
 
-  if (key.includes('book')) {
-    return 'bg-rose-100 text-rose-700'
-  }
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        aria-label="Open item actions"
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((current) => !current)}
+        disabled={ownerActionPending}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#eadfce] bg-[#faf7f1] text-[#8c755f] transition hover:border-[#d8cab8] hover:bg-white hover:text-[#1f3328] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f6f50]/20 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {ownerActionPending ? (
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 8v4m8-8h-4M8 12H4m13.657-5.657l-2.828 2.828M9.172 14.828l-2.829 2.829m11.314 0l-2.828-2.829M9.172 9.172 6.343 6.343" />
+          </svg>
+        ) : (
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="12" cy="19" r="1.8" />
+          </svg>
+        )}
+      </button>
 
-  if (key.includes('cloth') || key.includes('fashion')) {
-    return 'bg-fuchsia-100 text-fuchsia-700'
-  }
+      {menuOpen ? (
+        <div className="absolute right-0 top-11 z-20 w-48 overflow-hidden rounded-2xl border border-[#eadfce] bg-white p-1.5 shadow-xl shadow-[#1f3328]/10">
+          {item.status !== 'completed' ? (
+            <button
+              type="button"
+              onClick={() => handleAction(onCompleteItem)}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[11px] font-bold uppercase tracking-widest text-[#1f3328] transition hover:bg-[#f4efe7]"
+            >
+              <svg className="h-4 w-4 text-[#1f6f50]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+              </svg>
+              Successfully Taken
+            </button>
+          ) : null}
 
-  if (key.includes('electronic') || key.includes('tech')) {
-    return 'bg-sky-100 text-sky-700'
-  }
-
-  if (key.includes('baby') || key.includes('kid') || key.includes('toy')) {
-    return 'bg-orange-100 text-orange-700'
-  }
-
-  return 'bg-emerald-100 text-emerald-700'
-}
-
-function ownerInitials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'HE'
+          <button
+            type="button"
+            onClick={() => handleAction(onDeleteItem)}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[11px] font-bold uppercase tracking-widest text-[#c65d4a] transition hover:bg-[#fff3f0]"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4h8v2m-7 4v7m6-7v7M6 6l1 14h10l1-14" />
+            </svg>
+            Delete Item
+          </button>
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export default function ItemCard({
@@ -42,106 +93,102 @@ export default function ItemCard({
   currentUser,
   myRequest,
   onCreateRequest,
+  onDeleteItem,
+  onCompleteItem,
+  ownerActionPending = false,
+  compact = false,
 }) {
   const [imageAvailable, setImageAvailable] = useState(Boolean(item.image_url))
+  const isOwner = item.owner_id === currentUser?.id
+  const itemHref = `/items/${item.id}`
 
-  function renderInterestAction() {
-    if (!currentUser || item.owner_id === currentUser.id) {
+  function renderAction() {
+    if (isOwner) {
+      return (
+        <OwnerActionsMenu
+          item={item}
+          onDeleteItem={onDeleteItem}
+          onCompleteItem={onCompleteItem}
+          ownerActionPending={ownerActionPending}
+        />
+      )
+    }
+
+    if (!currentUser) {
       return null
     }
 
     if (myRequest) {
       return (
-        <p className="text-sm font-medium text-[#52655f]">
-          Your request is
-          {' '}
-          <StatusBadge status={myRequest.status} className="ml-2 align-middle" />
-        </p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#8c755f]">My Request:</span>
+          <StatusBadge status={myRequest.status} />
+        </div>
       )
     }
 
     if (item.status !== 'available') {
-      return <p className="text-sm font-medium text-[#6a7672]">This item is currently {item.status}.</p>
+      return <StatusBadge status={item.status} />
     }
 
     return (
-      <Button onClick={() => onCreateRequest(item.id)}>
-        I&apos;m Interested
+      <Button variant="primary" className="h-8 min-h-0 px-3 text-[10px]" onClick={() => onCreateRequest(item.id)}>
+        Interested
       </Button>
     )
   }
 
   return (
-    <article className="group overflow-hidden rounded-[30px] border border-white/70 bg-white/80 shadow-[0_18px_50px_rgba(29,33,44,0.08)] backdrop-blur transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_60px_rgba(29,33,44,0.14)]">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,rgba(140,188,166,0.9),rgba(240,184,160,0.88))]">
+    <article className="group flex overflow-hidden rounded-2xl border border-[#eadfce] bg-white transition-all duration-300 hover:shadow-md">
+      <Link
+        to={itemHref}
+        className="relative aspect-square w-24 shrink-0 overflow-hidden bg-[#f4efe7] sm:w-32"
+        aria-label={`Open ${item.title}`}
+      >
         {item.image_url && imageAvailable ? (
-          <>
-            <img
-              src={item.image_url}
-              alt={item.title}
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-              onError={() => setImageAvailable(false)}
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgba(32,53,46,0.58)_100%)]" />
-          </>
+          <img
+            src={item.image_url}
+            alt={item.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImageAvailable(false)}
+          />
         ) : (
-          <div className="relative flex h-full flex-col items-center justify-center overflow-hidden px-8 text-center">
-            <div className="absolute left-6 top-6 h-16 w-16 rounded-full bg-white/20 blur-xl" />
-            <div className="absolute bottom-8 right-8 h-24 w-24 rounded-full bg-[#fff4ea]/30 blur-2xl" />
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-[28px] bg-white/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur">
-              <div className="h-10 w-10 rounded-2xl border border-white/60 bg-white/80" />
-            </div>
-            <h3 className="relative mt-5 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-xl font-semibold text-white">
-              Shared with care
-            </h3>
-            <p className="relative mt-2 max-w-xs text-sm leading-6 text-white/85">
-              A thoughtful gift waiting for someone nearby who can use it well.
-            </p>
+          <div className="flex h-full items-center justify-center text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/50">
+            No image
           </div>
         )}
+      </Link>
 
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${categoryPalette(item.category)}`}>
-            {item.category}
-          </span>
-          <StatusBadge status={item.status} className="bg-white/86 backdrop-blur" />
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-white/72">Shared by</p>
-            <p className="mt-1 text-sm font-medium text-white">{item.owner_name}</p>
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <Link to={itemHref} className="min-w-0 transition hover:text-[#1f6f50]">
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[14px] font-bold leading-tight text-[#1f3328] line-clamp-1 sm:text-base">{item.title}</h3>
+            </Link>
+            <div className="flex items-center gap-2">
+              {isOwner && <span className="text-[10px] font-bold uppercase tracking-widest text-[#1f6f50]">Yours</span>}
+              {isOwner ? renderAction() : null}
+            </div>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/40 bg-white/18 text-sm font-semibold text-white backdrop-blur">
-            {ownerInitials(item.owner_name)}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-5 p-6">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-2xl font-semibold tracking-[-0.04em] text-[#20352e]">
-              {item.title}
-            </h3>
-          </div>
-          <p className="text-sm leading-7 text-[#64736e]">{item.description}</p>
+          <Link to={itemHref} className="block rounded-lg transition hover:bg-[#faf7f1]">
+            <p className="line-clamp-2 text-[11px] leading-relaxed text-[#68766d] sm:text-xs sm:line-clamp-2">
+              {item.description}
+            </p>
+          </Link>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#f3efe7] px-3 py-1.5 text-xs font-medium text-[#4f615b]">
-            {item.location}
-          </span>
-          <span className="rounded-full bg-[#eef6f1] px-3 py-1.5 text-xs font-medium text-[#447261]">
-            {item.condition}
-          </span>
-          <span className="rounded-full bg-[#fff2ea] px-3 py-1.5 text-xs font-medium text-[#b06144]">
-            Free to request
-          </span>
-        </div>
-
-        <div className="border-t border-[#f0ebe2] pt-4">
-          {renderInterestAction()}
+        <div className="mt-3 flex flex-col gap-2.5 border-t border-[#f4efe7] pt-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <Link to={itemHref} className="flex flex-wrap items-center gap-1.5 rounded-lg transition hover:text-[#1f3328]">
+            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">{item.location}</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">•</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">{item.condition}</span>
+            <StatusBadge status={item.status} />
+          </Link>
+          {!isOwner ? (
+            <div className="shrink-0 self-end sm:self-auto">
+              {renderAction()}
+            </div>
+          ) : null}
         </div>
       </div>
     </article>

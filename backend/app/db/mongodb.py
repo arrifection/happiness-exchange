@@ -22,6 +22,7 @@ async def connect_to_mongo() -> None:
         await client.admin.command("ping")
         db = client[settings.DB_NAME]
         await db.users.create_index("email", unique=True)
+        await db.users.create_index("name_normalized", unique=True)
         await db.items.create_index("status")
         await db.items.create_index("created_at")
         await db.requests.create_index(

@@ -20,3 +20,6 @@ python-jose[cryptography]==3.5.0
 bcrypt==5.0.0
 # email-validator - enables EmailStr validation in Pydantic
 email-validator==2.2.0
+
+# httpx - required by FastAPI/Starlette TestClient for backend tests
+httpx==0.28.1

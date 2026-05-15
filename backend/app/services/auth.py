@@ -7,6 +7,8 @@ from jose import JWTError, jwt
 from app.core.config import settings
 from app.schemas.auth import TokenPayload
 
+USERNAME_CHANGE_WINDOW_DAYS = 7
+
 
 def hash_password(password: str) -> str:
     """Hash a plain-text password using bcrypt."""
@@ -50,12 +52,29 @@ def decode_access_token(token: str) -> TokenPayload | None:
 
 def serialize_user(user: dict) -> dict:
     """Convert a MongoDB user document into an API-safe response shape."""
+    created_at = user.get("created_at")
+    username_change_deadline = None
+    can_change_username = False
+
+    if isinstance(created_at, datetime):
+        username_change_deadline = created_at + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+        can_change_username = datetime.now(timezone.utc) <= username_change_deadline
+
     return {
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
         "account_type": user.get("account_type"),
+        "created_at": created_at,
+        "updated_at": user.get("updated_at"),
+        "can_change_username": can_change_username,
+        "username_change_deadline": username_change_deadline,
     }
+
+
+def normalize_name(value: str) -> str:
+    """Normalize a display name for uniqueness checks."""
+    return " ".join(value.strip().split()).lower()
 
 
 def parse_object_id(value: str) -> ObjectId | None:
