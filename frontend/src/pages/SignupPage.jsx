@@ -178,10 +178,6 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  if (currentUser) {
-    return <Navigate to="/dashboard" replace />
-  }
-
   const submitStyle = useMemo(
     () => ({
       ...styles.submit,
@@ -190,6 +186,10 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, curren
     }),
     [submitting],
   )
+
+  if (currentUser) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   function handleChange(event) {
     const { name, value } = event.target

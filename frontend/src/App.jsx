@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import GiverHomePage from './pages/GiverHomePage.jsx'
 import HomePage from './pages/HomePage.jsx'
+import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import { Button, Surface } from './components/ui.jsx'
@@ -53,6 +54,7 @@ export default function App() {
   const [itemMessage, setItemMessage] = useState('')
   const [itemError, setItemError] = useState('')
   const [creatingItem, setCreatingItem] = useState(false)
+  const [lastPublishedItem, setLastPublishedItem] = useState(null)
   const [myRequests, setMyRequests] = useState([])
   const [ownerRequests, setOwnerRequests] = useState([])
   const [requestsError, setRequestsError] = useState('')
@@ -285,10 +287,13 @@ export default function App() {
 
       setItems((current) => [data, ...current])
       setMyItems((current) => [data, ...current])
+      setLastPublishedItem(data)
       setItemForm(emptyItemForm)
       setItemMessage('Your free listing is now live for the community.')
+      return data
     } catch (error) {
       setItemError(error.message)
+      return null
     } finally {
       setCreatingItem(false)
     }
@@ -465,6 +470,15 @@ export default function App() {
                   creatingItem={creatingItem}
                   itemMessage={itemMessage}
                   itemError={itemError}
+                />
+              )}
+            />
+            <Route
+              path="/item-listed-success"
+              element={(
+                <ItemListedSuccessPage
+                  currentUser={currentUser}
+                  publishedItem={lastPublishedItem}
                 />
               )}
             />

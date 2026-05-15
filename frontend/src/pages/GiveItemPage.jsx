@@ -1,10 +1,12 @@
+import { useNavigate } from 'react-router-dom'
+
 import ItemForm from '../components/ItemForm.jsx'
 import { Button, SectionHeading, Surface } from '../components/ui.jsx'
 
 const givingTips = [
-  'Use a specific title so people know exactly what you are offering.',
-  'Mention the condition honestly to keep requests thoughtful and easy to review.',
-  'If you have no image, the card will still look polished with placeholder artwork.',
+  'A warm, specific title helps the right person recognize the item quickly.',
+  'Clear condition details build trust and make requests easier to review.',
+  'If the image link breaks or is missing, your listing still gets a polished placeholder.',
 ]
 
 export default function GiveItemPage({
@@ -16,14 +18,30 @@ export default function GiveItemPage({
   itemMessage,
   itemError,
 }) {
+  const navigate = useNavigate()
+
+  async function handlePublishItem(event) {
+    const createdItem = await onCreateItem(event)
+
+    if (!createdItem) {
+      return
+    }
+
+    navigate('/item-listed-success', {
+      state: {
+        publishedItem: createdItem,
+      },
+    })
+  }
+
   return (
     <div className="space-y-8 pb-8">
-      <section className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
-        <Surface className="bg-[linear-gradient(180deg,#fff8ef,#f8efe4)] p-6 sm:p-8">
+      <section className="grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
+        <Surface className="overflow-hidden bg-[linear-gradient(180deg,#fff8ef,#f8efe4)] p-6 sm:p-8">
           <SectionHeading
-            eyebrow="Give an item"
-            title="Turn extra things at home into community value"
-            description="A polished listing form helps you share clearly while keeping the experience beginner-friendly."
+            eyebrow="List an item"
+            title="Someone nearby may truly need what you no longer use."
+            description="Create a thoughtful listing that feels generous, clear, and easy for the community to trust."
             align="start"
           />
           <div className="mt-6 grid gap-3">
@@ -42,10 +60,10 @@ export default function GiveItemPage({
               Sign in first
             </p>
             <h2 className="mt-5 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-3xl font-semibold tracking-[-0.04em] text-[#20352e]">
-              Create an account before posting your first listing
+              Log in before publishing your next listing
             </h2>
             <p className="mt-4 max-w-xl text-sm leading-7 text-[#65736e]">
-              We keep listings connected to real community members so requests stay personal and trustworthy.
+              We keep listings connected to real community members so requests stay personal, warm, and trustworthy.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button as="link" to="/login">
@@ -61,7 +79,7 @@ export default function GiveItemPage({
             <ItemForm
               itemForm={itemForm}
               onChange={onItemChange}
-              onSubmit={onCreateItem}
+              onSubmit={handlePublishItem}
               creatingItem={creatingItem}
               itemMessage={itemMessage}
               itemError={itemError}
