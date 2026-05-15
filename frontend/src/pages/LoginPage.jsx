@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 
@@ -61,13 +62,17 @@ const styles = {
   },
 }
 
-export default function LoginPage({ apiBase, onSuccess, onSwitchToSignup }) {
+export default function LoginPage({ apiBase, onSuccess, onSwitchToSignup, currentUser }) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  if (currentUser) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   const submitStyle = useMemo(
     () => ({

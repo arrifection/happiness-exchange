@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 
@@ -166,7 +167,7 @@ function AccountTypeCard({ option, selected, onSelect }) {
   )
 }
 
-export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin }) {
+export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin, currentUser }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -176,6 +177,10 @@ export default function SignupPage({ apiBase, onSuccess, onSwitchToLogin }) {
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+
+  if (currentUser) {
+    return <Navigate to="/dashboard" replace />
+  }
 
   const submitStyle = useMemo(
     () => ({
