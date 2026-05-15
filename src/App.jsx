@@ -272,6 +272,12 @@ export default function App() {
   }
 
   function handleAuthSuccess(data) {
+    setAuthError('')
+
+    if (data.user) {
+      setCurrentUser(data.user)
+    }
+
     if (data.access_token) {
       localStorage.setItem(TOKEN_KEY, data.access_token)
       setToken(data.access_token)
