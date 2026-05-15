@@ -1,49 +1,71 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { Button, TextAreaField, TextField } from './ui.jsx'
+import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
+
+const CATEGORIES = [
+  'Furniture', 'Home', 'Kitchen', 'Electronics',
+  'Clothes', 'Baby', 'Books', 'Appliances',
+  'Study', 'Sports', 'Toys', 'Other',
+]
+
+const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
+
+const LOCATIONS = [
+  'Lahore', 'Karachi', 'Islamabad', 'Rawalpindi',
+  'Faisalabad', 'Multan', 'Gujranwala', 'Sialkot',
+  'Peshawar', 'Quetta', 'Hyderabad', 'Bahawalpur',
+  'Sargodha', 'Mandi Bahauddin', 'Sukkur', 'Larkana',
+  'Sheikhupura', 'Jhang', 'Rahim Yar Khan', 'Kasur',
+]
 
 const fieldHelpText = {
-  title: 'Choose a clear everyday title so people understand the item quickly.',
-  description: 'Mention size, condition, pickup expectations, and anything a nearby family should know.',
-  category: 'A simple category like Furniture, Baby, Kitchen, or Books works well.',
-  condition: 'Be honest and kind here. Clear condition details help build trust.',
-  location: 'Use the neighborhood or city area where the item can be picked up.',
-  image_url: 'Paste a direct image URL if you have one. Real uploads can come later.',
-}
-
-function helperMessage(fieldName, errorMessage) {
-  return errorMessage || fieldHelpText[fieldName]
+  owner_name: 'Your name as it will appear to neighbors.',
+  title: 'Give your item a clear, concise name.',
+  description: 'Describe condition, usage, and pickup details clearly.',
+  category: 'Choose the best category for your item.',
+  condition: 'Be honest about the current state.',
+  location: 'Select your city for pickup.',
+  image_url: 'A clear photo helps your item find a home faster.',
 }
 
 function validateItemForm(itemForm) {
   const errors = {}
 
-  if (!itemForm.title.trim()) {
-    errors.title = 'Please add a title.'
+  if (!itemForm.owner_name?.trim()) {
+    errors.owner_name = 'Your name is required.'
   }
 
-  if (!itemForm.description.trim()) {
-    errors.description = 'Please describe the item.'
+  if (!itemForm.title?.trim()) {
+    errors.title = 'Item title is required.'
+  } else if (itemForm.title.trim().length < 3) {
+    errors.title = 'Title must be at least 3 characters.'
   }
 
-  if (!itemForm.category.trim()) {
-    errors.category = 'Please choose a category.'
+  if (!itemForm.description?.trim()) {
+    errors.description = 'Description is required.'
+  } else if (itemForm.description.trim().length < 30) {
+    errors.description = 'Please provide at least 30 characters.'
   }
 
-  if (!itemForm.condition.trim()) {
-    errors.condition = 'Please share the item condition.'
+  if (!itemForm.category) {
+    errors.category = 'Please select a category.'
   }
 
-  if (!itemForm.location.trim()) {
-    errors.location = 'Please add a pickup location.'
+  if (!itemForm.condition) {
+    errors.condition = 'Please select the condition.'
   }
 
-  if (itemForm.image_url.trim()) {
+  if (!itemForm.location) {
+    errors.location = 'Please select a location.'
+  }
+
+  if (!itemForm.image_url?.trim()) {
+    errors.image_url = 'An image URL is now required.'
+  } else {
     try {
-      // Validate early so we can show a friendly message before submit.
       new URL(itemForm.image_url.trim())
     } catch {
-      errors.image_url = 'Please enter a valid image URL.'
+      errors.image_url = 'Please enter a valid URL (e.g. https://...).'
     }
   }
 
@@ -51,67 +73,55 @@ function validateItemForm(itemForm) {
 }
 
 function PreviewCard({ itemForm, imageAvailable, onImageError }) {
-  const previewTitle = itemForm.title.trim() || 'Your item preview'
-  const previewDescription = itemForm.description.trim() || 'A helpful listing preview will appear here as you type.'
-  const previewCategory = itemForm.category.trim() || 'Category'
-  const previewCondition = itemForm.condition.trim() || 'Condition'
-  const previewLocation = itemForm.location.trim() || 'Location'
+  const previewTitle = itemForm.title.trim() || 'Item Preview'
+  const previewDescription = itemForm.description.trim() || 'Detailed description will appear here...'
+  const previewCategory = itemForm.category || 'Category'
+  const previewCondition = itemForm.condition || 'Condition'
+  const previewLocation = itemForm.location || 'Location'
+  const previewOwner = itemForm.owner_name?.trim() || 'Your Name'
 
   return (
-    <div className="overflow-hidden rounded-[30px] border border-white/75 bg-white/84 shadow-[0_18px_50px_rgba(29,33,44,0.08)] backdrop-blur">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,rgba(141,189,167,0.9),rgba(243,191,168,0.88))]">
+    <div className="flex overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm transition-all duration-500">
+      <div className="relative aspect-square w-28 shrink-0 overflow-hidden bg-[#f4efe7] sm:w-36">
         {itemForm.image_url.trim() && imageAvailable ? (
-          <>
-            <img
-              src={itemForm.image_url.trim()}
-              alt={previewTitle}
-              className="h-full w-full object-cover"
-              onError={onImageError}
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(32,53,46,0.54)_100%)]" />
-          </>
+          <img
+            src={itemForm.image_url.trim()}
+            alt={previewTitle}
+            className="h-full w-full object-cover"
+            onError={onImageError}
+          />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center px-8 text-center text-white">
-            <div className="flex h-20 w-20 items-center justify-center rounded-[28px] bg-white/22 shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur">
-              <div className="h-10 w-10 rounded-2xl border border-white/60 bg-white/82" />
-            </div>
-            <h3 className="mt-5 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-xl font-semibold">
-              Shared with care
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-white/84">
-              If no image is available, your listing still feels warm and polished to the community.
-            </p>
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+            <svg className="mb-2 h-6 w-6 text-[#8c755f]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">Photo Preview</span>
           </div>
         )}
-
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
-          <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[#466359] shadow-sm">
-            {previewCategory}
-          </span>
-          <span className="rounded-full bg-white/88 px-3 py-1 text-xs font-semibold capitalize text-[#7b6d60] shadow-sm">
-            Preview
-          </span>
-        </div>
       </div>
 
-      <div className="space-y-4 p-6">
-        <div>
-          <h3 className="font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-2xl font-semibold tracking-[-0.04em] text-[#20352e]">
-            {previewTitle}
-          </h3>
-          <p className="mt-3 text-sm leading-7 text-[#64736e]">{previewDescription}</p>
+      <div className="flex flex-1 flex-col justify-between p-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[15px] font-bold leading-tight text-[#1f3328] line-clamp-1">{previewTitle}</h3>
+            <span className="shrink-0 rounded-full bg-[#1f6f50]/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#1f6f50]">
+              {previewCategory}
+            </span>
+          </div>
+          <p className="line-clamp-2 text-[11px] leading-relaxed text-[#68766d]">
+            {previewDescription}
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#f3efe7] px-3 py-1.5 text-xs font-medium text-[#4f615b]">
-            {previewCondition}
-          </span>
-          <span className="rounded-full bg-[#eef6f1] px-3 py-1.5 text-xs font-medium text-[#447261]">
-            {previewLocation}
-          </span>
-          <span className="rounded-full bg-[#fff2ea] px-3 py-1.5 text-xs font-medium text-[#b06144]">
-            Ready to publish
-          </span>
+        <div className="mt-3 border-t border-[#f4efe7] pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight text-[#8c755f]">
+              <span>{previewLocation}</span>
+              <span className="opacity-30">•</span>
+              <span>{previewCondition}</span>
+            </div>
+            <span className="text-[10px] font-bold text-[#1f6f50]/70">By {previewOwner.split(' ')[0]}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -127,10 +137,14 @@ export default function ItemForm({
   itemError,
 }) {
   const [fieldErrors, setFieldErrors] = useState({})
-  const [imageAvailable, setImageAvailable] = useState(Boolean(itemForm.image_url.trim()))
+  const [imageAvailable, setImageAvailable] = useState(false)
 
   useEffect(() => {
-    setImageAvailable(Boolean(itemForm.image_url.trim()))
+    if (itemForm.image_url?.trim()) {
+      setImageAvailable(true)
+    } else {
+      setImageAvailable(false)
+    }
   }, [itemForm.image_url])
 
   const hasValidationErrors = useMemo(
@@ -142,22 +156,20 @@ export default function ItemForm({
     const { name } = event.target
     onChange(event)
 
-    setFieldErrors((current) => {
-      if (!current[name]) {
-        return current
-      }
-
-      const updated = { ...current }
-      delete updated[name]
-      return updated
-    })
+    if (fieldErrors[name]) {
+      setFieldErrors((current) => {
+        const updated = { ...current }
+        delete updated[name]
+        return updated
+      })
+    }
   }
 
   async function handleFormSubmit(event) {
+    event.preventDefault()
     const nextErrors = validateItemForm(itemForm)
 
     if (Object.keys(nextErrors).length > 0) {
-      event.preventDefault()
       setFieldErrors(nextErrors)
       return
     }
@@ -167,144 +179,173 @@ export default function ItemForm({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+    <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
       <form className="grid gap-6" onSubmit={handleFormSubmit} noValidate>
-        <div className="max-w-2xl">
-          <p className="inline-flex rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#b35d3c]">
-            Share a listing
-          </p>
-          <h2 className="mt-4 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-3xl font-semibold tracking-[-0.04em] text-[#20352e]">
-            Tell the community what you&apos;re passing along
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1f6f50]">List an Item</p>
+          <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f3328]">
+            Give with Joy
           </h2>
-          <p className="mt-3 text-sm leading-7 text-[#65736e]">
-            Keep it clear, warm, and honest so someone nearby can quickly tell whether it is the right fit.
+          <p className="text-sm leading-relaxed text-[#68766d]">
+            Fill in the details below to share your item with the community.
           </p>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div>
-            <TextField
-              id="item-title"
-              name="title"
-              label="Title"
-              value={itemForm.title}
-              onChange={handleFormChange}
-              placeholder="Wooden study table"
-              required
-            />
-            <p className={`mt-2 text-sm ${fieldErrors.title ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('title', fieldErrors.title)}
-            </p>
+        <div className="grid gap-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <TextField
+                id="item-owner_name"
+                name="owner_name"
+                label="Your Name"
+                value={itemForm.owner_name}
+                onChange={handleFormChange}
+                placeholder="Jane Doe"
+                required
+              />
+              <p className={`mt-1.5 text-[10px] ${fieldErrors.owner_name ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.owner_name || fieldHelpText.owner_name}
+              </p>
+            </div>
+
+            <div>
+              <TextField
+                id="item-title"
+                name="title"
+                label="Item Title"
+                value={itemForm.title}
+                onChange={handleFormChange}
+                placeholder="e.g. Wooden Dining Table"
+                required
+              />
+              <p className={`mt-1.5 text-[10px] ${fieldErrors.title ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.title || fieldHelpText.title}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            <div>
+              <SelectField
+                id="item-category"
+                name="category"
+                label="Category"
+                value={itemForm.category}
+                onChange={handleFormChange}
+                options={CATEGORIES}
+                placeholder="Select..."
+                required
+              />
+              <p className={`mt-1.5 text-[10px] ${fieldErrors.category ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.category || fieldHelpText.category}
+              </p>
+            </div>
+
+            <div>
+              <SelectField
+                id="item-condition"
+                name="condition"
+                label="Condition"
+                value={itemForm.condition}
+                onChange={handleFormChange}
+                options={CONDITIONS}
+                placeholder="Select..."
+                required
+              />
+              <p className={`mt-1.5 text-[10px] ${fieldErrors.condition ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.condition || fieldHelpText.condition}
+              </p>
+            </div>
+
+            <div>
+              <SelectField
+                id="item-location"
+                name="location"
+                label="Location"
+                value={itemForm.location}
+                onChange={handleFormChange}
+                options={LOCATIONS}
+                placeholder="Select City"
+                required
+              />
+              <p className={`mt-1.5 text-[10px] ${fieldErrors.location ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.location || fieldHelpText.location}
+              </p>
+            </div>
           </div>
 
           <div>
             <TextField
-              id="item-category"
-              name="category"
-              label="Category"
-              value={itemForm.category}
+              id="item-image_url"
+              name="image_url"
+              label="Image URL"
+              value={itemForm.image_url}
               onChange={handleFormChange}
-              placeholder="Furniture"
+              placeholder="https://images.unsplash.com/photo..."
               required
             />
-            <p className={`mt-2 text-sm ${fieldErrors.category ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('category', fieldErrors.category)}
+            <p className={`mt-1.5 text-[10px] ${fieldErrors.image_url ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              {fieldErrors.image_url || fieldHelpText.image_url}
             </p>
           </div>
 
-          <div className="lg:col-span-2">
+          <div>
             <TextAreaField
               id="item-description"
               name="description"
               label="Description"
               value={itemForm.description}
               onChange={handleFormChange}
-              placeholder="Describe the size, condition, pickup expectations, and anything helpful to know."
+              placeholder="Describe condition, usage, and pickup details clearly."
               rows={5}
               required
             />
-            <p className={`mt-2 text-sm ${fieldErrors.description ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('description', fieldErrors.description)}
-            </p>
-          </div>
-
-          <div>
-            <TextField
-              id="item-condition"
-              name="condition"
-              label="Condition"
-              value={itemForm.condition}
-              onChange={handleFormChange}
-              placeholder="Gently used"
-              required
-            />
-            <p className={`mt-2 text-sm ${fieldErrors.condition ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('condition', fieldErrors.condition)}
-            </p>
-          </div>
-
-          <div>
-            <TextField
-              id="item-location"
-              name="location"
-              label="Location"
-              value={itemForm.location}
-              onChange={handleFormChange}
-              placeholder="Lahore"
-              required
-            />
-            <p className={`mt-2 text-sm ${fieldErrors.location ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('location', fieldErrors.location)}
-            </p>
-          </div>
-
-          <div className="lg:col-span-2">
-            <TextField
-              id="item-image-url"
-              name="image_url"
-              label="Image URL"
-              value={itemForm.image_url}
-              onChange={handleFormChange}
-              placeholder="https://example.com/item.jpg"
-            />
-            <p className={`mt-2 text-sm ${fieldErrors.image_url ? 'font-medium text-[#b04e43]' : 'text-[#6a7773]'}`}>
-              {helperMessage('image_url', fieldErrors.image_url)}
+            <p className={`mt-1.5 text-[10px] ${fieldErrors.description ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              {fieldErrors.description || fieldHelpText.description}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 rounded-[28px] border border-[#f0e8dc] bg-[#fff9f3] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-medium text-[#29413b]">Listings stay free and community-first.</p>
-            <p className="mt-1 text-sm text-[#6a7773]">
-              Someone nearby may truly need what you no longer use, so a clear listing can make the handoff easier.
-            </p>
-          </div>
-          <Button type="submit" className="sm:min-w-44" disabled={creatingItem || hasValidationErrors}>
-            {creatingItem ? 'Publishing Item...' : 'Publish Item'}
+        <div className="pt-4">
+          <Button
+            type="submit"
+            disabled={creatingItem || hasValidationErrors}
+            className="h-12 w-full text-sm shadow-xl shadow-[#1f6f50]/20"
+          >
+            {creatingItem ? 'Publishing Listing...' : 'Publish to Community'}
           </Button>
-        </div>
 
-        {itemMessage ? <p className="text-sm font-medium text-[#1d6b57]">{itemMessage}</p> : null}
-        {itemError ? <p className="text-sm font-medium text-[#b04e43]">{itemError}</p> : null}
+          {itemMessage && (
+            <div className="mt-4 rounded-xl bg-[#1f6f50]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#1f6f50]">
+              {itemMessage}
+            </div>
+          )}
+          {itemError && (
+            <div className="mt-4 rounded-xl bg-[#c65d4a]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#c65d4a]">
+              {itemError}
+            </div>
+          )}
+        </div>
       </form>
 
-      <div className="space-y-5">
-        <div className="rounded-[28px] border border-white/70 bg-white/72 p-5 shadow-[0_18px_40px_rgba(35,39,46,0.07)] backdrop-blur">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#b35d3c]">Preview</p>
-          <h3 className="mt-3 font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui] text-2xl font-semibold tracking-[-0.04em] text-[#20352e]">
-            See how your item will appear
-          </h3>
-          <p className="mt-2 text-sm leading-7 text-[#65736e]">
-            A calm, readable preview helps you catch anything missing before you publish.
-          </p>
+      <div className="hidden space-y-6 lg:block">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c755f]">Live Preview</p>
+          <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-base font-bold text-[#1f3328]">Check your listing</h3>
         </div>
-
-        <PreviewCard
-          itemForm={itemForm}
-          imageAvailable={imageAvailable}
-          onImageError={() => setImageAvailable(false)}
-        />
+        <div className="sticky top-28">
+          <PreviewCard
+            itemForm={itemForm}
+            imageAvailable={imageAvailable}
+            onImageError={() => setImageAvailable(false)}
+          />
+          <div className="mt-6 rounded-2xl bg-[#f4efe7]/50 p-5">
+            <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1f3328]">Why details matter?</h4>
+            <p className="mt-2 text-[11px] leading-relaxed text-[#68766d]">
+              Items with clear photos and detailed descriptions are 3x more likely to find a new home quickly. Be sure to mention if any parts are missing or if there's minor wear.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

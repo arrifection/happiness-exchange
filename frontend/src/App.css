@@ -1,103 +1,38 @@
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
+/* 
+  Happiness Exchange - Core Styles
+  Minimal direction: focusing on warmth and clarity.
+*/
+
+:root {
+  --color-fresh-green: #1f6f50;
+  --color-warm-cream: #faf7f1;
+  --color-ink: #1f3328;
+  --color-muted: #68766d;
 }
 
-.auth-card {
-  width: 100%;
-  max-width: 520px;
-  background: #ffffff;
-  border: 1px solid #d8dee8;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+/* Base app padding for fixed navigation */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-.eyebrow {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #0f766e;
+/* Smooth line-clamping */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.intro {
-  margin-bottom: 1.5rem;
-  color: #475569;
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.status-panel,
-.user-panel,
-.auth-form {
-  border: 1px solid #d8dee8;
-  border-radius: 12px;
-  padding: 1rem;
-  background: #f8fafc;
-  margin-bottom: 1rem;
-}
-
-.view-switcher {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.view-switcher button,
-.auth-form button,
-.user-panel button {
-  border: 0;
-  border-radius: 10px;
-  padding: 0.8rem 1rem;
-  background: #0f766e;
-  color: #ffffff;
-  font: inherit;
-  cursor: pointer;
-}
-
-.view-switcher button {
-  flex: 1;
-  background: #dbe4ea;
-  color: #0f172a;
-}
-
-.view-switcher button.active {
-  background: #0f766e;
-  color: #ffffff;
-}
-
-.auth-form {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.auth-form label {
-  display: grid;
-  gap: 0.35rem;
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.auth-form input {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 0.75rem 0.85rem;
-  font: inherit;
-}
-
-.message {
-  margin: 0.75rem 0 0;
-  color: #334155;
-}
-
-.message.error {
-  color: #b91c1c;
-}
-
-.token-label {
-  color: #475569;
-  font-size: 0.95rem;
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
