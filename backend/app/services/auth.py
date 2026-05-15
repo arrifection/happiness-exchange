@@ -57,6 +57,10 @@ def serialize_user(user: dict) -> dict:
     can_change_username = False
 
     if isinstance(created_at, datetime):
+        # MongoDB may return naive UTC datetimes, so normalize before comparisons.
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+
         username_change_deadline = created_at + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
         can_change_username = datetime.now(timezone.utc) <= username_change_deadline
 
