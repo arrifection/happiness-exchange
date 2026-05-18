@@ -110,65 +110,21 @@
   }
 }
 
-@keyframes brand-logo-float {
-  0% {
-    opacity: 0;
-    transform: translateY(12px) scale(0.92);
-  }
-  55% {
-    opacity: 1;
-    transform: translateY(0) scale(1.03);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* ── Liquid Logo Animation Keyframes ── */
+@keyframes he-dotIn {
+  0%   { opacity: 0; transform: scale(0); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes brand-title-fade {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes he-drawSmile {
+  to { stroke-dashoffset: 0; }
 }
 
-@keyframes brand-square-pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+@keyframes he-slideIn {
+  to { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes brand-smile-draw {
-  0% {
-    opacity: 0;
-    transform: translateX(-58%) scaleX(0.3);
-  }
-  100% {
-    opacity: 0.85;
-    transform: translateX(-58%) scaleX(1);
-  }
-}
-
-@keyframes brand-eye-blink {
-  0%, 20%, 100% {
-    transform: scaleY(1);
-    opacity: 0.85;
-  }
-  28%, 34% {
-    transform: scaleY(0.2);
-    opacity: 0.7;
-  }
-  62%, 68% {
-    transform: scaleY(0.15);
-    opacity: 0.7;
-  }
+@keyframes he-pulseOut {
+  0%   { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.45); }
 }
