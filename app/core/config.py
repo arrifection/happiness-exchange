@@ -1,7 +1,11 @@
+import logging
+import os
 from typing import List
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -37,19 +41,45 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        # Primary Vercel deployment
         "https://happiness-exchange.vercel.app",
+        # Allow all *.vercel.app preview URLs for this project
+        "https://happiness-exchange-*.vercel.app",
+        "https://arrifection-happiness-exchange*.vercel.app",
     ]
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def split_allowed_origins(cls, v):
+        """
+        If ALLOWED_ORIGINS is provided as a comma-separated string in the
+        environment (e.g. in HF Spaces secrets), split it into a list.
+        """
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
-        "env_nested_delimiter": ",",
+        # Use | as nested delimiter so commas in ALLOWED_ORIGINS are not consumed
+        "env_nested_delimiter": "|",
     }
+
+    def log_startup_info(self) -> None:
+        """Log safe startup diagnostics — never prints secrets."""
+        uri_present = bool(self.MONGODB_URI and self.MONGODB_URI != "mongodb://localhost:27017")
+        logger.info("=== Happiness Exchange startup ===")
+        logger.info("MONGODB_URI present: %s", uri_present)
+        logger.info("DB_NAME: %s", self.DB_NAME)
+        logger.info("JWT_SECRET_KEY is default: %s", self.JWT_SECRET_KEY == "change-this-in-production")
+        logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
 
 settings = Settings()

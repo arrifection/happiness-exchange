@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from contextlib import suppress
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -84,8 +85,11 @@ async def connect_to_mongo() -> None:
             return
 
         pending_client = None
+        uri_present = bool(os.environ.get("MONGODB_URI"))
+        logger.info("[DB] MONGODB_URI present: %s", uri_present)
+        logger.info("[DB] DB_NAME: %s", settings.DB_NAME)
         try:
-            logger.info("Connecting to MongoDB...")
+            logger.info("[DB] Connecting to MongoDB...")
             pending_client = await _create_client_and_ping()
             database = pending_client[settings.DB_NAME]
             client = pending_client
@@ -94,8 +98,8 @@ async def connect_to_mongo() -> None:
             try:
                 await _ensure_indexes(database)
             except Exception as exc:
-                logger.warning("MongoDB connected but index sync failed: %s", exc)
-            logger.info("MongoDB connected - database: '%s'", settings.DB_NAME)
+                logger.warning("[DB] MongoDB connected but index sync failed: %s", exc)
+            logger.info("[DB] MongoDB ping: ok — database: '%s'", settings.DB_NAME)
         except Exception as exc:
             _indexes_ready = False
             if pending_client is not None:
@@ -104,7 +108,9 @@ async def connect_to_mongo() -> None:
             client = None
             db = None
             _last_connection_error = str(exc)
-            logger.error("MongoDB connection failed during startup: %s", exc)
+            # Strip credentials from error before logging
+            safe_msg = str(exc).split("@")[-1] if "@" in str(exc) else str(exc)
+            logger.error("[DB] MongoDB ping: FAILED — %s", safe_msg)
 
 
 async def get_db_async():
