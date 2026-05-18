@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import suppress
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -11,6 +12,10 @@ client: AsyncIOMotorClient | None = None
 db = None
 _connect_lock: asyncio.Lock | None = None
 _indexes_ready = False
+_last_connection_error: str | None = None
+
+CONNECT_RETRY_ATTEMPTS = 3
+CONNECT_RETRY_DELAY_SECONDS = 1
 
 
 def _get_connect_lock() -> asyncio.Lock:
@@ -38,11 +43,39 @@ async def _ensure_indexes(database) -> None:
     _indexes_ready = True
 
 
+async def _create_client_and_ping() -> AsyncIOMotorClient:
+    last_error: Exception | None = None
+
+    for attempt in range(1, CONNECT_RETRY_ATTEMPTS + 1):
+        pending_client = AsyncIOMotorClient(
+            settings.MONGODB_URI,
+            serverSelectionTimeoutMS=8000,
+            connectTimeoutMS=8000,
+        )
+        try:
+            await pending_client.admin.command("ping")
+            return pending_client
+        except Exception as exc:
+            last_error = exc
+            pending_client.close()
+            logger.warning(
+                "MongoDB ping attempt %s/%s failed: %s",
+                attempt,
+                CONNECT_RETRY_ATTEMPTS,
+                exc,
+            )
+            if attempt < CONNECT_RETRY_ATTEMPTS:
+                await asyncio.sleep(CONNECT_RETRY_DELAY_SECONDS)
+
+    assert last_error is not None
+    raise last_error
+
+
 async def connect_to_mongo() -> None:
     """
     Connect once and reuse the client across requests.
     """
-    global client, db, _indexes_ready
+    global client, db, _indexes_ready, _last_connection_error
     if db is not None:
         return
 
@@ -53,23 +86,24 @@ async def connect_to_mongo() -> None:
         pending_client = None
         try:
             logger.info("Connecting to MongoDB...")
-            pending_client = AsyncIOMotorClient(
-                settings.MONGODB_URI,
-                serverSelectionTimeoutMS=8000,
-                connectTimeoutMS=8000,
-            )
-            await pending_client.admin.command("ping")
+            pending_client = await _create_client_and_ping()
             database = pending_client[settings.DB_NAME]
-            await _ensure_indexes(database)
             client = pending_client
             db = database
+            _last_connection_error = None
+            try:
+                await _ensure_indexes(database)
+            except Exception as exc:
+                logger.warning("MongoDB connected but index sync failed: %s", exc)
             logger.info("MongoDB connected - database: '%s'", settings.DB_NAME)
         except Exception as exc:
             _indexes_ready = False
             if pending_client is not None:
-                pending_client.close()
+                with suppress(Exception):
+                    pending_client.close()
             client = None
             db = None
+            _last_connection_error = str(exc)
             logger.error("MongoDB connection failed during startup: %s", exc)
 
 
@@ -139,3 +173,8 @@ def get_requests_collection():
     if database is None:
         return None
     return database.requests
+
+
+def get_last_connection_error() -> str | None:
+    """Return the last MongoDB connection error for debugging."""
+    return _last_connection_error
