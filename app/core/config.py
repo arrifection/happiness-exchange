@@ -70,6 +70,7 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
         # Use | as nested delimiter so commas in ALLOWED_ORIGINS are not consumed
         "env_nested_delimiter": "|",
+        "str_strip_whitespace": True,
     }
 
     def log_startup_info(self) -> None:
