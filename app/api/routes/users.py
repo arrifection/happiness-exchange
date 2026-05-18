@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps.auth import get_current_user
 from app.db.mongodb import (
-    get_items_collection,
-    get_requests_collection,
-    get_users_collection,
+    get_items_collection_async,
+    get_requests_collection_async,
+    get_users_collection_async,
 )
 from app.schemas.auth import ProfileUpdateRequest, UserResponse
 from app.services.auth import USERNAME_CHANGE_WINDOW_DAYS, normalize_name, parse_object_id, serialize_user
@@ -26,7 +26,7 @@ async def update_me(
     current_user: dict = Depends(get_current_user),
 ):
     """Update the authenticated user's profile within allowed rules."""
-    users_collection = get_users_collection()
+    users_collection = await get_users_collection_async()
     if users_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -92,14 +92,14 @@ async def update_me(
         },
     )
 
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is not None:
         await items_collection.update_many(
             {"owner_id": current_user["id"]},
             {"$set": {"owner_name": cleaned_name}},
         )
 
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is not None:
         await requests_collection.update_many(
             {"requester_id": current_user["id"]},

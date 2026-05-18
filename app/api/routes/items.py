@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user
-from app.db.mongodb import get_items_collection, get_requests_collection
+from app.db.mongodb import get_items_collection_async, get_requests_collection_async
 from app.schemas.items import ItemCreateRequest, ItemResponse
 from app.services.auth import parse_object_id
 from app.services.items import build_item_document, serialize_item
@@ -18,7 +18,7 @@ async def create_item(
     current_user: dict = Depends(get_current_user),
 ):
     """Create a new item listing for the logged-in user."""
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -36,7 +36,7 @@ async def create_item(
 @router.get("/items", response_model=list[ItemResponse])
 async def list_items():
     """Return public item listings with their current status."""
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -51,8 +51,8 @@ async def list_items():
 @router.get("/items/my", response_model=list[ItemResponse])
 async def list_my_items(current_user: dict = Depends(get_current_user)):
     """Return item listings created by the logged-in user."""
-    items_collection = get_items_collection()
-    requests_collection = get_requests_collection()
+    items_collection = await get_items_collection_async()
+    requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -77,7 +77,7 @@ async def list_my_items(current_user: dict = Depends(get_current_user)):
 @router.get("/items/{item_id}", response_model=ItemResponse)
 async def get_item(item_id: str):
     """Return a single item listing by its id."""
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -107,7 +107,7 @@ async def delete_item(
     current_user: dict = Depends(get_current_user),
 ):
     """Delete an item listing. Only the owner can delete."""
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -137,7 +137,7 @@ async def delete_item(
     await items_collection.delete_one({"_id": object_id})
 
     # Clean up associated requests
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is not None:
         await requests_collection.delete_many({"item_id": item_id})
 
@@ -150,7 +150,7 @@ async def complete_item(
     current_user: dict = Depends(get_current_user),
 ):
     """Mark an item as successfully taken/completed. Only the owner can do this."""
-    items_collection = get_items_collection()
+    items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -182,7 +182,7 @@ async def complete_item(
         {"$set": {"status": "completed"}},
     )
 
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is not None:
         await requests_collection.update_many(
             {

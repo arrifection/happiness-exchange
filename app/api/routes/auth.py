@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
-from app.db.mongodb import get_users_collection
+from app.db.mongodb import get_users_collection_async
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
 from app.services.auth import (
     create_access_token,
@@ -19,7 +19,7 @@ router = APIRouter()
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(payload: SignupRequest):
     """Create a new user account and immediately return an access token."""
-    users_collection = get_users_collection()
+    users_collection = await get_users_collection_async()
     if users_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -76,7 +76,7 @@ async def signup(payload: SignupRequest):
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest):
     """Authenticate an existing user and return an access token."""
-    users_collection = get_users_collection()
+    users_collection = await get_users_collection_async()
     if users_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

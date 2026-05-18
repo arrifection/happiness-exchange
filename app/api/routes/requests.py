@@ -5,7 +5,7 @@ from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps.auth import get_current_user
-from app.db.mongodb import get_items_collection, get_requests_collection
+from app.db.mongodb import get_items_collection_async, get_requests_collection_async
 from app.schemas.requests import RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
@@ -19,8 +19,8 @@ async def create_request(
     current_user: dict = Depends(get_current_user),
 ):
     """Create an interest request for an item."""
-    items_collection = get_items_collection()
-    requests_collection = get_requests_collection()
+    items_collection = await get_items_collection_async()
+    requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -71,7 +71,7 @@ async def create_request(
 @router.get("/requests/my", response_model=list[RequestResponse])
 async def list_my_requests(current_user: dict = Depends(get_current_user)):
     """Return requests created by the logged-in user."""
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -88,7 +88,7 @@ async def list_my_requests(current_user: dict = Depends(get_current_user)):
 @router.get("/requests/incoming", response_model=list[RequestResponse])
 async def list_incoming_requests(current_user: dict = Depends(get_current_user)):
     """Return requests for items owned by the logged-in user."""
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -108,8 +108,8 @@ async def list_item_requests(
     current_user: dict = Depends(get_current_user),
 ):
     """Return requests for an item, only for that item's owner."""
-    items_collection = get_items_collection()
-    requests_collection = get_requests_collection()
+    items_collection = await get_items_collection_async()
+    requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -147,8 +147,8 @@ async def approve_request(
     current_user: dict = Depends(get_current_user),
 ):
     """Approve a request and reserve the related item."""
-    items_collection = get_items_collection()
-    requests_collection = get_requests_collection()
+    items_collection = await get_items_collection_async()
+    requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -241,7 +241,7 @@ async def reject_request(
     current_user: dict = Depends(get_current_user),
 ):
     """Reject a pending request."""
-    requests_collection = get_requests_collection()
+    requests_collection = await get_requests_collection_async()
     if requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

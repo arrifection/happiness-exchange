@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.core.config import settings
+from app.db.mongodb import get_db_async
 
 router = APIRouter()
 
@@ -15,7 +16,9 @@ async def health_check():
         "project": "Happiness Exchange"
     }
     """
+    database = await get_db_async()
     return {
         "status": "online",
         "project": settings.PROJECT_NAME,
+        "database": "connected" if database is not None else "disconnected",
     }

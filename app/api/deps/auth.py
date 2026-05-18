@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.db.mongodb import get_users_collection
+from app.db.mongodb import get_users_collection_async
 from app.services.auth import decode_access_token, parse_object_id, serialize_user
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -24,7 +24,7 @@ async def get_current_user(
             detail="Invalid or expired token.",
         )
 
-    users_collection = get_users_collection()
+    users_collection = await get_users_collection_async()
     if users_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
