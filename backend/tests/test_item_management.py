@@ -149,10 +149,16 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             ]
         )
 
-        items_routes.get_items_collection = lambda: self.items_collection
-        items_routes.get_requests_collection = lambda: self.requests_collection
-        requests_routes.get_items_collection = lambda: self.items_collection
-        requests_routes.get_requests_collection = lambda: self.requests_collection
+        async def get_items_collection_async():
+            return self.items_collection
+
+        async def get_requests_collection_async():
+            return self.requests_collection
+
+        items_routes.get_items_collection_async = get_items_collection_async
+        items_routes.get_requests_collection_async = get_requests_collection_async
+        requests_routes.get_items_collection_async = get_items_collection_async
+        requests_routes.get_requests_collection_async = get_requests_collection_async
 
         self.app = FastAPI()
         self.app.include_router(items_routes.router, prefix="/api")
@@ -169,6 +175,26 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(len(self.items_collection.documents), 0)
         self.assertEqual(len(self.requests_collection.documents), 0)
+
+    def test_create_item_keeps_only_image_url_in_storage(self):
+        payload = {
+            "title": "Dining chair",
+            "description": "A sturdy wooden chair with a clean seat and minor paint wear.",
+            "category": "Furniture",
+            "condition": "Good",
+            "location": "Lahore",
+            "image_url": "https://res.cloudinary.com/demo/image/upload/chair.png",
+        }
+
+        with self.make_client(self.owner_user) as client:
+            response = client.post("/api/items", json=payload)
+
+        self.assertEqual(response.status_code, 201)
+        created_document = self.items_collection.documents[-1]
+        self.assertEqual(created_document["image_url"], payload["image_url"])
+        self.assertNotIn("image", created_document)
+        self.assertNotIn("image_base64", created_document)
+        self.assertNotIn("image_binary", created_document)
 
     def test_non_owner_cannot_delete_item(self):
         with self.make_client(self.other_user) as client:
@@ -202,4 +228,53 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(
             response.json()["detail"],
             "This item is not currently available for requests.",
+        )
+
+    def test_upload_image_rejects_non_image_files(self):
+        with self.make_client(self.owner_user) as client:
+            response = client.post(
+                "/api/items/upload-image",
+                files={"file": ("notes.txt", b"not-an-image", "text/plain")},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "Please choose an image file (JPG, PNG, WEBP, etc.).",
+        )
+
+    def test_upload_image_rejects_large_files(self):
+        oversized_image = b"0" * ((5 * 1024 * 1024) + 1)
+
+        with self.make_client(self.owner_user) as client:
+            response = client.post(
+                "/api/items/upload-image",
+                files={"file": ("large.png", oversized_image, "image/png")},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "Please choose an image smaller than 5 MB.",
+        )
+
+    def test_upload_image_returns_secure_url(self):
+        async def fake_upload_image_to_cloudinary(*, file_name, content_type, file_bytes):
+            self.assertEqual(file_name, "lamp.png")
+            self.assertEqual(content_type, "image/png")
+            self.assertEqual(file_bytes, b"png-bytes")
+            return "https://res.cloudinary.com/demo/image/upload/sample.png"
+
+        items_routes.upload_image_to_cloudinary = fake_upload_image_to_cloudinary
+
+        with self.make_client(self.owner_user) as client:
+            response = client.post(
+                "/api/items/upload-image",
+                files={"file": ("lamp.png", b"png-bytes", "image/png")},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["secure_url"],
+            "https://res.cloudinary.com/demo/image/upload/sample.png",
         )

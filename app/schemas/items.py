@@ -29,3 +29,7 @@ class ItemResponse(BaseModel):
     owner_name: str
     created_at: datetime
     request_count: int | None = None
+
+
+class ItemImageUploadResponse(BaseModel):
+    secure_url: HttpUrl

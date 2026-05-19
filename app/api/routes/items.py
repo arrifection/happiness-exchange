@@ -1,12 +1,22 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user
 from app.db.mongodb import get_items_collection_async, get_requests_collection_async
-from app.schemas.items import ItemCreateRequest, ItemResponse
+from app.schemas.items import (
+    ItemCreateRequest,
+    ItemImageUploadResponse,
+    ItemResponse,
+)
 from app.services.auth import parse_object_id
+from app.services.cloudinary import (
+    CloudinaryConfigError,
+    CloudinaryUploadError,
+    MAX_IMAGE_SIZE_BYTES,
+    upload_image_to_cloudinary,
+)
 from app.services.items import build_item_document, serialize_item
 
 router = APIRouter()
@@ -72,6 +82,55 @@ async def list_my_items(current_user: dict = Depends(get_current_user)):
         serialized_items.append(serialize_item(item, request_count=request_count))
 
     return serialized_items
+
+
+@router.post("/items/upload-image", response_model=ItemImageUploadResponse)
+async def upload_item_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload an item image to Cloudinary and return its secure URL."""
+    del current_user
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please choose an image file (JPG, PNG, WEBP, etc.).",
+        )
+
+    file_bytes = await file.read()
+    await file.close()
+
+    if not file_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The selected image is empty. Please choose a different file.",
+        )
+
+    if len(file_bytes) > MAX_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please choose an image smaller than 5 MB.",
+        )
+
+    try:
+        secure_url = await upload_image_to_cloudinary(
+            file_name=file.filename or "item-image",
+            content_type=file.content_type,
+            file_bytes=file_bytes,
+        )
+    except CloudinaryConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except CloudinaryUploadError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+
+    return {"secure_url": secure_url}
 
 
 @router.get("/items/{item_id}", response_model=ItemResponse)

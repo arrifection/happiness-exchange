@@ -26,3 +26,6 @@ email-validator==2.2.0
 
 # httpx - required by FastAPI/Starlette TestClient for backend tests
 httpx==0.28.1
+
+# python-multipart - parses file uploads for FastAPI UploadFile endpoints
+python-multipart==0.0.20

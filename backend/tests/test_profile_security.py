@@ -132,10 +132,19 @@ class ProfileSecurityTests(IsolatedAsyncioTestCase):
             ]
         )
 
-        users_routes.get_users_collection = lambda: self.users_collection
-        users_routes.get_items_collection = lambda: self.items_collection
-        users_routes.get_requests_collection = lambda: self.requests_collection
-        requests_routes.get_requests_collection = lambda: self.requests_collection
+        async def get_users_collection_async():
+            return self.users_collection
+
+        async def get_items_collection_async():
+            return self.items_collection
+
+        async def get_requests_collection_async():
+            return self.requests_collection
+
+        users_routes.get_users_collection_async = get_users_collection_async
+        users_routes.get_items_collection_async = get_items_collection_async
+        users_routes.get_requests_collection_async = get_requests_collection_async
+        requests_routes.get_requests_collection_async = get_requests_collection_async
 
         self.app = FastAPI()
         self.app.include_router(users_routes.router, prefix="/api")

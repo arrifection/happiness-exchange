@@ -20,10 +20,12 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'ht
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
 const ME_ENDPOINT = `${API_BASE}/api/me`
 const ITEMS_ENDPOINT = `${API_BASE}/api/items`
+const ITEM_IMAGE_UPLOAD_ENDPOINT = `${API_BASE}/api/items/upload-image`
 const MY_ITEMS_ENDPOINT = `${API_BASE}/api/items/my`
 const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
 const PROFILE_ENDPOINT = `${API_BASE}/api/me`
 const TOKEN_KEY = 'happiness_exchange_token'
+const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
 const emptyItemForm = {
   title: '',
@@ -106,8 +108,11 @@ export default function App() {
 
   const [itemForm, setItemForm] = useState({ ...emptyItemForm })
   const [creatingItem, setCreatingItem] = useState(false)
+  const [uploadingItemImage, setUploadingItemImage] = useState(false)
   const [itemMessage, setItemMessage] = useState('')
   const [itemError, setItemError] = useState('')
+  const [imageUploadMessage, setImageUploadMessage] = useState('')
+  const [imageUploadError, setImageUploadError] = useState('')
   const [lastPublishedItem, setLastPublishedItem] = useState(null)
 
   const [myRequests, setMyRequests] = useState([])
@@ -118,6 +123,7 @@ export default function App() {
   const [profileUpdating, setProfileUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const isRestoringSession = Boolean(token) && !currentUser
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -267,6 +273,11 @@ export default function App() {
     setOwnerItemsMessage('')
     setOwnerItemsError('')
     setOwnerActionItemId('')
+    setUploadingItemImage(false)
+    setImageUploadMessage('')
+    setImageUploadError('')
+    setItemMessage('')
+    setItemError('')
     setProfileMessage('')
     setProfileError('')
   }
@@ -289,8 +300,69 @@ export default function App() {
     setItemForm((current) => ({ ...current, [name]: value }))
   }
 
+  async function handleItemImageUpload(file) {
+    if (!file) {
+      return null
+    }
+
+    if (!file.type?.startsWith('image/')) {
+      setImageUploadMessage('')
+      setImageUploadError('Please choose an image file such as JPG, PNG, or WEBP.')
+      setItemForm((current) => ({ ...current, image_url: '' }))
+      return null
+    }
+
+    if (file.size > MAX_ITEM_IMAGE_BYTES) {
+      setImageUploadMessage('')
+      setImageUploadError('Please choose an image smaller than 5 MB.')
+      setItemForm((current) => ({ ...current, image_url: '' }))
+      return null
+    }
+
+    setUploadingItemImage(true)
+    setItemError('')
+    setItemMessage('')
+    setImageUploadError('')
+    setImageUploadMessage('')
+    setItemForm((current) => ({ ...current, image_url: '' }))
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(ITEM_IMAGE_UPLOAD_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(formatApiError(data, 'We could not upload that image right now.'))
+      }
+
+      setItemForm((current) => ({ ...current, image_url: data.secure_url }))
+      setImageUploadMessage('Image uploaded and ready to publish.')
+      return data.secure_url
+    } catch (error) {
+      setImageUploadError(error.message)
+      setItemForm((current) => ({ ...current, image_url: '' }))
+      return null
+    } finally {
+      setUploadingItemImage(false)
+    }
+  }
+
   async function handleCreateItem(event) {
     event.preventDefault()
+
+    if (uploadingItemImage) {
+      setItemError('Please wait for the image upload to finish before publishing.')
+      return null
+    }
+
     setCreatingItem(true)
     setItemError('')
     setItemMessage('')
@@ -309,7 +381,12 @@ export default function App() {
       if (response.ok) {
         setItemMessage('Item published successfully!')
         setLastPublishedItem(data)
-        setItemForm({ ...emptyItemForm })
+        setImageUploadMessage('')
+        setImageUploadError('')
+        setItemForm({
+          ...emptyItemForm,
+          owner_name: currentUser?.name || '',
+        })
         await loadItems()
         await loadMyItems()
         return data
@@ -507,6 +584,25 @@ export default function App() {
     return myRequests.find((request) => request.item_id === itemId)
   }
 
+  if (isRestoringSession) {
+    return (
+      <div className="flex min-h-screen flex-col bg-[#fffaf0]">
+        <SplashScreen visible={showSplash} />
+        <main className={`app-shell flex flex-1 items-center justify-center py-8 transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
+          <Surface className="w-full max-w-md p-8 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Restoring Session</p>
+            <h1 className="mt-2 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f3328]">
+              Verifying your account
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-[#68766d]">
+              We&apos;re signing you back in so your items and requests open in the right place.
+            </p>
+          </Surface>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#fffaf0]">
       <SplashScreen visible={showSplash} />
@@ -582,10 +678,14 @@ export default function App() {
                     currentUser={currentUser}
                     itemForm={itemForm}
                     onItemChange={handleItemChange}
+                    onItemImageUpload={handleItemImageUpload}
                     onCreateItem={handleCreateItem}
                     creatingItem={creatingItem}
+                    uploadingItemImage={uploadingItemImage}
                     itemMessage={itemMessage}
                     itemError={itemError}
+                    imageUploadMessage={imageUploadMessage}
+                    imageUploadError={imageUploadError}
                   />
                 )}
               />

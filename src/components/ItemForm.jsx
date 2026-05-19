@@ -25,7 +25,7 @@ const fieldHelpText = {
   category: 'Choose the best category for your item.',
   condition: 'Be honest about the current state.',
   location: 'Select your city for pickup.',
-  image_url: 'A clear photo helps your item find a home faster.',
+  image_url: 'Upload a clear image from your device. Images only, up to 5 MB.',
 }
 
 function validateItemForm(itemForm) {
@@ -60,13 +60,7 @@ function validateItemForm(itemForm) {
   }
 
   if (!itemForm.image_url?.trim()) {
-    errors.image_url = 'An image URL is now required.'
-  } else {
-    try {
-      new URL(itemForm.image_url.trim())
-    } catch {
-      errors.image_url = 'Please enter a valid URL (e.g. https://...).'
-    }
+    errors.image_url = 'An item image is required.'
   }
 
   return errors
@@ -131,10 +125,14 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
 export default function ItemForm({
   itemForm,
   onChange,
+  onImageUpload,
   onSubmit,
   creatingItem,
+  uploadingItemImage,
   itemMessage,
   itemError,
+  imageUploadMessage,
+  imageUploadError,
 }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [imageAvailable, setImageAvailable] = useState(false)
@@ -163,6 +161,21 @@ export default function ItemForm({
         return updated
       })
     }
+  }
+
+  async function handleImageChange(event) {
+    const [file] = event.target.files || []
+
+    if (fieldErrors.image_url) {
+      setFieldErrors((current) => {
+        const updated = { ...current }
+        delete updated.image_url
+        return updated
+      })
+    }
+
+    await onImageUpload(file)
+    event.target.value = ''
   }
 
   async function handleFormSubmit(event) {
@@ -275,17 +288,38 @@ export default function ItemForm({
           </div>
 
           <div>
-            <TextField
-              id="item-image_url"
-              name="image_url"
-              label="Image URL"
-              value={itemForm.image_url}
-              onChange={handleFormChange}
-              placeholder="https://images.unsplash.com/photo..."
-              required
-            />
-            <p className={`mt-1.5 text-[10px] ${fieldErrors.image_url ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
-              {fieldErrors.image_url || fieldHelpText.image_url}
+            <label className="grid gap-1.5" htmlFor="item-image_file">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">Item Image</span>
+              <div className="rounded-2xl border border-dashed border-[#f1e2b8] bg-[#fffdfa] p-4">
+                <input
+                  id="item-image_file"
+                  name="image_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={uploadingItemImage}
+                  required
+                  className="block w-full cursor-pointer text-sm text-[#1f1f1f] file:mr-4 file:rounded-xl file:border-0 file:bg-[#efe7ff] file:px-4 file:py-2 file:text-[11px] file:font-bold file:uppercase file:tracking-widest file:text-[#7340d2] hover:file:bg-[#e4d8ff] disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <p className="mt-3 text-[11px] leading-relaxed text-[#68766d]">
+                  Select a JPG, PNG, WEBP, or other image file from your device.
+                </p>
+              </div>
+            </label>
+            <p
+              className={`mt-1.5 text-[10px] ${
+                fieldErrors.image_url || imageUploadError
+                  ? 'font-bold text-[#c65d4a]'
+                  : imageUploadMessage
+                    ? 'font-bold text-[#1f6f50]'
+                    : 'text-[#8c755f]/60'
+              }`}
+            >
+              {fieldErrors.image_url
+                || imageUploadError
+                || (uploadingItemImage ? 'Uploading your image...' : '')
+                || imageUploadMessage
+                || fieldHelpText.image_url}
             </p>
           </div>
 
@@ -309,10 +343,10 @@ export default function ItemForm({
         <div className="pt-4">
           <Button
             type="submit"
-            disabled={creatingItem || hasValidationErrors}
+            disabled={creatingItem || uploadingItemImage || hasValidationErrors || !itemForm.image_url?.trim()}
             className="h-12 w-full text-sm shadow-xl shadow-[#1f6f50]/20"
           >
-            {creatingItem ? 'Publishing Listing...' : 'Publish to Community'}
+            {uploadingItemImage ? 'Uploading Image...' : creatingItem ? 'Publishing Listing...' : 'Publish to Community'}
           </Button>
 
           {itemMessage && (
@@ -328,12 +362,12 @@ export default function ItemForm({
         </div>
       </form>
 
-      <div className="hidden space-y-6 lg:block">
+      <div className="space-y-6">
         <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c755f]">Live Preview</p>
           <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-base font-bold text-[#1f3328]">Check your listing</h3>
         </div>
-        <div className="sticky top-28">
+        <div className="lg:sticky lg:top-28">
           <PreviewCard
             itemForm={itemForm}
             imageAvailable={imageAvailable}

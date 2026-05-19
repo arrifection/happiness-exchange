@@ -7,10 +7,14 @@ export default function GiveItemPage({
   currentUser,
   itemForm,
   onItemChange,
+  onItemImageUpload,
   onCreateItem,
   creatingItem,
+  uploadingItemImage,
   itemMessage,
   itemError,
+  imageUploadMessage,
+  imageUploadError,
 }) {
   const navigate = useNavigate()
 
@@ -49,10 +53,14 @@ export default function GiveItemPage({
       <ItemForm
         itemForm={itemForm}
         onChange={onItemChange}
+        onImageUpload={onItemImageUpload}
         onSubmit={handlePublishItem}
         creatingItem={creatingItem}
+        uploadingItemImage={uploadingItemImage}
         itemMessage={itemMessage}
         itemError={itemError}
+        imageUploadMessage={imageUploadMessage}
+        imageUploadError={imageUploadError}
       />
     </Surface>
   )

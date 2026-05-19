@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_FOLDER: str = "happiness-exchange/items"
+
     # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:5173",
@@ -80,6 +85,10 @@ class Settings(BaseSettings):
         logger.info("MONGODB_URI present: %s", uri_present)
         logger.info("DB_NAME: %s", self.DB_NAME)
         logger.info("JWT_SECRET_KEY is default: %s", self.JWT_SECRET_KEY == "change-this-in-production")
+        logger.info("CLOUDINARY_CLOUD_NAME present: %s", bool(self.CLOUDINARY_CLOUD_NAME))
+        logger.info("CLOUDINARY_API_KEY present: %s", bool(self.CLOUDINARY_API_KEY))
+        logger.info("CLOUDINARY_API_SECRET present: %s", bool(self.CLOUDINARY_API_SECRET))
+        logger.info("CLOUDINARY_FOLDER: %s", self.CLOUDINARY_FOLDER)
         logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
 
