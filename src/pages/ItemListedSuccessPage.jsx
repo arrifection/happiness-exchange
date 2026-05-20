@@ -16,30 +16,28 @@ export default function ItemListedSuccessPage({ currentUser, publishedItem }) {
   }
 
   return (
-    <div className="space-y-6">
-      <Surface className="p-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#1f6f50]/10 text-[#1f6f50]">
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+    <div className="space-y-5">
+      <Surface className="p-6 text-center">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#8b4cf6]/10 text-[#8b4cf6]">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="mt-4 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f3328]">
+        <h1 className="mt-3 font-['Plus_Jakarta_Sans',sans-serif] text-xl font-bold tracking-tight text-[#1f1f1f]">
           Successfully Published
         </h1>
-        <p className="mt-2 text-xs leading-relaxed text-[#68766d]">
-          Your item is now live and available to your neighbors.
+        <p className="mt-1.5 text-xs leading-relaxed text-[#68766d]">
+          Your item is now live and available to neighbors.
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button as="link" to="/dashboard" className="sm:min-w-[140px]">Go to Dashboard</Button>
-          <Button as="link" to="/browse" variant="secondary" className="sm:min-w-[140px]">Browse Items</Button>
+        <div className="mt-6 flex gap-2">
+          <Button as="link" to="/dashboard" className="flex-1 h-9 min-h-0 text-xs py-2 px-3">Dashboard</Button>
+          <Button as="link" to="/browse" variant="secondary" className="flex-1 h-9 min-h-0 text-xs py-2 px-3">Browse</Button>
         </div>
       </Surface>
 
-      <div className="space-y-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">Listing Preview</p>
-        <div className="max-w-md">
-          <ItemCard item={item} currentUser={currentUser} compact />
-        </div>
+      <div className="space-y-2.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80">Listing Preview</p>
+        <ItemCard item={item} currentUser={currentUser} compact />
       </div>
     </div>
   )

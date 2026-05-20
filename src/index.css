@@ -7,6 +7,10 @@
   --color-he-yellow: #ffcc22;
   --color-he-ink: #1f1f1f;
   --color-he-muted: #68766d;
+
+  --radius-card: 16px;
+  --radius-btn: 14px;
+  --radius-input: 12px;
 }
 
 @layer base {
@@ -18,12 +22,13 @@
   html {
     scroll-behavior: smooth;
     height: 100%;
+    background: #f3efe5;
   }
 
   body {
     margin: 0;
     min-height: 100%;
-    background: #fffaf0;
+    background: #f3efe5;
     color: #1f1f1f;
     font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -55,6 +60,27 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fffaf0;
+    box-shadow: 0 0 32px rgba(31, 51, 40, 0.04);
+    border-left: 1px solid #efe8da;
+    border-right: 1px solid #efe8da;
+    position: relative;
+  }
+
+  @media (min-width: 768px) {
+    #root {
+      max-width: 100%;
+      box-shadow: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    html, body {
+      background: #fffaf0;
+    }
   }
   
   ::selection {
@@ -65,7 +91,7 @@
 
 @layer components {
   .app-shell {
-    @apply mx-auto w-full max-w-[1040px] px-4 sm:px-6;
+    @apply mx-auto w-full max-w-[1280px] px-4 md:px-6;
   }
   
   .glass {

@@ -603,29 +603,126 @@ export default function App() {
     )
   }
 
+  const bottomTabItems = [
+    {
+      to: '/',
+      label: 'Home',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg>
+      ),
+    },
+    {
+      to: '/browse',
+      label: 'Browse',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z" />
+        </svg>
+      ),
+    },
+    {
+      to: '/give',
+      label: 'Give',
+      icon: (
+        <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-[#8b4cf6] text-white shadow-xs transition-transform active:scale-90">
+          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </div>
+      ),
+    },
+    {
+      to: '/requests',
+      label: 'Activity',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+      ),
+    },
+    {
+      to: '/dashboard',
+      label: 'Profile',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+    },
+  ]
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#fffaf0]">
+    <div className="flex flex-1 flex-col">
       <SplashScreen visible={showSplash} />
       {currentUser ? (
         <div className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
-          <header className="sticky top-0 z-50 border-b border-[#f1e2b8] bg-white/85 shadow-sm backdrop-blur-xl">
-            <div className="app-shell flex h-14 items-center justify-between gap-4 sm:h-16">
-              <BrandLogo size="sm" className="min-w-0" />
+          <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
+            <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
+              {/* Left: Logo */}
+              <div className="flex flex-1 items-center justify-start">
+                <NavLink to="/" className="flex items-center gap-2">
+                  <BrandLogo size="sm" showText={true} className="min-w-0" />
+                </NavLink>
+              </div>
 
-              <nav className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                {tabItems.map((item) => (
-                  <NavLink key={item.to} className={({ isActive }) => appTabClass(isActive)} to={item.to}>
-                    {item.label}
-                  </NavLink>
-                ))}
+              {/* Center: Desktop Navigation Links */}
+              <nav className="hidden md:flex items-center justify-center gap-8">
+                <NavLink
+                  to="/"
+                  className={({ isActive }) => [
+                    'px-4 py-2 rounded-full text-[14px] font-bold tracking-wide transition-all duration-300',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                  ].join(' ')}
+                >
+                  Home
+                </NavLink>
+                <NavLink
+                  to="/browse"
+                  className={({ isActive }) => [
+                    'px-4 py-2 rounded-full text-[14px] font-bold tracking-wide transition-all duration-300',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                  ].join(' ')}
+                >
+                  Browse
+                </NavLink>
+                <NavLink
+                  to="/give"
+                  className={({ isActive }) => [
+                    'px-4 py-2 rounded-full text-[14px] font-bold tracking-wide transition-all duration-300',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                  ].join(' ')}
+                >
+                  Give Item
+                </NavLink>
+                <NavLink
+                  to="/requests"
+                  className={({ isActive }) => [
+                    'px-4 py-2 rounded-full text-[14px] font-bold tracking-wide transition-all duration-300',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                  ].join(' ')}
+                >
+                  Activity
+                </NavLink>
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) => [
+                    'px-4 py-2 rounded-full text-[14px] font-bold tracking-wide transition-all duration-300',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                  ].join(' ')}
+                >
+                  Dashboard
+                </NavLink>
               </nav>
 
-              <div className="flex items-center gap-2">
+              {/* Right: Profile */}
+              <div className="flex flex-1 items-center justify-end gap-2">
                 <NavLink
                   to="/profile"
                   className={({ isActive }) => [
-                    'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-[#8c755f] transition-all duration-300 hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
-                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-sm' : '',
+                    'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-[#8c755f] transition-all duration-200 hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
+                    isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : '',
                   ].join(' ')}
                   aria-label="Open profile settings"
                 >
@@ -633,14 +730,11 @@ export default function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
                   </svg>
                 </NavLink>
-                <Button variant="ghost" className="h-9 min-h-0 px-3 text-[10px] font-bold uppercase tracking-widest text-[#c65d4a] hover:bg-[#c65d4a]/5" onClick={handleLogout}>
-                  Logout
-                </Button>
               </div>
             </div>
           </header>
 
-          <main className="app-shell flex-1 py-8">
+          <main className="app-shell flex-1 pt-4 pb-20 md:pb-8">
             <Routes>
               <Route
                 path="/"
@@ -720,6 +814,7 @@ export default function App() {
                     <GiverHomePage
                       currentUser={currentUser}
                       myItems={myItems}
+                      myRequests={myRequests}
                       myItemsError={myItemsError}
                       loadingMyItems={loadingMyItems}
                       ownerItemsMessage={ownerItemsMessage}
@@ -736,6 +831,7 @@ export default function App() {
                   ) : (
                     <DashboardPage
                       currentUser={currentUser}
+                      myItems={myItems}
                       myRequests={myRequests}
                       ownerRequests={ownerRequests}
                       onRequestAction={handleRequestAction}
@@ -769,6 +865,9 @@ export default function App() {
                     profileUpdating={profileUpdating}
                     profileMessage={profileMessage}
                     profileError={profileError}
+                    onLogout={handleLogout}
+                    myItems={myItems}
+                    myRequests={myRequests}
                   />
                 )}
               />
@@ -779,6 +878,22 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
+
+          <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md">
+            {bottomTabItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => [
+                  'flex flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[9px] font-bold tracking-wide transition-all duration-200',
+                  isActive ? 'text-[#8b4cf6]' : 'text-[#8c755f] hover:text-[#1f1f1f]',
+                ].join(' ')}
+              >
+                {item.icon}
+                <span className="scale-90">{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
       ) : (
         <main className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>

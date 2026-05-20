@@ -172,7 +172,7 @@ export default function BrandLogo({
 
       {/* Text */}
       {showText && (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="hidden sm:flex flex-col">
           <span
             className={classes(
               "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#7C5CBF]",

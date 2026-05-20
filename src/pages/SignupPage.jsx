@@ -6,13 +6,13 @@ import { AuthShell } from '../components/AuthShell.jsx'
 const accountOptions = [
   {
     value: 'giver',
-    title: 'I want to give items',
-    description: 'List items you no longer need.',
+    title: 'Give items',
+    description: 'Share things you no longer need.',
   },
   {
     value: 'receiver',
-    title: 'I want to receive items',
-    description: 'Browse items and request what you need.',
+    title: 'Receive items',
+    description: 'Request things you need.',
   },
 ]
 
@@ -73,12 +73,12 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     <AuthShell
       eyebrow="Join the Movement"
       title="Create Your Account"
-      description="Be part of a community that believes in sharing. Whether you want to give or receive, there's a place for you here."
+      description="Be part of a community that believes in sharing."
       formEyebrow="Getting Started"
       formTitle="Personal Details"
-      formDescription="Fill in your information to set up your community profile."
+      formDescription="Fill in your information to set up your profile."
       footer={(
-        <p className="m-0">
+        <p className="m-0 text-xs">
           Already a member?
           {' '}
           <Link className="ml-1 font-bold text-[#8b4cf6] hover:underline" to="/login">
@@ -87,9 +87,9 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
-      <form className="grid gap-5" onSubmit={handleSubmit}>
-        <div className="grid gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-name">
+      <form className="grid gap-4" onSubmit={handleSubmit}>
+        <div className="grid gap-1">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-name">
             Full Name
           </label>
           <input
@@ -101,12 +101,12 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             placeholder="Jane Doe"
             autoComplete="name"
             required
-            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
+            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
           />
         </div>
 
-        <div className="grid gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-email">
+        <div className="grid gap-1">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-email">
             Email Address
           </label>
           <input
@@ -118,12 +118,12 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             placeholder="name@example.com"
             autoComplete="email"
             required
-            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
+            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
           />
         </div>
 
-        <div className="grid gap-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]" htmlFor="signup-password">
+        <div className="grid gap-1">
+          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-password">
             Password
           </label>
           <input
@@ -135,50 +135,53 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             placeholder="At least 8 characters"
             autoComplete="new-password"
             required
-            className="min-h-11 w-full rounded-xl border border-[#f1e2b8] bg-[#fffdfa] px-4 text-sm text-[#1f1f1f] shadow-sm outline-none transition-all focus:border-[#8b4cf6] focus:ring-4 focus:ring-[#8b4cf6]/10"
+            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
           />
         </div>
 
-        <div className="grid gap-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">Account type</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {accountOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setFormData((current) => ({ ...current, account_type: option.value }))}
-                className={`relative flex flex-col items-start rounded-xl border p-4 text-left transition-all ${
-                  formData.account_type === option.value
-                    ? 'border-[#8b4cf6] bg-[#efe7ff] ring-4 ring-[#8b4cf6]/10'
-                    : 'border-[#f1e2b8] bg-[#fffdf7] hover:border-[#d6bc73]'
-                }`}
-              >
-                {formData.account_type === option.value && (
-                  <div className="absolute right-3 top-3">
-                    <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[#8b4cf6] text-white">
-                      <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+        <div className="grid gap-2">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80">Account type</p>
+          <div className="grid gap-2 grid-cols-2">
+            {accountOptions.map((option) => {
+              const isSelected = formData.account_type === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData((current) => ({ ...current, account_type: option.value }))}
+                  className={`relative flex flex-col items-start rounded-card border p-3 text-left transition-all duration-200 ${
+                    isSelected
+                      ? 'border-[#8b4cf6] bg-[#efe7ff]/40'
+                      : 'border-[#efe8da] bg-[#fffdfb] hover:border-[#8b4cf6]/40'
+                  }`}
+                >
+                  {isSelected && (
+                    <div className="absolute right-2 top-2 scale-90">
+                      <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#8b4cf6] text-white">
+                        <svg className="h-2 w-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <p className="text-[13px] font-bold text-[#1f3328]">{option.title}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-[#68766d]">{option.description}</p>
-              </button>
-            ))}
+                  )}
+                  <p className="text-[11px] font-bold text-[#1f1f1f]">{option.title}</p>
+                  <p className="mt-0.5 text-[9px] leading-relaxed text-[#68766d]">{option.description}</p>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="relative mt-2 flex min-h-11 w-full items-center justify-center overflow-hidden rounded-xl bg-[#8b4cf6] px-6 text-[13px] font-bold uppercase tracking-widest text-white shadow-lg shadow-[#8b4cf6]/20 transition-all hover:bg-[#7b40e6] hover:shadow-xl hover:shadow-[#8b4cf6]/30 active:scale-[0.98] disabled:opacity-60"
+          className="relative mt-1 flex min-h-10 w-full items-center justify-center overflow-hidden rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
         >
           {submitting ? 'Creating account...' : 'Create Account'}
         </button>
 
         {error ? (
-          <div className="rounded-xl border border-[#c65d4a]/20 bg-[#c65d4a]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#c65d4a]">
+          <div className="rounded-xl border border-[#c65d4a]/20 bg-[#c65d4a]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#c65d4a]">
             {error}
           </div>
         ) : null}

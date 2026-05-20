@@ -31,40 +31,43 @@ export default function ItemDetailsPage({
   }
 
   return (
-    <div className="space-y-6">
-      <Surface className="p-6 sm:p-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1f6f50]">Item Details</p>
-        <h1 className="mt-2 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f3328] sm:text-3xl">
-          {item.title}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#68766d]">
-          View the full listing and manage it from here.
-        </p>
-
-        <div className="mt-6 max-w-3xl">
-          <ItemCard
-            item={item}
-            currentUser={currentUser}
-            myRequest={getMyRequestForItem(item.id)}
-            onCreateRequest={onCreateRequest}
-            onDeleteItem={onDeleteItem}
-            onCompleteItem={onCompleteItem}
-            ownerActionPending={ownerActionItemId === item.id}
-          />
+    <div className="space-y-4">
+      {/* Header and Back navigation */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f]">
+            Item Details
+          </h1>
+          <p className="text-[10px] text-[#68766d]">View the listing and make requests.</p>
         </div>
-      </Surface>
+        <Button as="link" to="/browse" variant="ghost" className="h-7 min-h-0 px-2.5 text-[10px] text-[#8b4cf6] hover:bg-[#8b4cf6]/5">
+          ← Back
+        </Button>
+      </div>
 
-      <Surface className="p-6 sm:p-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c755f]">About This Item</p>
-        <p className="mt-3 text-sm leading-relaxed text-[#68766d]">{item.description}</p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#f4efe7] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">
+      {/* Main card */}
+      <ItemCard
+        item={item}
+        currentUser={currentUser}
+        myRequest={getMyRequestForItem(item.id)}
+        onCreateRequest={onCreateRequest}
+        onDeleteItem={onDeleteItem}
+        onCompleteItem={onCompleteItem}
+        ownerActionPending={ownerActionItemId === item.id}
+      />
+
+      {/* Detail Block */}
+      <Surface className="p-4.5">
+        <h2 className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80">Description & Pickup Details</h2>
+        <p className="mt-2 text-xs leading-relaxed text-[#68766d]">{item.description}</p>
+        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[#fcfbf9] pt-3.5">
+          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
             {item.category}
           </span>
-          <span className="rounded-full bg-[#f4efe7] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">
+          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
             {item.condition}
           </span>
-          <span className="rounded-full bg-[#f4efe7] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">
+          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
             {item.location}
           </span>
         </div>

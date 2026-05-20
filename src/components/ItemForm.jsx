@@ -75,8 +75,8 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
   const previewOwner = itemForm.owner_name?.trim() || 'Your Name'
 
   return (
-    <div className="flex overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm transition-all duration-500">
-      <div className="relative aspect-square w-28 shrink-0 overflow-hidden bg-[#f4efe7] sm:w-36">
+    <div className="flex overflow-hidden rounded-card border border-[#efe8da] bg-white shadow-xs transition-all duration-500">
+      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26">
         {itemForm.image_url.trim() && imageAvailable ? (
           <img
             src={itemForm.image_url.trim()}
@@ -85,36 +85,36 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
             onError={onImageError}
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-            <svg className="mb-2 h-6 w-6 text-[#8c755f]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex h-full flex-col items-center justify-center p-3 text-center">
+            <svg className="mb-1 h-5 w-5 text-[#8c755f]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">Photo Preview</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[#8c755f]/40">Photo Preview</span>
           </div>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-between p-4">
-        <div className="space-y-1.5">
+      <div className="flex flex-1 flex-col justify-between p-3">
+        <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[15px] font-bold leading-tight text-[#1f3328] line-clamp-1">{previewTitle}</h3>
-            <span className="shrink-0 rounded-full bg-[#1f6f50]/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#1f6f50]">
+            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f] line-clamp-1">{previewTitle}</h3>
+            <span className="shrink-0 rounded-full bg-[#8b4cf6]/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#8b4cf6]">
               {previewCategory}
             </span>
           </div>
-          <p className="line-clamp-2 text-[11px] leading-relaxed text-[#68766d]">
+          <p className="line-clamp-2 text-[10px] leading-relaxed text-[#68766d]">
             {previewDescription}
           </p>
         </div>
 
-        <div className="mt-3 border-t border-[#f4efe7] pt-3">
+        <div className="mt-2 border-t border-[#fcfbf9] pt-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight text-[#8c755f]">
+            <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-tight text-[#8c755f]">
               <span>{previewLocation}</span>
               <span className="opacity-30">•</span>
               <span>{previewCondition}</span>
             </div>
-            <span className="text-[10px] font-bold text-[#1f6f50]/70">By {previewOwner.split(' ')[0]}</span>
+            <span className="text-[9px] font-bold text-[#8b4cf6]/75">By {previewOwner.split(' ')[0]}</span>
           </div>
         </div>
       </div>
@@ -192,20 +192,20 @@ export default function ItemForm({
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
-      <form className="grid gap-6" onSubmit={handleFormSubmit} noValidate>
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1f6f50]">List an Item</p>
-          <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f3328]">
+    <div className="flex flex-col md:flex-row gap-6 md:gap-10">
+      <form className="flex-1 flex flex-col gap-4.5" onSubmit={handleFormSubmit} noValidate>
+        <div className="space-y-0.5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8b4cf6]">List an Item</p>
+          <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f]">
             Give with Joy
           </h2>
-          <p className="text-sm leading-relaxed text-[#68766d]">
-            Fill in the details below to share your item with the community.
+          <p className="text-xs leading-relaxed text-[#68766d]">
+            Fill in the details below to share your item with neighbors.
           </p>
         </div>
 
-        <div className="grid gap-5">
-          <div className="grid gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-3.5">
+          <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-2">
             <div>
               <TextField
                 id="item-owner_name"
@@ -216,7 +216,7 @@ export default function ItemForm({
                 placeholder="Jane Doe"
                 required
               />
-              <p className={`mt-1.5 text-[10px] ${fieldErrors.owner_name ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              <p className={`mt-1 text-[9px] ${fieldErrors.owner_name ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.owner_name || fieldHelpText.owner_name}
               </p>
             </div>
@@ -228,16 +228,16 @@ export default function ItemForm({
                 label="Item Title"
                 value={itemForm.title}
                 onChange={handleFormChange}
-                placeholder="e.g. Wooden Dining Table"
+                placeholder="e.g. Dining Table"
                 required
               />
-              <p className={`mt-1.5 text-[10px] ${fieldErrors.title ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              <p className={`mt-1 text-[9px] ${fieldErrors.title ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.title || fieldHelpText.title}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-3">
             <div>
               <SelectField
                 id="item-category"
@@ -249,7 +249,7 @@ export default function ItemForm({
                 placeholder="Select..."
                 required
               />
-              <p className={`mt-1.5 text-[10px] ${fieldErrors.category ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              <p className={`mt-1 text-[9px] ${fieldErrors.category ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.category || fieldHelpText.category}
               </p>
             </div>
@@ -265,7 +265,7 @@ export default function ItemForm({
                 placeholder="Select..."
                 required
               />
-              <p className={`mt-1.5 text-[10px] ${fieldErrors.condition ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              <p className={`mt-1 text-[9px] ${fieldErrors.condition ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.condition || fieldHelpText.condition}
               </p>
             </div>
@@ -278,19 +278,19 @@ export default function ItemForm({
                 value={itemForm.location}
                 onChange={handleFormChange}
                 options={LOCATIONS}
-                placeholder="Select City"
+                placeholder="City"
                 required
               />
-              <p className={`mt-1.5 text-[10px] ${fieldErrors.location ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+              <p className={`mt-1 text-[9px] ${fieldErrors.location ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.location || fieldHelpText.location}
               </p>
             </div>
           </div>
 
           <div>
-            <label className="grid gap-1.5" htmlFor="item-image_file">
+            <label className="grid gap-1" htmlFor="item-image_file">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">Item Image</span>
-              <div className="rounded-2xl border border-dashed border-[#f1e2b8] bg-[#fffdfa] p-4">
+              <div className="rounded-input border border-dashed border-[#efe8da] bg-[#fffdfb] p-3">
                 <input
                   id="item-image_file"
                   name="image_file"
@@ -299,25 +299,25 @@ export default function ItemForm({
                   onChange={handleImageChange}
                   disabled={uploadingItemImage}
                   required
-                  className="block w-full cursor-pointer text-sm text-[#1f1f1f] file:mr-4 file:rounded-xl file:border-0 file:bg-[#efe7ff] file:px-4 file:py-2 file:text-[11px] file:font-bold file:uppercase file:tracking-widest file:text-[#7340d2] hover:file:bg-[#e4d8ff] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="block w-full cursor-pointer text-xs text-[#1f1f1f] file:mr-3 file:rounded-btn file:border-0 file:bg-[#efe7ff] file:px-3 file:py-1.5 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:text-[#7340d2] hover:file:bg-[#e4d8ff] disabled:cursor-not-allowed disabled:opacity-60"
                 />
-                <p className="mt-3 text-[11px] leading-relaxed text-[#68766d]">
-                  Select a JPG, PNG, WEBP, or other image file from your device.
+                <p className="mt-2 text-[10px] leading-relaxed text-[#68766d]">
+                  Select a JPG, PNG, or WEBP image (max 5 MB).
                 </p>
               </div>
             </label>
             <p
-              className={`mt-1.5 text-[10px] ${
+              className={`mt-1 text-[9px] ${
                 fieldErrors.image_url || imageUploadError
                   ? 'font-bold text-[#c65d4a]'
                   : imageUploadMessage
-                    ? 'font-bold text-[#1f6f50]'
+                    ? 'font-bold text-[#8b4cf6]'
                     : 'text-[#8c755f]/60'
               }`}
             >
               {fieldErrors.image_url
                 || imageUploadError
-                || (uploadingItemImage ? 'Uploading your image...' : '')
+                || (uploadingItemImage ? 'Uploading image...' : '')
                 || imageUploadMessage
                 || fieldHelpText.image_url}
             </p>
@@ -331,54 +331,55 @@ export default function ItemForm({
               value={itemForm.description}
               onChange={handleFormChange}
               placeholder="Describe condition, usage, and pickup details clearly."
-              rows={5}
+              rows={4}
               required
             />
-            <p className={`mt-1.5 text-[10px] ${fieldErrors.description ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+            <p className={`mt-1 text-[9px] ${fieldErrors.description ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
               {fieldErrors.description || fieldHelpText.description}
             </p>
           </div>
         </div>
 
-        <div className="pt-4">
+        <div className="pt-2">
           <Button
             type="submit"
             disabled={creatingItem || uploadingItemImage || hasValidationErrors || !itemForm.image_url?.trim()}
-            className="h-12 w-full text-sm shadow-xl shadow-[#1f6f50]/20"
+            className="h-10 w-full text-xs shadow-xs md:text-[13px] md:h-11"
           >
             {uploadingItemImage ? 'Uploading Image...' : creatingItem ? 'Publishing Listing...' : 'Publish to Community'}
           </Button>
 
           {itemMessage && (
-            <div className="mt-4 rounded-xl bg-[#1f6f50]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#1f6f50]">
+            <div className="mt-3 rounded-xl bg-[#8b4cf6]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">
               {itemMessage}
             </div>
           )}
           {itemError && (
-            <div className="mt-4 rounded-xl bg-[#c65d4a]/5 p-3 text-center text-[11px] font-bold uppercase tracking-widest text-[#c65d4a]">
+            <div className="mt-3 rounded-xl bg-[#c65d4a]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#c65d4a]">
               {itemError}
             </div>
           )}
         </div>
       </form>
 
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8c755f]">Live Preview</p>
-          <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-base font-bold text-[#1f3328]">Check your listing</h3>
+      <hr className="border-[#efe8da] md:hidden" />
+
+      {/* Right Sidebar: Preview & Tips */}
+      <div className="space-y-4 shrink-0 md:w-72 lg:w-80">
+        <div className="space-y-0.5 md:hidden">
+          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8c755f]">Live Preview</p>
+          <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-xs font-bold text-[#1f1f1f]">Check your listing</h3>
         </div>
-        <div className="lg:sticky lg:top-28">
-          <PreviewCard
-            itemForm={itemForm}
-            imageAvailable={imageAvailable}
-            onImageError={() => setImageAvailable(false)}
-          />
-          <div className="mt-6 rounded-2xl bg-[#f4efe7]/50 p-5">
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-[#1f3328]">Why details matter?</h4>
-            <p className="mt-2 text-[11px] leading-relaxed text-[#68766d]">
-              Items with clear photos and detailed descriptions are 3x more likely to find a new home quickly. Be sure to mention if any parts are missing or if there's minor wear.
-            </p>
-          </div>
+        <PreviewCard
+          itemForm={itemForm}
+          imageAvailable={imageAvailable}
+          onImageError={() => setImageAvailable(false)}
+        />
+        <div className="rounded-card bg-[#faf7f1] border border-[#efe8da]/60 p-3.5 md:p-5">
+          <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#1f1f1f]">Why details matter</h4>
+          <p className="mt-1 text-[10px] md:text-xs md:leading-relaxed leading-relaxed text-[#68766d]">
+            Items with clear photos and detailed descriptions are 3x more likely to find a new home quickly. Be sure to mention if there's minor wear or specific pickup times.
+          </p>
         </div>
       </div>
     </div>

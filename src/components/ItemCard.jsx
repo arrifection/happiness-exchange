@@ -128,23 +128,28 @@ export default function ItemCard({
     }
 
     if (item.status !== 'available') {
-      return <StatusBadge status={item.status} />
+      return null
     }
-
+ 
     return (
-      <Button variant="primary" className="h-8 min-h-0 px-3 text-[10px]" onClick={() => onCreateRequest(item.id)}>
+      <Button variant="primary" className="h-7 min-h-0 px-2.5 text-[9px]" onClick={() => onCreateRequest(item.id)}>
         Interested
       </Button>
     )
   }
-
+ 
   return (
-    <article className="group flex overflow-hidden rounded-2xl border border-[#eadfce] bg-white transition-all duration-300 hover:shadow-md">
+    <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:scale-[1.01] md:hover:border-[#8b4cf6]/30">
       <Link
         to={itemHref}
-        className="relative aspect-square w-24 shrink-0 overflow-hidden bg-[#f4efe7] sm:w-32"
+        className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26"
         aria-label={`Open ${item.title}`}
       >
+        {item.status !== 'available' && (
+          <div className="absolute left-1.5 top-1.5 z-10 scale-85 origin-top-left">
+            <StatusBadge status={item.status} className="border-0 shadow-xs backdrop-blur-xs bg-white/95" />
+          </div>
+        )}
         {item.image_url && imageAvailable ? (
           <img
             src={item.image_url}
@@ -153,39 +158,38 @@ export default function ItemCard({
             onError={() => setImageAvailable(false)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/50">
+          <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">
             No image
           </div>
         )}
       </Link>
-
-      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
-        <div className="space-y-1">
+ 
+      <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
+        <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-2">
-            <Link to={itemHref} className="min-w-0 transition hover:text-[#1f6f50]">
-              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[14px] font-bold leading-tight text-[#1f3328] line-clamp-1 sm:text-base">{item.title}</h3>
+            <Link to={itemHref} className="min-w-0 transition hover:text-[#8b4cf6]">
+              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f] line-clamp-1">{item.title}</h3>
             </Link>
-            <div className="flex items-center gap-2">
-              {isOwner && <span className="text-[10px] font-bold uppercase tracking-widest text-[#1f6f50]">Yours</span>}
+            <div className="flex items-center gap-1.5">
+              {isOwner && <span className="text-[9px] font-bold uppercase tracking-widest text-[#8b4cf6]">Yours</span>}
               {isOwner ? renderAction() : null}
             </div>
           </div>
-          <Link to={itemHref} className="block rounded-lg transition hover:bg-[#faf7f1]">
-            <p className="line-clamp-2 text-[11px] leading-relaxed text-[#68766d] sm:text-xs sm:line-clamp-2">
+          <Link to={itemHref} className="block rounded-lg transition">
+            <p className="line-clamp-2 text-[10px] leading-normal text-[#68766d]">
               {item.description}
             </p>
           </Link>
         </div>
-
-        <div className="mt-3 flex flex-col gap-2.5 border-t border-[#f4efe7] pt-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <Link to={itemHref} className="flex flex-wrap items-center gap-1.5 rounded-lg transition hover:text-[#1f3328]">
-            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">{item.location}</span>
-            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">•</span>
-            <span className="text-[10px] font-bold uppercase tracking-tight text-[#8c755f]/80">{item.condition}</span>
-            <StatusBadge status={item.status} />
+ 
+        <div className="mt-2 flex flex-row items-center justify-between gap-2 border-t border-[#fcfbf9] pt-2">
+          <Link to={itemHref} className="flex flex-wrap items-center gap-1 rounded-lg transition hover:text-[#8b4cf6]">
+            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location}</span>
+            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/40">•</span>
+            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.condition}</span>
           </Link>
           {!isOwner ? (
-            <div className="shrink-0 self-end sm:self-auto">
+            <div className="shrink-0">
               {renderAction()}
             </div>
           ) : null}
