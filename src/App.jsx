@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
@@ -87,6 +87,7 @@ function appTabClass(isActive) {
 }
 
 export default function App() {
+  const location = useLocation()
   const [showSplash, setShowSplash] = useState(true)
   const [statusInfo, setStatusInfo] = useState(null)
   const [statusError, setStatusError] = useState('')
@@ -124,6 +125,7 @@ export default function App() {
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
   const isRestoringSession = Boolean(token) && !currentUser
+  const isLandingHome = location.pathname === '/'
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -151,6 +153,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    loadItems()
+  }, [])
+
+  useEffect(() => {
     if (token) {
       loadUserData()
     } else {
@@ -160,7 +166,6 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
-      loadItems()
       loadMyItems()
       loadRequestData()
       setItemForm((current) => ({
@@ -658,7 +663,8 @@ export default function App() {
       <SplashScreen visible={showSplash} />
       {currentUser ? (
         <div className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
-          <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
+          {!isLandingHome ? (
+            <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
             <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
               {/* Left: Logo */}
               <div className="flex flex-1 items-center justify-start">
@@ -732,9 +738,10 @@ export default function App() {
                 </NavLink>
               </div>
             </div>
-          </header>
+            </header>
+          ) : null}
 
-          <main className="app-shell flex-1 pt-4 pb-20 md:pb-8">
+          <main className={isLandingHome ? 'flex-1' : 'app-shell flex-1 pt-4 pb-20 md:pb-8'}>
             <Routes>
               <Route
                 path="/"
@@ -879,25 +886,42 @@ export default function App() {
             </Routes>
           </main>
 
-          <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md">
-            {bottomTabItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => [
-                  'flex flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[9px] font-bold tracking-wide transition-all duration-200',
-                  isActive ? 'text-[#8b4cf6]' : 'text-[#8c755f] hover:text-[#1f1f1f]',
-                ].join(' ')}
-              >
-                {item.icon}
-                <span className="scale-90">{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+          {!isLandingHome ? (
+            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md">
+              {bottomTabItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) => [
+                    'flex flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[9px] font-bold tracking-wide transition-all duration-200',
+                    isActive ? 'text-[#8b4cf6]' : 'text-[#8c755f] hover:text-[#1f1f1f]',
+                  ].join(' ')}
+                >
+                  {item.icon}
+                  <span className="scale-90">{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          ) : null}
         </div>
       ) : (
         <main className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
           <Routes>
+            <Route
+              path="/"
+              element={(
+                <HomePage
+                  items={items}
+                  currentUser={currentUser}
+                  getMyRequestForItem={getMyRequestForItem}
+                  onCreateRequest={handleCreateRequest}
+                  loadingItems={loadingItems}
+                  itemsError={itemsError}
+                  myRequests={myRequests}
+                  ownerRequests={ownerRequests}
+                />
+              )}
+            />
             <Route
               path="/login"
               element={(
@@ -918,7 +942,7 @@ export default function App() {
                 />
               )}
             />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       )}
