@@ -3,9 +3,31 @@ import { useMemo, useState } from 'react'
 import ItemCard from '../components/ItemCard.jsx'
 import { Button, EmptyState } from '../components/ui.jsx'
 
-const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids', 'Books', 'Kitchen', 'Clothes', 'Other']
+const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Other']
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
 const SORT_OPTIONS = ['Newest first', 'Oldest first']
+
+// Map display labels to actual DB values
+const CATEGORY_DB_MAP = {
+  'Kids Goods': ['Kids', 'Kid'],
+  'Family Items': ['Baby', 'Family'],
+}
+
+function AnonymousBadge() {
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl border border-[#8b4cf6]/20 bg-gradient-to-r from-[#efe7ff]/60 to-[#fff9e6]/60 px-4 py-2.5 backdrop-blur-sm">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6]/15">
+        <svg className="h-4 w-4 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+      </div>
+      <div>
+        <p className="text-[11px] font-bold text-[#8b4cf6]">Completely Anonymous</p>
+        <p className="text-[9px] text-[#8c755f]">Addresses remain private · Courier handled securely</p>
+      </div>
+    </div>
+  )
+}
 
 export default function BrowseItemsPage({
   items,
@@ -38,11 +60,14 @@ export default function BrowseItemsPage({
       )
     }
 
-    // Category
+    // Category — handle mapped labels
     if (categoryFilter !== 'All') {
+      const dbValues = CATEGORY_DB_MAP[categoryFilter]
       result = result.filter((item) => {
-        if (categoryFilter === 'Kids' && item.category === 'Baby') return true;
-        return item.category === categoryFilter;
+        if (dbValues) {
+          return dbValues.some((v) => item.category?.toLowerCase() === v.toLowerCase())
+        }
+        return item.category === categoryFilter
       })
     }
 
@@ -72,10 +97,10 @@ export default function BrowseItemsPage({
             <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg md:text-xl font-bold tracking-tight text-[#1f1f1f]">
               Browse Items
             </h1>
-            <p className="text-[10px] md:text-xs text-[#68766d]">Find items shared by neighbors.</p>
+            <p className="text-[10px] md:text-xs text-[#68766d]">Find items shared by your community.</p>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#8b4cf6] hover:underline"
             onClick={onRefreshItems}
             disabled={loadingItems}
@@ -83,6 +108,9 @@ export default function BrowseItemsPage({
             {loadingItems ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
+
+        {/* Anonymous Trust Badge */}
+        <AnonymousBadge />
 
         {/* Search Input Box */}
         <div className="relative">
@@ -108,7 +136,7 @@ export default function BrowseItemsPage({
           )}
         </div>
 
-        {/* Categories Carousel / Wrap Grid */}
+        {/* Categories */}
         <div className="flex flex-wrap md:flex-nowrap md:justify-center gap-1.5 md:gap-2.5 pb-1 md:pb-0 overflow-x-auto md:overflow-x-visible no-scrollbar -mx-4 px-4 md:-mx-0 md:px-0 scroll-smooth">
           {CATEGORIES.map((cat) => {
             const isActive = categoryFilter === cat
@@ -130,7 +158,7 @@ export default function BrowseItemsPage({
           })}
         </div>
 
-        {/* Status and Sorting Compact Grid */}
+        {/* Status and Sort */}
         <div className="flex flex-wrap sm:flex-nowrap md:justify-center gap-2 md:gap-4 md:pt-1">
           <div className="relative flex-1 md:flex-none md:w-48">
             <select
@@ -158,9 +186,7 @@ export default function BrowseItemsPage({
               className="h-8 md:h-10 w-full appearance-none rounded-input border border-[#efe8da] bg-[#fffdfb] px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-[#8c755f] outline-none transition focus:border-[#8b4cf6]"
             >
               {SORT_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
+                <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
             <div className="pointer-events-none absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
