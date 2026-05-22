@@ -259,6 +259,19 @@ export default function HomePage({ currentUser }) {
               <span className="he-ac-btn">Browse items →</span>
             </Link>
           </div>
+
+          {/* Anonymous Trust Stamp — Hero */}
+          <div className="he-anon-stamp">
+            <div className="he-anon-stamp-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </div>
+            <div>
+              <span className="he-anon-stamp-title">Completely Anonymous</span>
+              <span className="he-anon-stamp-sub">Addresses remain private · Courier handled securely</span>
+            </div>
+          </div>
         </div>
 
         <div className="he-hero-right">
@@ -330,6 +343,14 @@ export default function HomePage({ currentUser }) {
             <Link to={giveRoute} className="he-col-cta">
               List your first item →
             </Link>
+            <div className="he-anon-stamp he-anon-stamp--compact">
+              <div className="he-anon-stamp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <span className="he-anon-stamp-title">Completely Anonymous</span>
+            </div>
           </div>
 
           <div className="he-concept-divider">
@@ -358,6 +379,14 @@ export default function HomePage({ currentUser }) {
             <Link to={getRoute} className="he-col-cta">
               Browse items near you →
             </Link>
+            <div className="he-anon-stamp he-anon-stamp--compact">
+              <div className="he-anon-stamp-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <span className="he-anon-stamp-title">Completely Anonymous</span>
+            </div>
           </div>
         </div>
       </section>
@@ -470,6 +499,20 @@ export default function HomePage({ currentUser }) {
           <a href="#">Terms of Use</a>
           <a href="#">Contact Us</a>
           <a href="mailto:hello@happinessexchange.pk">hello@happinessexchange.pk</a>
+        </div>
+
+        <div className="he-footer-trust">
+          <div className="he-anon-stamp">
+            <div className="he-anon-stamp-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+            </div>
+            <div>
+              <span className="he-anon-stamp-title">Completely Anonymous</span>
+              <span className="he-anon-stamp-sub">Addresses remain private · Courier handled securely</span>
+            </div>
+          </div>
         </div>
 
         <span className="he-footer-copy">© 2025 Happiness Exchange Pakistan. All rights reserved.</span>
