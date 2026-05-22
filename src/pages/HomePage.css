@@ -1291,3 +1291,94 @@
     padding: 24px 20px;
   }
 }
+
+/* ── Anonymous Trust Stamp ─────────────────────────────────────────────── */
+.he-anon-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  border: 1.5px solid rgba(140, 87, 245, 0.25);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(240, 235, 255, 0.8) 0%, rgba(255, 251, 234, 0.8) 100%);
+  padding: 10px 16px;
+  backdrop-filter: blur(8px);
+}
+
+.he-anon-stamp--compact {
+  margin-top: 16px;
+  padding: 8px 13px;
+}
+
+.he-anon-stamp-icon {
+  display: flex;
+  height: 28px;
+  width: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(140, 87, 245, 0.12);
+  color: #8c57f5;
+}
+
+.he-anon-stamp--compact .he-anon-stamp-icon {
+  height: 22px;
+  width: 22px;
+}
+
+.he-anon-stamp-icon svg {
+  height: 15px;
+  width: 15px;
+}
+
+.he-anon-stamp--compact .he-anon-stamp-icon svg {
+  height: 12px;
+  width: 12px;
+}
+
+.he-anon-stamp-title {
+  display: block;
+  color: #6b38cc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.he-anon-stamp--compact .he-anon-stamp-title {
+  font-size: 10px;
+}
+
+.he-anon-stamp-sub {
+  display: block;
+  color: #8c755f;
+  font-size: 9px;
+  margin-top: 1px;
+}
+
+/* ── Footer Trust Section ─────────────────────────────────────────────── */
+.he-footer-trust {
+  margin: 20px 0 4px;
+  display: flex;
+  justify-content: center;
+}
+
+.he-footer-trust .he-anon-stamp {
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.he-footer-trust .he-anon-stamp-title {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.he-footer-trust .he-anon-stamp-sub {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.he-footer-trust .he-anon-stamp-icon {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+

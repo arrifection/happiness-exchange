@@ -15,7 +15,7 @@ const BADGE_LEVELS = [
     id: 'kind_sharer',
     label: 'Kind Sharer',
     icon: '🤝',
-    desc: 'You've shared your first items.',
+    desc: "You've shared your first items.",
     minPoints: 10,
     color: '#0369a1',
     bg: '#e0f2fe',

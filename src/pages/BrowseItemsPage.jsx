@@ -42,7 +42,7 @@ export default function BrowseItemsPage({
 }) {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('Available')
   const [sortBy, setSortBy] = useState('Newest first')
 
   const filteredItems = useMemo(() => {
@@ -201,7 +201,7 @@ export default function BrowseItemsPage({
               onClick={() => {
                 setSearch('')
                 setCategoryFilter('All')
-                setStatusFilter('All')
+                setStatusFilter('Available')
               }}
               className="text-[10px] md:text-[13px] font-bold text-[#c65d4a] hover:underline px-2"
             >
