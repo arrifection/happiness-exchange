@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
-import { Button, Surface, TextField } from '../components/ui.jsx'
+import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
 
 function formatProfileDate(value) {
   if (!value) {
@@ -18,8 +19,29 @@ function formatProfileDate(value) {
   }).format(parsedDate)
 }
 
+function formatReviewDate(value) {
+  if (!value) {
+    return 'Recently'
+  }
+
+  const parsedDate = new Date(value)
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'Recently'
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+  }).format(parsedDate)
+}
+
 export default function ProfilePage({
   currentUser,
+  myReputation,
+  loadingReputation,
+  reputationError,
+  profileReviews,
+  loadingProfileReviews,
+  profileReviewsError,
   onUpdateProfile,
   profileUpdating,
   profileMessage,
@@ -72,72 +94,111 @@ export default function ProfilePage({
       ? `You can change your username until ${formatProfileDate(currentUser.username_change_deadline)}.`
       : 'You can update your username for 7 days after signup.'
 
-  const itemsSharedCount = myItems?.length || 0;
-  const completedExchangesCount = myItems?.filter(item => item.status === 'completed').length || 0;
-  
-  let memberStatus = 'New Member';
-  if (completedExchangesCount >= 5) {
-    memberStatus = 'Trusted Member';
-  } else if (itemsSharedCount >= 1) {
-    memberStatus = 'Active Sharer';
-  }
-
-  const bonusPoints = (itemsSharedCount * 10) + (completedExchangesCount * 50);
+  const itemsSharedCount = myItems?.length || 0
+  const requestedCount = myRequests?.length || 0
+  const completedSharedCount = myReputation?.completed_shared_count || 0
+  const completedReceivedCount = myReputation?.completed_received_count || 0
+  const completedExchangesCount = myReputation?.completed_exchange_count || 0
+  const reviewCount = myReputation?.review_count || 0
+  const averageRating = myReputation?.average_rating || 0
+  const trustPoints = completedSharedCount * 10 + completedExchangesCount * 50
 
   return (
-    <div className="space-y-4 md:space-y-6 md:max-w-3xl md:mx-auto">
-      {/* Header Info Banner */}
-      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 bg-gradient-to-br from-[#8b4cf6]/5 to-[#ffcc22]/10 p-5 rounded-card border border-[#efe8da]/80">
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-white bg-[#efe7ff] shadow-sm flex items-center justify-center">
-          {/* Profile Picture Placeholder */}
+    <div className="space-y-4 md:mx-auto md:max-w-4xl md:space-y-6">
+      <div className="flex flex-col items-center gap-4 rounded-card border border-[#efe8da]/80 bg-gradient-to-br from-[#8b4cf6]/5 to-[#ffcc22]/10 p-5 sm:flex-row sm:items-start">
+        <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#efe7ff] shadow-sm">
           <span className="text-2xl font-bold text-[#8b4cf6]">{currentUser.name.charAt(0).toUpperCase()}</span>
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-not-allowed">
-             <span className="text-white text-[9px] font-bold">CHANGE</span>
+          <div className="absolute inset-0 flex cursor-not-allowed items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
+            <span className="text-[9px] font-bold text-white">CHANGE</span>
           </div>
         </div>
+
         <div className="flex-1 text-center sm:text-left">
-          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-xl md:text-2xl font-bold tracking-tight text-[#1f1f1f]">{currentUser.name}</h1>
-          <p className="text-[11px] md:text-xs text-[#68766d] mt-0.5">{currentUser.email}</p>
-          <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 shadow-xs border border-[#efe8da]">
-             <span className="h-2 w-2 rounded-full bg-[#8b4cf6]"></span>
-             <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">{memberStatus}</span>
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-xl font-bold tracking-tight text-[#1f1f1f] md:text-2xl">
+            {currentUser.name}
+          </h1>
+          <p className="mt-0.5 text-[11px] text-[#68766d] md:text-xs">{currentUser.email}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            <ReputationBadge label={myReputation?.current_badge} />
+            <PlaceholderBadge label="Top Donor of the Week" />
+            <PlaceholderBadge label="Top Donor of the Month" />
+          </div>
+          <div className="mt-3 flex justify-center sm:justify-start">
+            <RatingStars rating={averageRating} reviewCount={reviewCount} />
           </div>
         </div>
-        <div className="shrink-0 flex flex-col items-center sm:items-end justify-center rounded-xl bg-white/60 p-3 border border-[#efe8da]/40 min-w-[100px]">
+
+        <div className="flex min-w-[100px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#efe8da]/40 bg-white/60 p-3 sm:items-end">
           <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/80">Trust Points</p>
-          <p className="mt-0.5 text-lg md:text-xl font-bold text-[#8b4cf6]">{bonusPoints}</p>
+          <p className="mt-0.5 text-lg font-bold text-[#8b4cf6] md:text-xl">{trustPoints}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* Trophies & Stats Area */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
         <Surface className="p-5 md:col-span-2">
-          <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm md:text-base font-bold text-[#1f1f1f]">Your Impact</h2>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-             <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Items Shared</p>
-                <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{itemsSharedCount}</p>
-             </div>
-             <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Exchanges</p>
-                <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedExchangesCount}</p>
-             </div>
-             <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Account Type</p>
-                <p className="mt-1 text-[11px] font-bold text-[#1f1f1f] capitalize uppercase py-1">{currentUser.account_type}</p>
-             </div>
-             <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Joined</p>
-                <p className="mt-1 text-[11px] font-bold text-[#1f1f1f] py-1">{joinedLabel}</p>
-             </div>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] md:text-base">Community Reputation</h2>
+              <p className="mt-1 text-[10px] leading-relaxed text-[#68766d] md:text-[11px]">
+                Simple trust signals based on completed sharing and community reviews.
+              </p>
+            </div>
+            {loadingReputation ? <p className="text-[10px] font-bold uppercase tracking-widest text-[#68766d]">Refreshing reputation...</p> : null}
+          </div>
+
+          {reputationError ? <p className="mt-3 text-[10px] font-bold text-[#c65d4a]">{reputationError}</p> : null}
+
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Current Badge</p>
+              <p className="mt-1 text-[11px] font-bold text-[#1f1f1f]">{myReputation?.current_badge || 'New Member'}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Average Rating</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Reviews</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{reviewCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Completed Shared</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedSharedCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Completed Received</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedReceivedCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Total Exchanges</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedExchangesCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Items Listed</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{itemsSharedCount}</p>
+            </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Requests Made</p>
+              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{requestedCount}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-dashed border-[#efe8da] bg-[#fffdfb] p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Account Type</p>
+              <p className="mt-1 text-[11px] font-bold uppercase text-[#1f1f1f]">{currentUser.account_type}</p>
+            </div>
+            <div className="rounded-xl border border-dashed border-[#efe8da] bg-[#fffdfb] p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Joined</p>
+              <p className="mt-1 text-[11px] font-bold text-[#1f1f1f]">{joinedLabel}</p>
+            </div>
           </div>
         </Surface>
 
-        {/* Identity form */}
         <Surface className="p-5">
           <div>
-            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm md:text-base font-bold text-[#1f1f1f]">Personal Information</h2>
-            <p className="text-[10px] md:text-[11px] leading-relaxed text-[#68766d] mt-1">
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] md:text-base">Personal Information</h2>
+            <p className="mt-1 text-[10px] leading-relaxed text-[#68766d] md:text-[11px]">
               Manage your identity and contact details.
             </p>
           </div>
@@ -160,7 +221,7 @@ export default function ProfilePage({
 
             <div className="grid gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Email Address</span>
-              <div className="min-h-10 rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 py-2.5 text-[13px] text-[#68766d] cursor-not-allowed">
+              <div className="min-h-10 cursor-not-allowed rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 py-2.5 text-[13px] text-[#68766d]">
                 {currentUser.email}
               </div>
             </div>
@@ -168,19 +229,19 @@ export default function ProfilePage({
             <div className="grid gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Phone Number</span>
               <div className="relative">
-                 <input 
-                   disabled
-                   type="tel"
-                   placeholder="+1 (555) 000-0000"
-                   className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 text-[13px] text-[#68766d] cursor-not-allowed"
-                 />
-                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase text-[#8c755f]/40">Coming Soon</span>
+                <input
+                  disabled
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  className="min-h-10 w-full cursor-not-allowed rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 text-[13px] text-[#68766d]"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase text-[#8c755f]/40">Coming Soon</span>
               </div>
             </div>
 
             <div className="grid gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Name Change Rule</span>
-              <div className="min-h-10 rounded-input border border-transparent bg-[#8b4cf6]/5 px-3 py-2.5 text-[11px] text-[#8b4cf6]/90 font-medium">
+              <div className="min-h-10 rounded-input bg-[#8b4cf6]/5 px-3 py-2.5 text-[11px] font-medium text-[#8b4cf6]/90">
                 {helperMessage}
               </div>
             </div>
@@ -192,7 +253,7 @@ export default function ProfilePage({
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 type="submit"
-                className="w-full h-10 min-h-0 text-[12px]"
+                className="h-10 min-h-0 w-full text-[12px]"
                 disabled={usernameLocked || profileUpdating || normalizedName === currentUser.name}
               >
                 {profileUpdating ? 'Saving...' : 'Save Profile Changes'}
@@ -201,55 +262,100 @@ export default function ProfilePage({
           </form>
         </Surface>
 
-        {/* Preferences & Danger Zone */}
         <div className="space-y-4 md:space-y-6">
-           <Surface className="p-5">
-             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm md:text-base font-bold text-[#1f1f1f]">App Preferences</h2>
-             <div className="mt-4 flex items-center justify-between py-2">
-                <div>
-                   <p className="text-xs font-bold text-[#1f1f1f]">Dark Theme</p>
-                   <p className="text-[10px] text-[#68766d] mt-0.5">Switch to a darker interface.</p>
-                </div>
-                <div className="relative inline-flex h-5 w-9 items-center rounded-full bg-[#efe8da] opacity-50 cursor-not-allowed">
-                   <span className="inline-block h-3 w-3 translate-x-1 rounded-full bg-white transition" />
-                </div>
-             </div>
-             <div className="flex items-center justify-between py-2 border-t border-[#efe8da]/40 mt-1">
-                <div>
-                   <p className="text-xs font-bold text-[#1f1f1f]">Email Notifications</p>
-                   <p className="text-[10px] text-[#68766d] mt-0.5">Get alerted on new requests.</p>
-                </div>
-                <div className="relative inline-flex h-5 w-9 items-center rounded-full bg-[#8b4cf6] opacity-50 cursor-not-allowed">
-                   <span className="inline-block h-3 w-3 translate-x-5 rounded-full bg-white transition" />
-                </div>
-             </div>
-           </Surface>
+          <Surface className="p-5">
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] md:text-base">App Preferences</h2>
+            <div className="mt-4 flex items-center justify-between py-2">
+              <div>
+                <p className="text-xs font-bold text-[#1f1f1f]">Dark Theme</p>
+                <p className="mt-0.5 text-[10px] text-[#68766d]">Switch to a darker interface.</p>
+              </div>
+              <div className="relative inline-flex h-5 w-9 cursor-not-allowed items-center rounded-full bg-[#efe8da] opacity-50">
+                <span className="inline-block h-3 w-3 translate-x-1 rounded-full bg-white transition" />
+              </div>
+            </div>
+            <div className="mt-1 flex items-center justify-between border-t border-[#efe8da]/40 py-2">
+              <div>
+                <p className="text-xs font-bold text-[#1f1f1f]">Email Notifications</p>
+                <p className="mt-0.5 text-[10px] text-[#68766d]">Get alerted on new requests.</p>
+              </div>
+              <div className="relative inline-flex h-5 w-9 cursor-not-allowed items-center rounded-full bg-[#8b4cf6] opacity-50">
+                <span className="inline-block h-3 w-3 translate-x-5 rounded-full bg-white transition" />
+              </div>
+            </div>
+          </Surface>
 
-           <Surface className="p-5 border-[#c65d4a]/20">
-             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm md:text-base font-bold text-[#c65d4a]">Account Security</h2>
-             <p className="text-[10px] md:text-[11px] leading-relaxed text-[#68766d] mt-1">
-                Manage your session or permanently remove your account.
-             </p>
-             <div className="mt-4 flex flex-col gap-3">
-               <Button
-                 type="button"
-                 onClick={onLogout}
-                 variant="secondary"
-                 className="w-full h-10 min-h-0 text-[12px] font-bold text-[#1f1f1f] bg-white border-[#efe8da] hover:bg-[#faf7f1]"
-               >
-                 Sign Out
-               </Button>
-               <Button
-                 type="button"
-                 variant="secondary"
-                 disabled
-                 className="w-full h-10 min-h-0 text-[12px] font-bold text-[#c65d4a] bg-[#fff3f0]/50 border-[#c65d4a]/20 opacity-60 cursor-not-allowed"
-               >
-                 Delete Account
-               </Button>
-             </div>
-           </Surface>
+          <Surface className="border-[#c65d4a]/20 p-5">
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#c65d4a] md:text-base">Account Security</h2>
+            <p className="mt-1 text-[10px] leading-relaxed text-[#68766d] md:text-[11px]">
+              Manage your session or permanently remove your account.
+            </p>
+            <div className="mt-4 flex flex-col gap-3">
+              <Button
+                type="button"
+                onClick={onLogout}
+                variant="secondary"
+                className="h-10 min-h-0 w-full border-[#efe8da] bg-white text-[12px] font-bold text-[#1f1f1f] hover:bg-[#faf7f1]"
+              >
+                Sign Out
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled
+                className="h-10 min-h-0 w-full cursor-not-allowed border-[#c65d4a]/20 bg-[#fff3f0]/50 text-[12px] font-bold text-[#c65d4a] opacity-60"
+              >
+                Delete Account
+              </Button>
+            </div>
+          </Surface>
         </div>
+
+        <Surface className="p-5 md:col-span-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] md:text-base">Latest Reviews</h2>
+              <p className="mt-1 text-[10px] leading-relaxed text-[#68766d] md:text-[11px]">
+                Kind words from completed exchanges appear here.
+              </p>
+            </div>
+            {loadingProfileReviews ? <p className="text-[10px] font-bold uppercase tracking-widest text-[#68766d]">Loading reviews...</p> : null}
+          </div>
+
+          {profileReviewsError ? <p className="mt-3 text-[10px] font-bold text-[#c65d4a]">{profileReviewsError}</p> : null}
+
+          {!loadingProfileReviews && !profileReviewsError && profileReviews.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                title={`No reviews yet \u{1F331}`}
+                description="Complete a few exchanges and your community feedback will show here."
+              />
+            </div>
+          ) : null}
+
+          <div className="mt-4 space-y-3">
+            {profileReviews.slice(0, 6).map((review) => (
+              <article key={review.id} className="rounded-card border border-[#efe8da] bg-[#fffdfb] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-bold text-[#1f1f1f]">{review.reviewer_name}</p>
+                    <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">
+                      {review.item_title}
+                    </p>
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">
+                    {formatReviewDate(review.created_at)}
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <RatingStars rating={review.rating} reviewCount={0} showValue={false} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">{review.rating}/5</span>
+                </div>
+                <p className="mt-3 text-[12px] leading-relaxed text-[#68766d]">{review.comment}</p>
+              </article>
+            ))}
+          </div>
+        </Surface>
       </div>
     </div>
   )

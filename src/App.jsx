@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
+import AuthenticatedHomePage from './pages/AuthenticatedHomePage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import GiverHomePage from './pages/GiverHomePage.jsx'
@@ -13,6 +14,7 @@ import ProfilePage from './pages/ProfilePage.jsx'
 import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
+import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
 import { Button, Surface } from './components/ui.jsx'
 
@@ -24,6 +26,8 @@ const ITEM_IMAGE_UPLOAD_ENDPOINT = `${API_BASE}/api/items/upload-image`
 const MY_ITEMS_ENDPOINT = `${API_BASE}/api/items/my`
 const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
 const PROFILE_ENDPOINT = `${API_BASE}/api/me`
+const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
+const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const TOKEN_KEY = 'happiness_exchange_token'
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -86,6 +90,72 @@ function appTabClass(isActive) {
   ].join(' ')
 }
 
+function getUserReviewsEndpoint(userId) {
+  return `${API_BASE}/api/users/${userId}/reviews`
+}
+
+function AuthenticatedDashboardRoute({
+  currentUser,
+  items,
+  myItems,
+  myRequests,
+  ownerRequests,
+  myReputation,
+  myItemsError,
+  loadingMyItems,
+  ownerItemsMessage,
+  ownerItemsError,
+  ownerActionItemId,
+  onDeleteItem,
+  onCompleteItem,
+  onRequestAction,
+  onOpenReview,
+  getReviewContextForMyRequest,
+  getReviewContextForOwnerRequest,
+  loadingRequests,
+  requestsMessage,
+  requestsError,
+}) {
+  return currentUser?.account_type === 'giver' ? (
+    <GiverHomePage
+      currentUser={currentUser}
+      myReputation={myReputation}
+      myItems={myItems}
+      myRequests={myRequests}
+      myItemsError={myItemsError}
+      loadingMyItems={loadingMyItems}
+      ownerItemsMessage={ownerItemsMessage}
+      ownerItemsError={ownerItemsError}
+      ownerActionItemId={ownerActionItemId}
+      onDeleteItem={onDeleteItem}
+      onCompleteItem={onCompleteItem}
+      ownerRequests={ownerRequests}
+      onRequestAction={onRequestAction}
+      onOpenReview={onOpenReview}
+      getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
+      loadingRequests={loadingRequests}
+      requestsMessage={requestsMessage}
+      requestsError={requestsError}
+    />
+  ) : (
+    <DashboardPage
+      currentUser={currentUser}
+      items={items}
+      myReputation={myReputation}
+      myItems={myItems}
+      myRequests={myRequests}
+      ownerRequests={ownerRequests}
+      onRequestAction={onRequestAction}
+      onOpenReview={onOpenReview}
+      getReviewContextForMyRequest={getReviewContextForMyRequest}
+      getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
+      loadingRequests={loadingRequests}
+      requestsMessage={requestsMessage}
+      requestsError={requestsError}
+    />
+  )
+}
+
 export default function App() {
   const location = useLocation()
   const [showSplash, setShowSplash] = useState(true)
@@ -124,8 +194,17 @@ export default function App() {
   const [profileUpdating, setProfileUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const [myReputation, setMyReputation] = useState(null)
+  const [loadingReputation, setLoadingReputation] = useState(false)
+  const [reputationError, setReputationError] = useState('')
+  const [profileReviews, setProfileReviews] = useState([])
+  const [loadingProfileReviews, setLoadingProfileReviews] = useState(false)
+  const [profileReviewsError, setProfileReviewsError] = useState('')
+  const [reviewMessage, setReviewMessage] = useState('')
+  const [reviewModalState, setReviewModalState] = useState(null)
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const isRestoringSession = Boolean(token) && !currentUser
-  const isLandingHome = location.pathname === '/'
+  const isLandingHome = !currentUser && location.pathname === '/'
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -168,6 +247,8 @@ export default function App() {
     if (currentUser) {
       loadMyItems()
       loadRequestData()
+      loadMyReputation()
+      loadProfileReviews(currentUser.id)
       setItemForm((current) => ({
         ...current,
         owner_name: current.owner_name || currentUser.name,
@@ -267,6 +348,54 @@ export default function App() {
     }
   }
 
+  async function loadMyReputation() {
+    if (!token) {
+      setMyReputation(null)
+      return
+    }
+
+    setLoadingReputation(true)
+    setReputationError('')
+    try {
+      const response = await fetch(MY_REPUTATION_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setMyReputation(data)
+      } else {
+        setReputationError(formatApiError(data, 'Unable to load your reputation.'))
+      }
+    } catch (error) {
+      setReputationError('Unable to load your reputation.')
+    } finally {
+      setLoadingReputation(false)
+    }
+  }
+
+  async function loadProfileReviews(userId) {
+    if (!userId) {
+      setProfileReviews([])
+      return
+    }
+
+    setLoadingProfileReviews(true)
+    setProfileReviewsError('')
+    try {
+      const response = await fetch(getUserReviewsEndpoint(userId))
+      const data = await response.json()
+      if (response.ok) {
+        setProfileReviews(data)
+      } else {
+        setProfileReviewsError(formatApiError(data, 'Unable to load profile reviews.'))
+      }
+    } catch (error) {
+      setProfileReviewsError('Unable to load profile reviews.')
+    } finally {
+      setLoadingProfileReviews(false)
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem(TOKEN_KEY)
     setToken('')
@@ -285,6 +414,12 @@ export default function App() {
     setItemError('')
     setProfileMessage('')
     setProfileError('')
+    setMyReputation(null)
+    setReputationError('')
+    setProfileReviews([])
+    setProfileReviewsError('')
+    setReviewMessage('')
+    setReviewModalState(null)
   }
 
   function handleAuthSuccess(data) {
@@ -494,6 +629,7 @@ export default function App() {
       setMyItems((current) => current.filter((currentItem) => currentItem.id !== item.id))
       setOwnerRequests((current) => current.filter((request) => request.item_id !== item.id))
       setOwnerItemsMessage(`"${item.title}" was deleted successfully.`)
+      await loadMyReputation()
       return true
     } catch (error) {
       setOwnerItemsError(error.message)
@@ -523,7 +659,10 @@ export default function App() {
 
       replaceItemAcrossLists(data)
       setOwnerItemsMessage(`"${item.title}" is now marked as successfully taken.`)
+      await loadItems()
+      await loadMyItems()
       await loadRequestData()
+      await loadMyReputation()
       return data
     } catch (error) {
       setOwnerItemsError(error.message)
@@ -585,8 +724,125 @@ export default function App() {
     }
   }
 
+  function openReviewModal(reviewContext) {
+    if (!reviewContext) {
+      return
+    }
+
+    setReviewModalState(reviewContext)
+  }
+
+  function closeReviewModal() {
+    if (reviewSubmitting) {
+      return
+    }
+
+    setReviewModalState(null)
+  }
+
+  async function handleSubmitReview({ rating, comment }) {
+    if (!reviewModalState) {
+      return { error: 'Review details are missing.' }
+    }
+
+    setReviewSubmitting(true)
+    try {
+      const response = await fetch(REVIEWS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          item_id: reviewModalState.itemId,
+          reviewed_user_id: reviewModalState.reviewedUserId,
+          rating,
+          comment,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        return { error: formatApiError(data, 'Unable to submit your review.') }
+      }
+
+      setReviewMessage('Review submitted successfully.')
+      setReviewModalState(null)
+      await loadItems()
+      await loadMyItems()
+      await loadRequestData()
+      await loadMyReputation()
+      if (currentUser?.id) {
+        await loadProfileReviews(currentUser.id)
+      }
+      return { success: true, data }
+    } catch (error) {
+      return { error: 'Unable to submit your review.' }
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
   function getMyRequestForItem(itemId) {
     return myRequests.find((request) => request.item_id === itemId)
+  }
+
+  function hasSubmittedReviewForItem(itemId) {
+    return Boolean(myReputation?.submitted_review_item_ids?.includes(itemId))
+  }
+
+  function getReviewContextForItem(item) {
+    if (!currentUser || !item || item.owner_id === currentUser.id) {
+      return null
+    }
+
+    const myRequest = getMyRequestForItem(item.id)
+    if (item.status !== 'completed' || myRequest?.status !== 'approved' || hasSubmittedReviewForItem(item.id)) {
+      return null
+    }
+
+    return {
+      itemId: item.id,
+      itemTitle: item.title,
+      reviewedUserId: item.owner_id,
+      reviewedUserName: item.owner_name,
+    }
+  }
+
+  function getReviewContextForMyRequest(request) {
+    if (!currentUser || !request || request.status !== 'approved' || hasSubmittedReviewForItem(request.item_id)) {
+      return null
+    }
+
+    const relatedItem = items.find((item) => item.id === request.item_id)
+    if (!relatedItem || relatedItem.status !== 'completed') {
+      return null
+    }
+
+    return {
+      itemId: request.item_id,
+      itemTitle: request.item_title,
+      reviewedUserId: relatedItem.owner_id,
+      reviewedUserName: relatedItem.owner_name,
+    }
+  }
+
+  function getReviewContextForOwnerRequest(request) {
+    if (!currentUser || !request || request.status !== 'approved' || hasSubmittedReviewForItem(request.item_id)) {
+      return null
+    }
+
+    const relatedItem = myItems.find((item) => item.id === request.item_id)
+    if (!relatedItem || relatedItem.status !== 'completed') {
+      return null
+    }
+
+    return {
+      itemId: request.item_id,
+      itemTitle: request.item_title,
+      reviewedUserId: request.requester_id,
+      reviewedUserName: request.requester_name,
+    }
   }
 
   if (isRestoringSession) {
@@ -746,11 +1002,14 @@ export default function App() {
               <Route
                 path="/"
                 element={(
-                  <HomePage
+                  <AuthenticatedHomePage
                     items={items}
                     currentUser={currentUser}
+                    myReputation={myReputation}
                     getMyRequestForItem={getMyRequestForItem}
+                    getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={handleCreateRequest}
+                    onOpenReview={openReviewModal}
                     loadingItems={loadingItems}
                     itemsError={itemsError}
                     myRequests={myRequests}
@@ -765,7 +1024,9 @@ export default function App() {
                     items={items}
                     currentUser={currentUser}
                     getMyRequestForItem={getMyRequestForItem}
+                    getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={handleCreateRequest}
+                    onOpenReview={openReviewModal}
                     onRefreshItems={loadItems}
                     loadingItems={loadingItems}
                     itemsError={itemsError}
@@ -798,7 +1059,9 @@ export default function App() {
                     items={items}
                     myItems={myItems}
                     getMyRequestForItem={getMyRequestForItem}
+                    getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={handleCreateRequest}
+                    onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem}
                     onCompleteItem={handleCompleteItem}
                     ownerActionItemId={ownerActionItemId}
@@ -817,36 +1080,28 @@ export default function App() {
               <Route
                 path="/dashboard"
                 element={(
-                  currentUser?.account_type === 'giver' ? (
-                    <GiverHomePage
-                      currentUser={currentUser}
-                      myItems={myItems}
-                      myRequests={myRequests}
-                      myItemsError={myItemsError}
-                      loadingMyItems={loadingMyItems}
-                      ownerItemsMessage={ownerItemsMessage}
-                      ownerItemsError={ownerItemsError}
-                      ownerActionItemId={ownerActionItemId}
-                      onDeleteItem={handleDeleteItem}
-                      onCompleteItem={handleCompleteItem}
-                      ownerRequests={ownerRequests}
-                      onRequestAction={handleRequestAction}
-                      loadingRequests={loadingRequests}
-                      requestsMessage={requestsMessage}
-                      requestsError={requestsError}
-                    />
-                  ) : (
-                    <DashboardPage
-                      currentUser={currentUser}
-                      myItems={myItems}
-                      myRequests={myRequests}
-                      ownerRequests={ownerRequests}
-                      onRequestAction={handleRequestAction}
-                      loadingRequests={loadingRequests}
-                      requestsMessage={requestsMessage}
-                      requestsError={requestsError}
-                    />
-                  )
+                  <AuthenticatedDashboardRoute
+                    currentUser={currentUser}
+                    items={items}
+                    myReputation={myReputation}
+                    myItems={myItems}
+                    myRequests={myRequests}
+                    ownerRequests={ownerRequests}
+                    myItemsError={myItemsError}
+                    loadingMyItems={loadingMyItems}
+                    ownerItemsMessage={ownerItemsMessage}
+                    ownerItemsError={ownerItemsError}
+                    ownerActionItemId={ownerActionItemId}
+                    onDeleteItem={handleDeleteItem}
+                    onCompleteItem={handleCompleteItem}
+                    onRequestAction={handleRequestAction}
+                    onOpenReview={openReviewModal}
+                    getReviewContextForMyRequest={getReviewContextForMyRequest}
+                    getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
+                    loadingRequests={loadingRequests}
+                    requestsMessage={requestsMessage}
+                    requestsError={requestsError}
+                  />
                 )}
               />
               <Route
@@ -856,6 +1111,8 @@ export default function App() {
                     currentUser={currentUser}
                     ownerRequests={ownerRequests}
                     myItems={myItems}
+                    onOpenReview={openReviewModal}
+                    getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
                     loadingRequests={loadingRequests}
                     requestsMessage={requestsMessage}
                     requestsError={requestsError}
@@ -868,6 +1125,12 @@ export default function App() {
                 element={(
                   <ProfilePage
                     currentUser={currentUser}
+                    myReputation={myReputation}
+                    loadingReputation={loadingReputation}
+                    reputationError={reputationError}
+                    profileReviews={profileReviews}
+                    loadingProfileReviews={loadingProfileReviews}
+                    profileReviewsError={profileReviewsError}
                     onUpdateProfile={handleProfileUpdate}
                     profileUpdating={profileUpdating}
                     profileMessage={profileMessage}
@@ -947,15 +1210,24 @@ export default function App() {
         </main>
       )}
 
-      {(loadingUser || authError) ? (
+      {(loadingUser || authError || reviewMessage) ? (
         <div className="fixed bottom-6 right-6 z-50 w-64">
           <Surface className="border-[#8b4cf6]/10 p-4 shadow-xl ring-1 ring-[#8b4cf6]/5">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">System Notification</h2>
             {loadingUser ? <p className="mt-1 text-xs text-[#68766d]">Verifying profile...</p> : null}
             {authError ? <p className="mt-1 text-xs font-medium text-[#c65d4a]">{authError}</p> : null}
+            {reviewMessage ? <p className="mt-1 text-xs font-medium text-[#8b4cf6]">{reviewMessage}</p> : null}
           </Surface>
         </div>
       ) : null}
+
+      <ReviewModal
+        open={Boolean(reviewModalState)}
+        context={reviewModalState}
+        submitting={reviewSubmitting}
+        onClose={closeReviewModal}
+        onSubmit={handleSubmitReview}
+      />
     </div>
   )
 }

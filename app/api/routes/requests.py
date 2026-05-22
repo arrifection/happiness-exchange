@@ -5,7 +5,11 @@ from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps.auth import get_current_user
-from app.db.mongodb import get_items_collection_async, get_requests_collection_async
+from app.db.mongodb import (
+    get_conversations_collection_async,
+    get_items_collection_async,
+    get_requests_collection_async,
+)
 from app.schemas.requests import RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
@@ -230,6 +234,31 @@ async def approve_request(
         {"_id": item_object_id},
         {"$set": {"status": "reserved"}},
     )
+
+    # Auto-create a private conversation for the two participants
+    conversations_collection = await get_conversations_collection_async()
+    if conversations_collection is not None:
+        request_id_str = str(request_object_id)
+        existing_conv = await conversations_collection.find_one({"request_id": request_id_str})
+        if existing_conv is None:
+            now = datetime.now(timezone.utc)
+            conv_doc = {
+                "item_id": request["item_id"],
+                "item_title": request.get("item_title", ""),
+                "giver_id": request["owner_id"],
+                "giver_name": request.get("owner_name", ""),
+                "receiver_id": request["requester_id"],
+                "receiver_name": request.get("requester_name", ""),
+                "request_id": request_id_str,
+                "created_at": now,
+                "last_message_at": None,
+                "last_message_text": None,
+                "unread_counts": {
+                    request["owner_id"]: 0,
+                    request["requester_id"]: 0,
+                },
+            }
+            await conversations_collection.insert_one(conv_doc)
 
     updated_request = await requests_collection.find_one({"_id": request_object_id})
     return serialize_request(updated_request)

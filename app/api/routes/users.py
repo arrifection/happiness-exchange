@@ -6,6 +6,7 @@ from app.api.deps.auth import get_current_user
 from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
+    get_reviews_collection_async,
     get_users_collection_async,
 )
 from app.schemas.auth import ProfileUpdateRequest, UserResponse
@@ -108,6 +109,13 @@ async def update_me(
         await requests_collection.update_many(
             {"owner_id": current_user["id"]},
             {"$set": {"owner_name": cleaned_name}},
+        )
+
+    reviews_collection = await get_reviews_collection_async()
+    if reviews_collection is not None:
+        await reviews_collection.update_many(
+            {"reviewer_id": current_user["id"]},
+            {"$set": {"reviewer_name": cleaned_name}},
         )
 
     updated_user = await users_collection.find_one({"_id": user_object_id})

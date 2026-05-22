@@ -122,6 +122,22 @@ class ProfileSecurityTests(IsolatedAsyncioTestCase):
                 },
             ]
         )
+        self.reviews_collection = FakeCollection(
+            [
+                {
+                    "_id": ObjectId(),
+                    "item_id": "item-1",
+                    "request_id": str(ObjectId()),
+                    "item_title": "Owner Item",
+                    "reviewer_id": str(self.owner_id),
+                    "reviewer_name": "Owner User",
+                    "reviewed_user_id": str(self.other_id),
+                    "rating": 5,
+                    "comment": "Very kind and responsive.",
+                    "created_at": self.now,
+                }
+            ]
+        )
         self.items_collection = FakeCollection(
             [
                 {
@@ -141,9 +157,13 @@ class ProfileSecurityTests(IsolatedAsyncioTestCase):
         async def get_requests_collection_async():
             return self.requests_collection
 
+        async def get_reviews_collection_async():
+            return self.reviews_collection
+
         users_routes.get_users_collection_async = get_users_collection_async
         users_routes.get_items_collection_async = get_items_collection_async
         users_routes.get_requests_collection_async = get_requests_collection_async
+        users_routes.get_reviews_collection_async = get_reviews_collection_async
         requests_routes.get_requests_collection_async = get_requests_collection_async
 
         self.app = FastAPI()
@@ -186,6 +206,7 @@ class ProfileSecurityTests(IsolatedAsyncioTestCase):
         self.assertEqual(self.items_collection.documents[0]["owner_name"], "Better Name")
         self.assertEqual(self.requests_collection.documents[0]["requester_name"], "Better Name")
         self.assertEqual(self.requests_collection.documents[1]["owner_name"], "Better Name")
+        self.assertEqual(self.reviews_collection.documents[0]["reviewer_name"], "Better Name")
 
     def test_username_update_fails_after_seven_days(self):
         current_user = {

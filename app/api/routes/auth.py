@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(payload: SignupRequest):
-    """Create a new user account and immediately return an access token."""
+    """Create a new community member account and immediately return an access token."""
     users_collection = await get_users_collection_async()
     if users_collection is None:
         raise HTTPException(
@@ -42,7 +42,7 @@ async def signup(payload: SignupRequest):
         "name_normalized": normalized_name,
         "email": normalized_email,
         "hashed_password": hash_password(payload.password),
-        "account_type": payload.account_type,
+        "account_type": "member",
         "created_at": now,
         "updated_at": now,
     }

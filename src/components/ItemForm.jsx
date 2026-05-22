@@ -4,7 +4,7 @@ import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
 
 const CATEGORIES = [
   'Furniture', 'Home', 'Kitchen', 'Electronics',
-  'Clothes', 'Baby', 'Books', 'Appliances',
+  'Clothes', 'Kids', 'Books', 'Appliances',
   'Study', 'Sports', 'Toys', 'Other',
 ]
 

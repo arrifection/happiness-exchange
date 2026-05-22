@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import ItemCard from '../components/ItemCard.jsx'
 import { Button, EmptyState } from '../components/ui.jsx'
 
-const CATEGORIES = ['All', 'Furniture', 'Home', 'Baby', 'Books', 'Kitchen', 'Clothes', 'Other']
+const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids', 'Books', 'Kitchen', 'Clothes', 'Other']
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
 const SORT_OPTIONS = ['Newest first', 'Oldest first']
 
@@ -11,7 +11,9 @@ export default function BrowseItemsPage({
   items,
   currentUser,
   getMyRequestForItem,
+  getReviewContextForItem,
   onCreateRequest,
+  onOpenReview,
   onRefreshItems,
   loadingItems,
   itemsError,
@@ -38,7 +40,10 @@ export default function BrowseItemsPage({
 
     // Category
     if (categoryFilter !== 'All') {
-      result = result.filter((item) => item.category === categoryFilter)
+      result = result.filter((item) => {
+        if (categoryFilter === 'Kids' && item.category === 'Baby') return true;
+        return item.category === categoryFilter;
+      })
     }
 
     // Status
@@ -197,7 +202,9 @@ export default function BrowseItemsPage({
                 item={item}
                 currentUser={currentUser}
                 myRequest={getMyRequestForItem(item.id)}
+                reviewContext={getReviewContextForItem(item)}
                 onCreateRequest={onCreateRequest}
+                onOpenReview={onOpenReview}
                 compact
               />
             ))}

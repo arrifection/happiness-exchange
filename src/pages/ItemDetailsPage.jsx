@@ -8,7 +8,9 @@ export default function ItemDetailsPage({
   items,
   myItems,
   getMyRequestForItem,
+  getReviewContextForItem,
   onCreateRequest,
+  onOpenReview,
   onDeleteItem,
   onCompleteItem,
   ownerActionItemId,
@@ -50,7 +52,9 @@ export default function ItemDetailsPage({
         item={item}
         currentUser={currentUser}
         myRequest={getMyRequestForItem(item.id)}
+        reviewContext={getReviewContextForItem(item)}
         onCreateRequest={onCreateRequest}
+        onOpenReview={onOpenReview}
         onDeleteItem={onDeleteItem}
         onCompleteItem={onCompleteItem}
         ownerActionPending={ownerActionItemId === item.id}

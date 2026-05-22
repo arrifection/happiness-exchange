@@ -20,7 +20,7 @@ function formatRequestDate(value) {
   }).format(parsedDate)
 }
 
-function RequestCard({ request, item, onRequestAction }) {
+function RequestCard({ request, item, onRequestAction, children }) {
   return (
     <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-xs">
       <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26">
@@ -40,24 +40,28 @@ function RequestCard({ request, item, onRequestAction }) {
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f] line-clamp-1">{request.item_title}</h3>
-            <div className="shrink-0 scale-90 origin-top-right">
+            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f]">
+              {request.item_title}
+            </h3>
+            <div className="origin-top-right shrink-0 scale-90">
               <StatusBadge status={request.status} />
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">
             <span>By {request.requester_name.split(' ')[0]}</span>
-            <span className="opacity-40">•</span>
+            <span className="opacity-40">/</span>
             <span>{formatRequestDate(request.created_at)}</span>
           </div>
         </div>
 
         {request.status === 'pending' ? (
           <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
-            <Button className="flex-1 h-7 min-h-0 text-[10px] rounded-btn" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
-            <Button className="flex-1 h-7 min-h-0 text-[10px] rounded-btn" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
+            <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
+            <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
           </div>
         ) : null}
+
+        {children}
       </div>
     </article>
   )
@@ -67,6 +71,8 @@ export default function RequestsPage({
   currentUser,
   ownerRequests,
   myItems,
+  onOpenReview,
+  getReviewContextForOwnerRequest,
   loadingRequests,
   requestsMessage,
   requestsError,
@@ -96,19 +102,17 @@ export default function RequestsPage({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg md:text-xl font-bold tracking-tight text-[#1f1f1f]">
+            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f] md:text-xl">
               Incoming Requests
             </h1>
-            <p className="text-[10px] md:text-xs text-[#68766d]">Review neighbors who are interested in your items.</p>
+            <p className="text-[10px] text-[#68766d] md:text-xs">Review neighbors who are interested in your items.</p>
           </div>
         </div>
 
-        {/* Filter pills */}
-        <div className="flex flex-wrap md:flex-nowrap md:justify-center gap-1.5 md:gap-3 overflow-x-auto md:overflow-x-visible no-scrollbar pb-1 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth">
+        <div className="-mx-4 flex flex-wrap gap-1.5 overflow-x-auto px-4 pb-1 no-scrollbar scroll-smooth md:mx-0 md:flex-nowrap md:justify-center md:gap-3 md:overflow-x-visible md:px-0 md:pb-0">
           {FILTERS.map((filter) => {
             const isActive = activeFilter === filter
             return (
@@ -117,7 +121,7 @@ export default function RequestsPage({
                 type="button"
                 onClick={() => setActiveFilter(filter)}
                 className={[
-                  'shrink-0 rounded-full px-3.5 py-1.5 md:px-5 md:py-2 text-[10px] md:text-[11px] font-bold uppercase tracking-wider transition-all duration-200',
+                  'shrink-0 rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 md:px-5 md:py-2 md:text-[11px]',
                   isActive
                     ? 'bg-[#8b4cf6] text-white shadow-xs'
                     : 'border border-[#efe8da] bg-[#fffdfb] text-[#8c755f] hover:text-[#1f1f1f]',
@@ -140,11 +144,11 @@ export default function RequestsPage({
 
       <div className="space-y-3 pt-1 md:pt-4">
         {!loadingRequests && visibleRequests.length === 0 ? (
-          <div className="md:px-8">
+          <div className="flex w-full justify-center md:px-8">
             <EmptyState
               title={
                 activeFilter === 'pending'
-                  ? 'No pending requests 🌱'
+                  ? 'No pending requests yet'
                   : activeFilter === 'approved'
                     ? 'No approved requests'
                     : activeFilter === 'rejected'
@@ -155,15 +159,30 @@ export default function RequestsPage({
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-6">
-            {visibleRequests.map((request) => (
-              <RequestCard
-                key={request.id}
-                request={request}
-                item={itemLookup[request.item_id]}
-                onRequestAction={onRequestAction}
-              />
-            ))}
+          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-6">
+            {visibleRequests.map((request) => {
+              const reviewContext = getReviewContextForOwnerRequest(request)
+              return (
+                <RequestCard
+                  key={request.id}
+                  request={request}
+                  item={itemLookup[request.item_id]}
+                  onRequestAction={onRequestAction}
+                >
+                  {reviewContext ? (
+                    <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+                      <Button
+                        className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+                        variant="secondary"
+                        onClick={() => onOpenReview(reviewContext)}
+                      >
+                        Leave Review
+                      </Button>
+                    </div>
+                  ) : null}
+                </RequestCard>
+              )
+            })}
           </div>
         )}
       </div>

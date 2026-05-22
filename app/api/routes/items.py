@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user
-from app.db.mongodb import get_items_collection_async, get_requests_collection_async
+from app.db.mongodb import (
+    get_items_collection_async,
+    get_requests_collection_async,
+    get_reviews_collection_async,
+)
 from app.schemas.items import (
     ItemCreateRequest,
     ItemImageUploadResponse,
@@ -18,6 +22,7 @@ from app.services.cloudinary import (
     upload_image_to_cloudinary,
 )
 from app.services.items import build_item_document, serialize_item
+from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
 
 router = APIRouter()
 
@@ -47,7 +52,9 @@ async def create_item(
 async def list_items():
     """Return public item listings with their current status."""
     items_collection = await get_items_collection_async()
-    if items_collection is None:
+    requests_collection = await get_requests_collection_async()
+    reviews_collection = await get_reviews_collection_async()
+    if items_collection is None or requests_collection is None or reviews_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
@@ -55,7 +62,19 @@ async def list_items():
 
     cursor = items_collection.find({}).sort("created_at", DESCENDING)
     items = await cursor.to_list(length=100)
-    return [serialize_item(item) for item in items]
+    owner_reputation_lookup = await build_reputation_lookup(
+        [item["owner_id"] for item in items],
+        items_collection=items_collection,
+        requests_collection=requests_collection,
+        reviews_collection=reviews_collection,
+    )
+    return [
+        serialize_item(
+            item,
+            owner_reputation=owner_reputation_lookup.get(item["owner_id"]),
+        )
+        for item in items
+    ]
 
 
 @router.get("/items/my", response_model=list[ItemResponse])
@@ -63,7 +82,8 @@ async def list_my_items(current_user: dict = Depends(get_current_user)):
     """Return item listings created by the logged-in user."""
     items_collection = await get_items_collection_async()
     requests_collection = await get_requests_collection_async()
-    if items_collection is None or requests_collection is None:
+    reviews_collection = await get_reviews_collection_async()
+    if items_collection is None or requests_collection is None or reviews_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
@@ -74,12 +94,24 @@ async def list_my_items(current_user: dict = Depends(get_current_user)):
     ).sort("created_at", DESCENDING)
     items = await cursor.to_list(length=100)
 
+    owner_reputation = await calculate_reputation_summary(
+        current_user["id"],
+        items_collection=items_collection,
+        requests_collection=requests_collection,
+        reviews_collection=reviews_collection,
+    )
     serialized_items = []
     for item in items:
         request_count = await requests_collection.count_documents(
             {"item_id": str(item["_id"])}
         )
-        serialized_items.append(serialize_item(item, request_count=request_count))
+        serialized_items.append(
+            serialize_item(
+                item,
+                request_count=request_count,
+                owner_reputation=owner_reputation,
+            )
+        )
 
     return serialized_items
 
@@ -137,7 +169,9 @@ async def upload_item_image(
 async def get_item(item_id: str):
     """Return a single item listing by its id."""
     items_collection = await get_items_collection_async()
-    if items_collection is None:
+    requests_collection = await get_requests_collection_async()
+    reviews_collection = await get_reviews_collection_async()
+    if items_collection is None or requests_collection is None or reviews_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
@@ -157,7 +191,13 @@ async def get_item(item_id: str):
             detail="Item not found.",
         )
 
-    return serialize_item(item)
+    owner_reputation = await calculate_reputation_summary(
+        item["owner_id"],
+        items_collection=items_collection,
+        requests_collection=requests_collection,
+        reviews_collection=reviews_collection,
+    )
+    return serialize_item(item, owner_reputation=owner_reputation)
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -252,4 +292,14 @@ async def complete_item(
         )
 
     updated_item = await items_collection.find_one({"_id": object_id})
-    return serialize_item(updated_item)
+    owner_reputation = None
+    reviews_collection = await get_reviews_collection_async()
+    if requests_collection is not None and reviews_collection is not None:
+        owner_reputation = await calculate_reputation_summary(
+            current_user["id"],
+            items_collection=items_collection,
+            requests_collection=requests_collection,
+            reviews_collection=reviews_collection,
+        )
+
+    return serialize_item(updated_item, owner_reputation=owner_reputation)

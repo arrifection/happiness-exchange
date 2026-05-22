@@ -1,7 +1,11 @@
 from app.schemas.items import ItemCreateRequest
 
 
-def serialize_item(item: dict, request_count: int | None = None) -> dict:
+def serialize_item(
+    item: dict,
+    request_count: int | None = None,
+    owner_reputation: dict | None = None,
+) -> dict:
     """Convert a MongoDB item document into an API-safe response shape."""
     return {
         "id": str(item["_id"]),
@@ -14,6 +18,9 @@ def serialize_item(item: dict, request_count: int | None = None) -> dict:
         "status": item["status"],
         "owner_id": item["owner_id"],
         "owner_name": item["owner_name"],
+        "owner_badge": owner_reputation["current_badge"] if owner_reputation else None,
+        "owner_average_rating": owner_reputation["average_rating"] if owner_reputation else None,
+        "owner_review_count": owner_reputation["review_count"] if owner_reputation else None,
         "created_at": item["created_at"],
         "request_count": request_count,
     }

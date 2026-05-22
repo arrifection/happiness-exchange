@@ -27,6 +27,9 @@ class ItemResponse(BaseModel):
     status: ItemStatus
     owner_id: str
     owner_name: str
+    owner_badge: str | None = None
+    owner_average_rating: float | None = None
+    owner_review_count: int | None = None
     created_at: datetime
     request_count: int | None = None
 

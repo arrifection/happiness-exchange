@@ -3,19 +3,6 @@ import { Link, Navigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 
-const accountOptions = [
-  {
-    value: 'giver',
-    title: 'Give items',
-    description: 'Share things you no longer need.',
-  },
-  {
-    value: 'receiver',
-    title: 'Receive items',
-    description: 'Request things you need.',
-  },
-]
-
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
 }
@@ -25,13 +12,15 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     name: '',
     email: '',
     password: '',
-    account_type: 'giver',
+    confirmPassword: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   if (currentUser) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   function handleChange(event) {
@@ -40,20 +29,32 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
       ...current,
       [name]: value,
     }))
+    if (error) setError('')
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+
     setSubmitting(true)
     setError('')
 
     try {
       const response = await fetch(`${apiBase}/api/auth/signup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
       })
 
       const data = await response.json()
@@ -69,18 +70,21 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     }
   }
 
+  const inputClass =
+    'min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10'
+  const labelClass = 'text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80'
+
   return (
     <AuthShell
       eyebrow="Join the Movement"
       title="Create Your Account"
-      description="Be part of a community that believes in sharing."
-      formEyebrow="Getting Started"
-      formTitle="Personal Details"
-      formDescription="Fill in your information to set up your profile."
+      description="Every member can give and receive. Be part of a community built on trust."
+      formEyebrow="Community Member"
+      formTitle="Your Details"
+      formDescription="Fill in your information to get started."
       footer={(
         <p className="m-0 text-xs">
-          Already a member?
-          {' '}
+          Already a member?{' '}
           <Link className="ml-1 font-bold text-[#8b4cf6] hover:underline" to="/login">
             Sign in here
           </Link>
@@ -88,27 +92,26 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
       )}
     >
       <form className="grid gap-4" onSubmit={handleSubmit}>
+
+        {/* Name */}
         <div className="grid gap-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-name">
-            Full Name
-          </label>
+          <label className={labelClass} htmlFor="signup-name">Display Name / Username</label>
           <input
             id="signup-name"
             name="name"
             type="text"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Jane Doe"
+            placeholder="e.g. Sara Khan"
             autoComplete="name"
             required
-            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+            className={inputClass}
           />
         </div>
 
+        {/* Email */}
         <div className="grid gap-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-email">
-            Email Address
-          </label>
+          <label className={labelClass} htmlFor="signup-email">Email Address</label>
           <input
             id="signup-email"
             name="email"
@@ -118,66 +121,83 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             placeholder="name@example.com"
             autoComplete="email"
             required
-            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+            className={inputClass}
           />
         </div>
 
+        {/* Password */}
         <div className="grid gap-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="signup-password">
-            Password
-          </label>
-          <input
-            id="signup-password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="At least 8 characters"
-            autoComplete="new-password"
-            required
-            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
-          />
+          <label className={labelClass} htmlFor="signup-password">Password</label>
+          <div className="relative">
+            <input
+              id="signup-password"
+              name="password"
+              type={showPass ? 'text' : 'password'}
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+              required
+              className={`${inputClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#8c755f] hover:text-[#8b4cf6]"
+              tabIndex={-1}
+            >
+              {showPass ? 'Hide' : 'Show'}
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-2">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80">Account type</p>
-          <div className="grid gap-2 grid-cols-2">
-            {accountOptions.map((option) => {
-              const isSelected = formData.account_type === option.value
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFormData((current) => ({ ...current, account_type: option.value }))}
-                  className={`relative flex flex-col items-start rounded-card border p-3 text-left transition-all duration-200 ${
-                    isSelected
-                      ? 'border-[#8b4cf6] bg-[#efe7ff]/40'
-                      : 'border-[#efe8da] bg-[#fffdfb] hover:border-[#8b4cf6]/40'
-                  }`}
-                >
-                  {isSelected && (
-                    <div className="absolute right-2 top-2 scale-90">
-                      <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#8b4cf6] text-white">
-                        <svg className="h-2 w-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[11px] font-bold text-[#1f1f1f]">{option.title}</p>
-                  <p className="mt-0.5 text-[9px] leading-relaxed text-[#68766d]">{option.description}</p>
-                </button>
-              )
-            })}
+        {/* Confirm Password */}
+        <div className="grid gap-1">
+          <label className={labelClass} htmlFor="signup-confirm">Confirm Password</label>
+          <div className="relative">
+            <input
+              id="signup-confirm"
+              name="confirmPassword"
+              type={showConfirm ? 'text' : 'password'}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Re-enter your password"
+              autoComplete="new-password"
+              required
+              className={`${inputClass} pr-10`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#8c755f] hover:text-[#8b4cf6]"
+              tabIndex={-1}
+            >
+              {showConfirm ? 'Hide' : 'Show'}
+            </button>
           </div>
+          {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+            <p className="text-[9px] font-bold text-[#c65d4a]">Passwords don't match yet.</p>
+          )}
+        </div>
+
+        {/* Community Member badge */}
+        <div className="flex items-center gap-2 rounded-xl border border-[#8b4cf6]/20 bg-[#efe7ff]/30 px-3 py-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6]/20 text-[#8b4cf6]">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <p className="text-[10px] font-bold text-[#8b4cf6]">
+            Community Member — give items, request items, chat & review
+          </p>
         </div>
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || (formData.confirmPassword && formData.password !== formData.confirmPassword)}
           className="relative mt-1 flex min-h-10 w-full items-center justify-center overflow-hidden rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
         >
-          {submitting ? 'Creating account...' : 'Create Account'}
+          {submitting ? 'Creating account...' : 'Join Community'}
         </button>
 
         {error ? (

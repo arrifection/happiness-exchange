@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { RatingStars, ReputationBadge } from './reputation.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
 function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPending }) {
@@ -92,7 +93,9 @@ export default function ItemCard({
   item,
   currentUser,
   myRequest,
+  reviewContext,
   onCreateRequest,
+  onOpenReview,
   onDeleteItem,
   onCompleteItem,
   ownerActionPending = false,
@@ -118,6 +121,18 @@ export default function ItemCard({
       return null
     }
 
+    if (reviewContext && onOpenReview) {
+      return (
+        <Button
+          variant="secondary"
+          className="h-7 min-h-0 border-[#8b4cf6]/20 px-2.5 text-[9px] text-[#8b4cf6] hover:bg-[#f5efff]"
+          onClick={() => onOpenReview(reviewContext)}
+        >
+          Leave Review
+        </Button>
+      )
+    }
+
     if (myRequest) {
       return (
         <div className="flex items-center gap-1.5">
@@ -130,14 +145,14 @@ export default function ItemCard({
     if (item.status !== 'available') {
       return null
     }
- 
+
     return (
       <Button variant="primary" className="h-7 min-h-0 px-2.5 text-[9px]" onClick={() => onCreateRequest(item.id)}>
         Interested
       </Button>
     )
   }
- 
+
   return (
     <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:scale-[1.01] md:hover:border-[#8b4cf6]/30">
       <Link
@@ -145,11 +160,11 @@ export default function ItemCard({
         className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26"
         aria-label={`Open ${item.title}`}
       >
-        {item.status !== 'available' && (
-          <div className="absolute left-1.5 top-1.5 z-10 scale-85 origin-top-left">
-            <StatusBadge status={item.status} className="border-0 shadow-xs backdrop-blur-xs bg-white/95" />
+        {item.status !== 'available' ? (
+          <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
+            <StatusBadge status={item.status} className="border-0 bg-white/95 shadow-xs backdrop-blur-xs" />
           </div>
-        )}
+        ) : null}
         {item.image_url && imageAvailable ? (
           <img
             src={item.image_url}
@@ -163,31 +178,50 @@ export default function ItemCard({
           </div>
         )}
       </Link>
- 
+
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <Link to={itemHref} className="min-w-0 transition hover:text-[#8b4cf6]">
-              <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f] line-clamp-1">{item.title}</h3>
+              <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f]">
+                {item.title}
+              </h3>
             </Link>
             <div className="flex items-center gap-1.5">
-              {isOwner && <span className="text-[9px] font-bold uppercase tracking-widest text-[#8b4cf6]">Yours</span>}
+              {isOwner ? <span className="text-[9px] font-bold uppercase tracking-widest text-[#8b4cf6]">Yours</span> : null}
               {isOwner ? renderAction() : null}
             </div>
           </div>
+
           <Link to={itemHref} className="block rounded-lg transition">
+            {!isOwner ? (
+              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]/80">
+                <span>By {item.owner_name}</span>
+                {item.owner_badge ? <ReputationBadge label={item.owner_badge} compact /> : null}
+              </div>
+            ) : null}
             <p className="line-clamp-2 text-[10px] leading-normal text-[#68766d]">
               {item.description}
             </p>
           </Link>
         </div>
- 
+
         <div className="mt-2 flex flex-row items-center justify-between gap-2 border-t border-[#fcfbf9] pt-2">
-          <Link to={itemHref} className="flex flex-wrap items-center gap-1 rounded-lg transition hover:text-[#8b4cf6]">
-            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location}</span>
-            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/40">•</span>
-            <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.condition}</span>
-          </Link>
+          <div className="min-w-0">
+            <Link to={itemHref} className="flex flex-wrap items-center gap-1 rounded-lg transition hover:text-[#8b4cf6]">
+              <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/40">/</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.condition}</span>
+            </Link>
+            {!isOwner && item.owner_review_count > 0 ? (
+              <div className="mt-1">
+                <RatingStars
+                  rating={item.owner_average_rating || 0}
+                  reviewCount={item.owner_review_count || 0}
+                />
+              </div>
+            ) : null}
+          </div>
           {!isOwner ? (
             <div className="shrink-0">
               {renderAction()}

@@ -16,7 +16,7 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
   const [error, setError] = useState('')
 
   if (currentUser) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   function handleChange(event) {

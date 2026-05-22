@@ -41,6 +41,21 @@ async def _ensure_indexes(database) -> None:
     )
     await database.requests.create_index("owner_id")
     await database.requests.create_index("requester_id")
+    await database.reviews.create_index(
+        [("item_id", 1), ("reviewer_id", 1)],
+        unique=True,
+    )
+    await database.reviews.create_index("reviewed_user_id")
+    await database.reviews.create_index("reviewer_id")
+    await database.reviews.create_index("created_at")
+    # Chat indexes
+    await database.conversations.create_index("request_id", unique=True)
+    await database.conversations.create_index("giver_id")
+    await database.conversations.create_index("receiver_id")
+    await database.conversations.create_index("last_message_at")
+    await database.messages.create_index("conversation_id")
+    await database.messages.create_index("created_at")
+    await database.messages.create_index([("conversation_id", 1), ("created_at", 1)])
     _indexes_ready = True
 
 
@@ -139,6 +154,27 @@ async def get_requests_collection_async():
     return database.requests
 
 
+async def get_reviews_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.reviews
+
+
+async def get_conversations_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.conversations
+
+
+async def get_messages_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.messages
+
+
 async def close_mongo_connection() -> None:
     """Called once at application shutdown."""
     global client, db, _indexes_ready
@@ -179,6 +215,14 @@ def get_requests_collection():
     if database is None:
         return None
     return database.requests
+
+
+def get_reviews_collection():
+    """Return the MongoDB collection used for user reviews."""
+    database = get_db()
+    if database is None:
+        return None
+    return database.reviews
 
 
 def get_last_connection_error() -> str | None:

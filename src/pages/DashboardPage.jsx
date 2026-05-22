@@ -1,4 +1,41 @@
+import { useNavigate } from 'react-router-dom'
+import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
+
+function StatCard({ label, value, onClick, highlight, to }) {
+  const navigate = useNavigate()
+
+  const handleClick = () => {
+    if (to) navigate(to)
+    if (onClick) onClick()
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`group flex w-full flex-col items-center justify-center rounded-card border p-4 text-center shadow-xs transition-all duration-200 md:p-5
+        hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(139,76,246,0.15)] active:scale-[0.97]
+        ${highlight
+          ? 'border-transparent bg-gradient-to-br from-[#8b4cf6] to-[#7340d2] cursor-pointer'
+          : 'border-[#efe8da]/80 bg-white cursor-pointer hover:border-[#8b4cf6]/30'
+        }`}
+    >
+      <p className={`mb-1 text-[9px] font-bold uppercase tracking-wider md:text-[10px] ${highlight ? 'text-white/80' : 'text-[#8c755f]/70'}`}>
+        {label}
+      </p>
+      <p className={`text-2xl font-bold md:text-3xl ${highlight ? 'text-white' : 'text-[#1f1f1f]'}`}>
+        {value}
+      </p>
+      <div className={`mt-1.5 flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider transition-opacity ${highlight ? 'text-white/60 group-hover:text-white/90' : 'text-[#8b4cf6]/0 group-hover:text-[#8b4cf6]/70'}`}>
+        <span>View</span>
+        <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </button>
+  )
+}
 
 function RequestCard({ request, children }) {
   return (
@@ -21,18 +58,25 @@ function RequestCard({ request, children }) {
 
 export default function DashboardPage({
   currentUser,
+  items,
+  myReputation,
   myItems,
   myRequests,
   ownerRequests,
   onRequestAction,
+  onOpenReview,
+  onOpenChat,
+  getReviewContextForMyRequest,
+  getReviewContextForOwnerRequest,
+  getChatConversationForRequest,
   loadingRequests,
   requestsMessage,
   requestsError,
 }) {
-  const itemsSharedCount = myItems?.length || 0;
-  const itemsRequestedCount = myRequests?.length || 0;
-  const completedExchangesCount = myItems?.filter(item => item.status === 'completed').length || 0;
-  const trustPoints = (itemsSharedCount * 10) + (completedExchangesCount * 50);
+  const itemsSharedCount = myItems?.length || 0
+  const itemsRequestedCount = myRequests?.length || 0
+  const completedExchangesCount = myReputation?.completed_exchange_count || 0
+  const trustPoints = (myReputation?.completed_shared_count || 0) * 10 + completedExchangesCount * 50
 
   if (!currentUser) {
     return (
@@ -47,37 +91,66 @@ export default function DashboardPage({
 
   return (
     <div className="space-y-6 md:space-y-8 md:max-w-5xl md:mx-auto md:px-4">
-      {/* Welcome Card & Stats Section */}
-      <section className="flex flex-col md:flex-row gap-4 md:gap-6">
-        <div className="flex-1 flex flex-col justify-center bg-gradient-to-br from-[#8b4cf6]/10 to-[#ffcc22]/20 p-5 md:p-8 rounded-[24px] border border-[#efe8da]/80 shadow-xs">
-          <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#8c755f]/80">Receiver Console</p>
-          <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl md:text-3xl font-bold tracking-tight text-[#1f1f1f]">Welcome back, {currentUser.name.split(' ')[0]}</h1>
-          <p className="mt-2 text-xs md:text-sm text-[#68766d] max-w-sm leading-relaxed">Discover items shared by your neighbors and give them a second life.</p>
-          <div className="mt-5">
-             <Button as="link" to="/browse" className="h-10 text-[12px] md:text-[13px] px-6 shadow-sm hover:shadow-md transition-shadow">Browse Items</Button>
+      {/* Welcome Banner */}
+      <section className="flex flex-col gap-4 md:flex-row md:gap-6">
+        <div className="flex flex-1 flex-col justify-center rounded-[24px] border border-[#efe8da]/80 bg-gradient-to-br from-[#8b4cf6]/10 to-[#ffcc22]/20 p-5 shadow-xs md:p-8">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/80 md:text-xs">
+            Community Member
+          </p>
+          <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f1f1f] md:text-3xl">
+            Welcome back, {currentUser.name.split(' ')[0]}
+          </h1>
+          <p className="mt-2 max-w-sm text-xs leading-relaxed text-[#68766d] md:text-sm">
+            Give, receive, and connect — anonymously and with trust at the heart of every exchange.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <ReputationBadge label={myReputation?.current_badge} />
+            {trustPoints >= 300 && <PlaceholderBadge label="Top Donor of the Week" />}
+            {trustPoints >= 600 && <PlaceholderBadge label="Top Donor of the Month" />}
+          </div>
+          <div className="mt-3">
+            <RatingStars
+              rating={myReputation?.average_rating || 0}
+              reviewCount={myReputation?.review_count || 0}
+            />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button as="link" to="/browse" className="h-10 px-6 text-[12px] transition-shadow hover:shadow-md md:text-[13px]">
+              Browse Items
+            </Button>
+            <Button as="link" to="/give" variant="secondary" className="h-10 px-6 text-[12px] md:text-[13px]">
+              List Item
+            </Button>
           </div>
         </div>
 
-        <div className="md:w-80 grid grid-cols-2 gap-3 md:gap-4 shrink-0">
-          <div className="rounded-card border border-[#efe8da]/80 bg-white p-4 md:p-5 text-center flex flex-col justify-center shadow-xs">
-            <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-[#8c755f]/70 mb-1">Items Shared</p>
-            <p className="text-2xl md:text-3xl font-bold text-[#1f1f1f]">{itemsSharedCount}</p>
-          </div>
-          <div className="rounded-card border border-[#efe8da]/80 bg-white p-4 md:p-5 text-center flex flex-col justify-center shadow-xs">
-            <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-[#8c755f]/70 mb-1">Requested</p>
-            <p className="text-2xl md:text-3xl font-bold text-[#1f1f1f]">{itemsRequestedCount}</p>
-          </div>
-          <div className="rounded-card border border-[#efe8da]/80 bg-white p-4 md:p-5 text-center flex flex-col justify-center shadow-xs">
-            <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-[#8c755f]/70 mb-1">Completed</p>
-            <p className="text-2xl md:text-3xl font-bold text-[#1f1f1f]">{completedExchangesCount}</p>
-          </div>
-          <div className="rounded-card border border-[#efe8da]/80 bg-gradient-to-br from-[#8b4cf6] to-[#7340d2] p-4 md:p-5 text-center flex flex-col justify-center shadow-xs">
-            <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-white/80 mb-1">Trust Points</p>
-            <p className="text-2xl md:text-3xl font-bold text-white">{trustPoints}</p>
-          </div>
+        {/* Clickable Stat Cards */}
+        <div className="grid shrink-0 grid-cols-2 gap-3 md:w-80 md:gap-4">
+          <StatCard
+            label="Items Shared"
+            value={itemsSharedCount}
+            to="/give"
+          />
+          <StatCard
+            label="Requested"
+            value={itemsRequestedCount}
+            to="/requests"
+          />
+          <StatCard
+            label="Completed"
+            value={completedExchangesCount}
+            to="/reputation"
+          />
+          <StatCard
+            label="Trust Points"
+            value={trustPoints}
+            to="/reputation"
+            highlight
+          />
         </div>
       </section>
 
+      {/* Messages / Feedback */}
       {(loadingRequests || requestsMessage || requestsError) ? (
         <div className="space-y-1.5 px-2">
           {loadingRequests ? <p className="text-[10px] font-bold uppercase tracking-widest text-[#68766d]">Refreshing...</p> : null}
@@ -86,54 +159,105 @@ export default function DashboardPage({
         </div>
       ) : null}
 
-      <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
-         {/* Items Requested */}
-         <div className="flex-1 space-y-4 md:space-y-5">
-           <SectionHeading
-             title="Items you requested"
-             description="Your active requests for community items."
-           />
+      <div className="flex flex-col gap-6 md:gap-8 lg:flex-row">
+        {/* My Requests */}
+        <div className="flex-1 space-y-4 md:space-y-5">
+          <SectionHeading
+            title="Items you requested"
+            description="Your active requests for community items."
+          />
+          <div className="grid grid-cols-1 gap-3 md:gap-5 sm:grid-cols-2">
+            {myRequests.length === 0 ? (
+              <EmptyState
+                title="No active requests"
+                description="When you request an item, it will appear here."
+              />
+            ) : (
+              myRequests.map((request) => {
+                const reviewContext = getReviewContextForMyRequest(request)
+                const convId = getChatConversationForRequest?.(request.id)
+                return (
+                  <RequestCard key={request.id} request={request}>
+                    <div className="mt-2.5 flex flex-col gap-1.5 border-t border-[#fcfbf9] pt-2">
+                      {request.status === 'approved' && convId && (
+                        <Button
+                          as="link"
+                          to={`/messages/${convId}`}
+                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#8b4cf6] text-white"
+                        >
+                          💬 Open Chat
+                        </Button>
+                      )}
+                      {reviewContext ? (
+                        <Button
+                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+                          variant="secondary"
+                          onClick={() => onOpenReview(reviewContext)}
+                        >
+                          Leave Review
+                        </Button>
+                      ) : null}
+                    </div>
+                  </RequestCard>
+                )
+              })
+            )}
+          </div>
+        </div>
 
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-5">
-             {myRequests.length === 0 ? (
-               <EmptyState
-                 title="No active requests"
-                 description="When you request an item, it will appear here."
-               />
-             ) : (
-               myRequests.map((request) => <RequestCard key={request.id} request={request} />)
-             )}
-           </div>
-         </div>
-
-         {/* Review Incoming */}
-         <div className="lg:w-80 shrink-0 space-y-4 md:space-y-5">
-           <SectionHeading
-             title="Review incoming"
-             description="Approve or decline requests."
-             action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
-           />
-
-           <div className="flex flex-col gap-3">
-             {ownerRequests.length === 0 ? (
-               <EmptyState
-                 title="No pending reviews"
-                 description="Requests will appear here."
-               />
-             ) : (
-               ownerRequests.slice(0, 5).map((request) => (
-                 <RequestCard key={request.id} request={request}>
-                   {request.status === 'pending' ? (
-                     <div className="mt-2.5 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
-                       <Button className="flex-1 h-7 min-h-0 text-[10px] rounded-btn" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
-                       <Button className="flex-1 h-7 min-h-0 text-[10px] rounded-btn" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
-                     </div>
-                   ) : null}
-                 </RequestCard>
-               ))
-             )}
-           </div>
-         </div>
+        {/* Incoming Requests */}
+        <div className="shrink-0 space-y-4 md:space-y-5 lg:w-80">
+          <SectionHeading
+            title="Review incoming"
+            description="Approve or decline requests."
+            action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
+          />
+          <div className="flex flex-col gap-3">
+            {ownerRequests.length === 0 ? (
+              <EmptyState
+                title="No pending reviews"
+                description="Requests will appear here."
+              />
+            ) : (
+              ownerRequests.slice(0, 5).map((request) => {
+                const reviewContext = getReviewContextForOwnerRequest(request)
+                const convId = getChatConversationForRequest?.(request.id)
+                return (
+                  <RequestCard key={request.id} request={request}>
+                    {request.status === 'pending' ? (
+                      <div className="mt-2.5 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
+                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
+                      </div>
+                    ) : null}
+                    {request.status === 'approved' && convId && (
+                      <div className="mt-1.5 flex gap-1.5">
+                        <Button
+                          as="link"
+                          to={`/messages/${convId}`}
+                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+                        >
+                          💬 Open Chat
+                        </Button>
+                      </div>
+                    )}
+                    {reviewContext ? (
+                      <div className="mt-1.5 flex gap-1.5">
+                        <Button
+                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+                          variant="secondary"
+                          onClick={() => onOpenReview(reviewContext)}
+                        >
+                          Leave Review
+                        </Button>
+                      </div>
+                    ) : null}
+                  </RequestCard>
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
