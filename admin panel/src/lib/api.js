@@ -1,0 +1,120 @@
+import axios from 'axios'
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// ── Request interceptor: attach JWT token ─────────────────────────────────────
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('admin_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
+// ── Response interceptor: handle 401 globally ────────────────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  },
+)
+
+export default api
+
+// ── Auth endpoints ─────────────────────────────────────────────────────────────
+export const authApi = {
+  // Admin panel uses its own login endpoint — rejects non-admin roles with 403
+  login:   (data) => api.post('/api/admin/auth/login', data),
+  me:      ()     => api.get('/api/auth/me'),
+  refresh: ()     => api.post('/api/auth/refresh'),
+}
+
+// ── Users endpoints (Admin) ───────────────────────────────────────────────────
+export const usersApi = {
+  list:    (params) => api.get('/api/admin/users', { params }),
+  getById: (id)     => api.get(`/api/admin/users/${id}`),
+  update:  (id, d) => api.put(`/api/admin/users/${id}`, d),
+  delete:  (id)    => api.delete(`/api/admin/users/${id}`),
+  ban:     (id)    => api.patch(`/api/admin/users/${id}/ban`),
+  unban:   (id)    => api.patch(`/api/admin/users/${id}/unban`),
+  changeRole: (id, role) => api.patch(`/api/admin/users/${id}/role`, { role }),
+  trustPenalty: (id, data) => api.post(`/api/admin/users/${id}/trust-penalty`, data),
+}
+
+// ── Items / Listings endpoints (Admin) ────────────────────────────────────────
+export const itemsApi = {
+  list:    (params) => api.get('/api/admin/items', { params }),
+  getById: (id)     => api.get(`/api/admin/items/${id}`),
+  update:  (id, d) => api.put(`/api/admin/items/${id}`, d),
+  delete:  (id)    => api.delete(`/api/admin/items/${id}`),
+  approve: (id)    => api.post(`/api/admin/items/${id}/approve`),
+}
+
+// ── Requests endpoints (still public — no admin-specific actions yet) ──────────
+export const requestsApi = {
+  list:    (params) => api.get('/api/requests', { params }),
+  getById: (id)     => api.get(`/api/requests/${id}`),
+  update:  (id, d) => api.put(`/api/requests/${id}`, d),
+}
+
+// ── Reviews endpoints (Admin) ─────────────────────────────────────────────────
+export const reviewsApi = {
+  list:    (params) => api.get('/api/admin/reviews', { params }),
+  getById: (id)     => api.get(`/api/admin/reviews/${id}`),
+  delete:  (id)    => api.delete(`/api/admin/reviews/${id}`),
+}
+
+// ── Reports endpoints (Admin) ─────────────────────────────────────────────────
+export const reportsApi = {
+  list:    (params) => api.get('/api/admin/reports', { params }),
+  create:  (data)   => api.post('/api/admin/reports', data),
+  resolve: (id)     => api.patch(`/api/admin/reports/${id}/resolve`),
+  dismiss: (id)     => api.patch(`/api/admin/reports/${id}/dismiss`),
+}
+
+// ── Team endpoints (Admin) ────────────────────────────────────────────────────
+export const teamApi = {
+  list:   ()           => api.get('/api/admin/team'),
+  invite: (data)       => api.post('/api/admin/team/invite', data),
+  remove: (id)         => api.delete(`/api/admin/team/${id}`),
+}
+
+// ── Analytics endpoints (Admin) ───────────────────────────────────────────────
+export const analyticsApi = {
+  summary:  ()       => api.get('/api/admin/analytics/summary'),
+  auditLog: (params) => api.get('/api/admin/analytics/audit', { params }),
+}
+
+// ── Conversations endpoints ────────────────────────────────────────────────────
+export const conversationsApi = {
+  list:    (params) => api.get('/api/conversations', { params }),
+  getById: (id)     => api.get(`/api/conversations/${id}`),
+}
+
+// ── Notifications endpoints ──────────────────────────────────────────────────
+export const notificationsApi = {
+  list:        (params) => api.get('/api/notifications', { params }),
+  unreadCount: ()       => api.get('/api/notifications/unread-count'),
+  markAsRead:  (id)     => api.patch(`/api/notifications/${id}/read`),
+  markAllRead: ()       => api.patch('/api/notifications/read-all'),
+}
+
+// ── Status endpoint ────────────────────────────────────────────────────────────
+export const statusApi = {
+  check: () => api.get('/api/status'),
+}
