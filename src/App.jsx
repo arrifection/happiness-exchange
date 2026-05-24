@@ -45,6 +45,14 @@ const TOKEN_KEY = 'happiness_exchange_token'
 const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
+function readStoredToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || ''
+  } catch {
+    return ''
+  }
+}
+
 const emptyItemForm = {
   title: '',
   description: '',
@@ -76,13 +84,12 @@ function formatApiError(errorData, fallbackMessage) {
 export default function App() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [showSplash, setShowSplash] = useState(true)
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
+  const [showSplash, setShowSplash] = useState(false)
+  const [token, setToken] = useState(() => readStoredToken())
   const [currentUser, setCurrentUser] = useState(null)
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
   const [loadingUser, setLoadingUser] = useState(false)
-  const [sessionReady, setSessionReady] = useState(() => !localStorage.getItem(TOKEN_KEY))
 
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(false)
@@ -135,34 +142,12 @@ export default function App() {
   const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
   const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
-  const showSessionBootstrap = Boolean(token) && !sessionReady && !isAuthFlowRoute && location.pathname !== '/'
-
-  // Splash — skip for returning visitors with a saved session
-  useEffect(() => {
-    const skipSplash = Boolean(localStorage.getItem(TOKEN_KEY))
-    if (skipSplash) {
-      setShowSplash(false)
-      return undefined
-    }
-    const t = window.setTimeout(() => setShowSplash(false), 1200)
-    return () => window.clearTimeout(t)
-  }, [])
-
-  // Never block the app forever if session restore hangs
-  useEffect(() => {
-    if (!token || sessionReady) return undefined
-    const t = window.setTimeout(() => setSessionReady(true), 25000)
-    return () => window.clearTimeout(t)
-  }, [token, sessionReady])
 
   useEffect(() => { loadItems() }, [])
 
   useEffect(() => {
     if (token) loadUserData()
-    else {
-      setCurrentUser(null)
-      setSessionReady(true)
-    }
+    else setCurrentUser(null)
   }, [token])
 
   useEffect(() => {
@@ -239,7 +224,6 @@ export default function App() {
       }
     } finally {
       setLoadingUser(false)
-      setSessionReady(true)
     }
   }
 
@@ -320,10 +304,13 @@ export default function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem(TOKEN_KEY)
+    try {
+      localStorage.removeItem(TOKEN_KEY)
+    } catch {
+      /* ignore */
+    }
     setToken('')
     setCurrentUser(null)
-    setSessionReady(true)
     setMyItems([]); setMyRequests([]); setOwnerRequests([])
     setOwnerItemsMessage(''); setOwnerItemsError(''); setOwnerActionItemId('')
     setUploadingItemImage(false); setImageUploadMessage(''); setImageUploadError('')
@@ -338,11 +325,15 @@ export default function App() {
 
   function handleAuthSuccess(data) {
     setAuthError('')
-    if (data.user) {
-      setCurrentUser(data.user)
-      setSessionReady(true)
+    if (data.user) setCurrentUser(data.user)
+    if (data.access_token) {
+      try {
+        localStorage.setItem(TOKEN_KEY, data.access_token)
+      } catch {
+        /* private browsing — session works for this tab only */
+      }
+      setToken(data.access_token)
     }
-    if (data.access_token) { localStorage.setItem(TOKEN_KEY, data.access_token); setToken(data.access_token) }
   }
 
   function handleItemChange(event) {
@@ -618,23 +609,6 @@ export default function App() {
       <div className="flex min-h-screen flex-1 flex-col bg-[#fffaf0]">
         <SplashScreen visible={showSplash} />
 
-        {showSessionBootstrap ? (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#fffaf0]/90 backdrop-blur-sm">
-            <Surface className="w-full max-w-md p-8 text-center space-y-4 mx-4">
-              <div className="flex justify-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#8b4cf6]/20 border-t-[#8b4cf6]" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Loading</p>
-                <h1 className="mt-1 text-xl font-bold tracking-tight text-[#1f3328]">Restoring your session…</h1>
-                <p className="mt-2 text-xs leading-relaxed text-[#68766d]">
-                  Connecting to the server. This may take a moment after idle time.
-                </p>
-              </div>
-            </Surface>
-          </div>
-        ) : null}
-
         <div className="flex flex-1 flex-col">
           {currentUser && !currentUser.is_verified ? (
             <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap">
@@ -788,7 +762,7 @@ export default function App() {
                     apiBase={API_BASE}
                     token={token}
                     currentUser={currentUser}
-                    loadingUser={loadingUser || (Boolean(token) && !sessionReady)}
+                    loadingUser={loadingUser}
                     onRefreshUser={refreshCurrentUser}
                   />
                 }
