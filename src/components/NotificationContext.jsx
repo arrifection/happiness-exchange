@@ -2,11 +2,13 @@ import { createContext, useContext, useEffect, useState } from 'react'
 
 const NotificationContext = createContext(null)
 
+import { resolveApiBase } from '../lib/api.js'
+
 export function NotificationProvider({ token, children }) {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
+  const API_BASE = resolveApiBase()
 
   async function fetchNotifications() {
     if (!token) return

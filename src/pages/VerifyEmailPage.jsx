@@ -3,7 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui.jsx'
 import BrandLogo from '../components/BrandLogo.jsx'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+import { resolveApiBase } from '../lib/api.js'
+
+const API_BASE_URL = resolveApiBase()
 const TOKEN_KEY = 'happiness_exchange_token'
 const REDIRECT_SECONDS = 2
 

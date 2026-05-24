@@ -28,8 +28,9 @@ import {
   setResendCooldown,
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
+import { resolveApiBase } from './lib/api.js'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
+const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
 const ME_ENDPOINT = `${API_BASE}/api/me`
 const ITEMS_ENDPOINT = `${API_BASE}/api/items`
@@ -81,6 +82,7 @@ export default function App() {
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
   const [loadingUser, setLoadingUser] = useState(false)
+  const [sessionReady, setSessionReady] = useState(() => !localStorage.getItem(TOKEN_KEY))
 
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(false)
@@ -131,8 +133,9 @@ export default function App() {
   const [myDeliveries, setMyDeliveries] = useState([])
 
   const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
-  const isRestoringSession = Boolean(token) && !currentUser && !isAuthFlowRoute && loadingUser
-  const isLandingHome = !currentUser && location.pathname === '/'
+  const isMarketingHome = !currentUser && location.pathname === '/'
+  const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
+  const showSessionBootstrap = Boolean(token) && !sessionReady && !isAuthFlowRoute
 
   // Splash
   useEffect(() => {
@@ -144,7 +147,20 @@ export default function App() {
 
   useEffect(() => {
     if (token) loadUserData()
-    else setCurrentUser(null)
+    else {
+      setCurrentUser(null)
+      setSessionReady(true)
+    }
+  }, [token])
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && token) {
+        refreshCurrentUser()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [token])
 
   useEffect(() => {
@@ -175,24 +191,43 @@ export default function App() {
   async function loadUserData() {
     setLoadingUser(true)
     setAuthError('')
+
     try {
-      // 5 second timeout — if backend is down, don't hang forever
-      const controller = new AbortController()
-      const timeoutId = window.setTimeout(() => controller.abort(), 5000)
-      const res = await fetch(ME_ENDPOINT, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      })
-      window.clearTimeout(timeoutId)
-      const data = await res.json()
-      if (res.ok) setCurrentUser(data)
-      else { handleLogout(); setAuthError(formatApiError(data, 'Session expired. Please log in again.')) }
-    } catch (err) {
-      // AbortError = timeout, TypeError = network down
-      handleLogout()
-      setAuthError('Could not reach the server. Please check your connection.')
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const controller = new AbortController()
+          const timeoutId = window.setTimeout(() => controller.abort(), 20000)
+          const res = await fetch(ME_ENDPOINT, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          })
+          window.clearTimeout(timeoutId)
+          const data = await res.json()
+
+          if (res.ok) {
+            setCurrentUser(data)
+            return
+          }
+
+          if (res.status === 401 || res.status === 403) {
+            handleLogout()
+            setAuthError(formatApiError(data, 'Session expired. Please log in again.'))
+            return
+          }
+
+          setAuthError(formatApiError(data, 'Could not load your profile.'))
+          return
+        } catch {
+          if (attempt < 3) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1500 * attempt))
+            continue
+          }
+          setAuthError('Could not reach the server. Your session is still saved — please try again.')
+        }
+      }
     } finally {
       setLoadingUser(false)
+      setSessionReady(true)
     }
   }
 
@@ -276,6 +311,7 @@ export default function App() {
     localStorage.removeItem(TOKEN_KEY)
     setToken('')
     setCurrentUser(null)
+    setSessionReady(true)
     setMyItems([]); setMyRequests([]); setOwnerRequests([])
     setOwnerItemsMessage(''); setOwnerItemsError(''); setOwnerActionItemId('')
     setUploadingItemImage(false); setImageUploadMessage(''); setImageUploadError('')
@@ -290,7 +326,10 @@ export default function App() {
 
   function handleAuthSuccess(data) {
     setAuthError('')
-    if (data.user) setCurrentUser(data.user)
+    if (data.user) {
+      setCurrentUser(data.user)
+      setSessionReady(true)
+    }
     if (data.access_token) { localStorage.setItem(TOKEN_KEY, data.access_token); setToken(data.access_token) }
   }
 
@@ -505,41 +544,6 @@ export default function App() {
     return conv ? conv.id : null
   }
 
-  if (isRestoringSession) {
-    return (
-      <div className="flex min-h-screen flex-col bg-[#fffaf0]">
-        <SplashScreen visible={showSplash} />
-        <main className="app-shell flex flex-1 items-center justify-center py-8">
-          <Surface className="w-full max-w-md p-8 text-center space-y-4">
-            {/* Spinner */}
-            <div className="flex justify-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#8b4cf6]/20 border-t-[#8b4cf6]" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Restoring Session</p>
-              <h1 className="mt-1 font-[&apos;Plus_Jakarta_Sans&apos;,sans-serif] text-xl font-bold tracking-tight text-[#1f3328]">
-                Verifying your account…
-              </h1>
-              <p className="mt-2 text-xs leading-relaxed text-[#68766d]">
-                Connecting to server. If this takes too long, your backend may not be running.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => { localStorage.removeItem('happiness_exchange_token'); window.location.reload() }}
-              className="mx-auto flex items-center gap-2 rounded-full border border-[#c65d4a]/30 bg-[#fef2f2] px-5 py-2 text-[11px] font-bold text-[#c65d4a] transition hover:bg-[#c65d4a]/10"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Clear Session &amp; Continue
-            </button>
-          </Surface>
-        </main>
-      </div>
-    )
-  }
-
   const bottomTabItems = [
     {
       to: '/',
@@ -599,11 +603,28 @@ export default function App() {
 
   return (
     <NotificationProvider token={token}>
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-screen flex-1 flex-col bg-[#fffaf0]">
         <SplashScreen visible={showSplash} />
-      {currentUser ? (
-        <div className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
-          {!currentUser.is_verified && (
+
+        {showSessionBootstrap ? (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#fffaf0]/90 backdrop-blur-sm">
+            <Surface className="w-full max-w-md p-8 text-center space-y-4 mx-4">
+              <div className="flex justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#8b4cf6]/20 border-t-[#8b4cf6]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Loading</p>
+                <h1 className="mt-1 text-xl font-bold tracking-tight text-[#1f3328]">Restoring your session…</h1>
+                <p className="mt-2 text-xs leading-relaxed text-[#68766d]">
+                  Connecting to the server. This may take a moment after idle time.
+                </p>
+              </div>
+            </Surface>
+          </div>
+        ) : null}
+
+        <div className={`flex flex-1 flex-col ${showSplash ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}>
+          {currentUser && !currentUser.is_verified ? (
             <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap">
               <span>Verify your email to list, request, chat, and review.</span>
               <button
@@ -656,8 +677,9 @@ export default function App() {
                 Resend verification email
               </button>
             </div>
-          )}
-          {!isLandingHome ? (
+          ) : null}
+
+          {showAppChrome ? (
             <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
@@ -724,18 +746,27 @@ export default function App() {
             </header>
           ) : null}
 
-          <main className={isLandingHome ? 'flex-1' : 'app-shell flex-1 pt-4 pb-20 md:pb-8'}>
+          <main className={isMarketingHome ? 'flex-1' : 'app-shell flex-1 pt-4 pb-20 md:pb-8'}>
             <Routes>
               <Route
                 path="/"
                 element={
-                  <AuthenticatedHomePage
-                    items={items} currentUser={currentUser} myReputation={myReputation}
-                    getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
-                    onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
-                    loadingItems={loadingItems} itemsError={itemsError}
-                    myRequests={myRequests} ownerRequests={ownerRequests}
-                  />
+                  currentUser ? (
+                    <AuthenticatedHomePage
+                      items={items} currentUser={currentUser} myReputation={myReputation}
+                      getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
+                      onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
+                      loadingItems={loadingItems} itemsError={itemsError}
+                      myRequests={myRequests} ownerRequests={ownerRequests}
+                    />
+                  ) : (
+                    <HomePage
+                      items={items} currentUser={currentUser}
+                      getMyRequestForItem={getMyRequestForItem} onCreateRequest={handleCreateRequest}
+                      loadingItems={loadingItems} itemsError={itemsError}
+                      myRequests={myRequests} ownerRequests={ownerRequests}
+                    />
+                  )
                 }
               />
               <Route
@@ -745,7 +776,7 @@ export default function App() {
                     apiBase={API_BASE}
                     token={token}
                     currentUser={currentUser}
-                    loadingUser={loadingUser}
+                    loadingUser={loadingUser || (Boolean(token) && !sessionReady)}
                     onRefreshUser={refreshCurrentUser}
                   />
                 }
@@ -802,8 +833,8 @@ export default function App() {
                     myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
-                    getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
-                    getChatConversationForRequest={getChatConversationForRequest}
+                    getReviewContextForOwnerRequ  getChatConversatest={getReviewContextForOwnerRequest}
+                  ionForRequest={getChatConversationForRequest}
                     loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
                   />
                 }
@@ -856,13 +887,20 @@ export default function App() {
                 }
               />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
+              <Route
+                path="/login"
+                element={<LoginPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
+              />
+              <Route
+                path="/signup"
+                element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
+              />
               <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
 
-          {/* Mobile Bottom Nav */}
-          {!isLandingHome ? (
+          {currentUser && !isMarketingHome ? (
             <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md">
               {bottomTabItems.map((item) => (
                 <NavLink
@@ -880,49 +918,6 @@ export default function App() {
             </nav>
           ) : null}
         </div>
-      ) : (
-        <main className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <HomePage
-                  items={items} currentUser={currentUser}
-                  getMyRequestForItem={getMyRequestForItem} onCreateRequest={handleCreateRequest}
-                  loadingItems={loadingItems} itemsError={itemsError}
-                  myRequests={myRequests} ownerRequests={ownerRequests}
-                />
-              }
-            />
-            <Route
-              path="/login"
-              element={<LoginPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
-            />
-            <Route
-              path="/signup"
-              element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
-            />
-            <Route
-              path="/check-email"
-              element={
-                <CheckYourEmailPage
-                  apiBase={API_BASE}
-                  token={token}
-                  currentUser={currentUser}
-                  loadingUser={loadingUser}
-                  onRefreshUser={refreshCurrentUser}
-                />
-              }
-            />
-            <Route
-              path="/verify-email"
-              element={<VerifyEmailPage onRefreshUser={refreshCurrentUser} />}
-            />
-            <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      )}
 
       {/* Global notification toast */}
       {(loadingUser || authError || authNotice || reviewMessage) ? (
