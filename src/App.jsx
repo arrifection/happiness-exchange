@@ -644,7 +644,7 @@ export default function App() {
 
   return (
     <NotificationProvider token={token}>
-      <div className="flex min-h-screen flex-1 flex-col bg-[#fffaf0] dark:bg-[#121214]">
+      <div className="he-app flex min-h-screen flex-1 flex-col bg-he-page">
         <SplashScreen visible={showSplash} />
 
         <div className="flex flex-1 flex-col">
@@ -704,7 +704,7 @@ export default function App() {
           ) : null}
 
           {showAppChrome ? (
-            <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md dark:border-[#2e2e32] dark:bg-[#1c1c1f]/90">
+            <header className="sticky top-0 z-50 border-b border-he-border bg-he-surface/85 backdrop-blur-md">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
                 <div className="flex flex-1 items-center justify-start">
@@ -728,7 +728,7 @@ export default function App() {
                       to={nav.to}
                       className={({ isActive }) => [
                         'relative px-3 py-2 rounded-full text-[13px] font-bold tracking-wide transition-all duration-300',
-                        isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : 'text-[#8c755f] hover:text-[#8b4cf6] hover:bg-[#faf7f1]',
+                        isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : 'text-he-soft hover:text-he-purple hover:bg-he-surface-soft',
                       ].join(' ')}
                     >
                       {nav.label}
@@ -743,7 +743,7 @@ export default function App() {
                     to="/leaderboard"
                     className={({ isActive }) => [
                       'text-sm font-bold uppercase tracking-widest transition-colors duration-200',
-                      isActive ? 'text-[#8b4cf6]' : 'text-[#1f3328] hover:text-[#8b4cf6]',
+                      isActive ? 'text-he-purple' : 'text-he-ink hover:text-he-purple',
                     ].join(' ')}
                   >
                     Top Donors
@@ -757,7 +757,7 @@ export default function App() {
                     to="/profile"
                     className={({ isActive }) => [
                       'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-[#8c755f] transition-all duration-200 hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
-                      isActive ? 'bg-[#efe7ff] text-[#8b4cf6] shadow-xs' : '',
+                      isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : '',
                     ].join(' ')}
                     aria-label="Open profile settings"
                   >
@@ -927,14 +927,14 @@ export default function App() {
           </main>
 
           {currentUser && !isMarketingHome ? (
-            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md dark:border-[#2e2e32] dark:bg-[#1c1c1f]/90 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.25)]">
+            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-he-border bg-he-surface/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
               {bottomTabItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) => [
                     'flex flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[9px] font-bold tracking-wide transition-all duration-200',
-                    isActive ? 'text-[#8b4cf6]' : 'text-[#8c755f] hover:text-[#1f1f1f]',
+                    isActive ? 'text-he-purple' : 'text-he-soft hover:text-he-ink',
                   ].join(' ')}
                 >
                   {item.icon}

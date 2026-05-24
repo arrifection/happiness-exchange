@@ -4,15 +4,36 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-he-cream: #fffaf0;
-  --color-he-purple: #8b4cf6;
-  --color-he-yellow: #ffcc22;
+  --color-he-page: #fffaf0;
+  --color-he-page-outer: #f3efe5;
+  --color-he-surface: #ffffff;
+  --color-he-surface-soft: #faf7f1;
   --color-he-ink: #1f1f1f;
   --color-he-muted: #68766d;
+  --color-he-soft: #8c755f;
+  --color-he-border: #efe8da;
+  --color-he-input: #fffdfb;
+  --color-he-nav-active: #efe7ff;
+  --color-he-purple: #8b4cf6;
+  --color-he-yellow: #ffcc22;
 
   --radius-card: 16px;
   --radius-btn: 14px;
   --radius-input: 12px;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-he-page: #171615;
+  --color-he-page-outer: #0f0e0d;
+  --color-he-surface: #222020;
+  --color-he-surface-soft: #2a2826;
+  --color-he-ink: #f5f0e8;
+  --color-he-muted: #a39e96;
+  --color-he-soft: #8a837a;
+  --color-he-border: #3a3632;
+  --color-he-input: #1a1918;
+  --color-he-nav-active: #2d2640;
 }
 
 @layer base {
@@ -24,26 +45,17 @@
   html {
     scroll-behavior: smooth;
     height: 100%;
-    background: #f3efe5;
-  }
-
-  html.dark {
-    background: #0c0c0e;
+    background: var(--color-he-page-outer);
   }
 
   body {
     margin: 0;
     min-height: 100%;
-    background: #f3efe5;
-    color: #1f1f1f;
+    background: var(--color-he-page-outer);
+    color: var(--color-he-ink);
     font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-  }
-
-  html.dark body {
-    background: #0c0c0e;
-    color: #f3f0ea;
   }
 
   button,
@@ -74,18 +86,11 @@
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
-    background: #fffaf0;
+    background: var(--color-he-page);
     box-shadow: 0 0 32px rgba(31, 51, 40, 0.04);
-    border-left: 1px solid #efe8da;
-    border-right: 1px solid #efe8da;
+    border-left: 1px solid var(--color-he-border);
+    border-right: 1px solid var(--color-he-border);
     position: relative;
-  }
-
-  html.dark #root {
-    background: #121214;
-    border-left-color: #2a2a2e;
-    border-right-color: #2a2a2e;
-    box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
   }
 
   @media (min-width: 768px) {
@@ -96,40 +101,28 @@
       border-right: none;
     }
 
-    html, body {
-      background: #fffaf0;
-    }
-
-    html.dark, html.dark body {
-      background: #121214;
+    html,
+    body {
+      background: var(--color-he-page);
     }
   }
-  
+
   ::selection {
     background: rgba(139, 76, 246, 0.16);
     color: inherit;
   }
 
-  html.dark [class*="text-[#1f1f1f]"] {
-    color: #f3f0ea;
+  /* Text-only fallbacks for legacy hardcoded colors — never override backgrounds/borders */
+  html.dark .he-app [class*="text-[#1f1f1f]"]:not([class*="text-white"]) {
+    color: var(--color-he-ink);
   }
 
-  html.dark [class*="text-[#68766d]"] {
-    color: #a8a29e;
+  html.dark .he-app [class*="text-[#68766d]"] {
+    color: var(--color-he-muted);
   }
 
-  html.dark [class*="text-[#8c755f]"] {
-    color: #b8a99a;
-  }
-
-  html.dark [class*="bg-[#fffaf0]"],
-  html.dark [class*="bg-[#faf7f1]"],
-  html.dark [class*="bg-[#fffdfb]"] {
-    background-color: #1c1c1f;
-  }
-
-  html.dark [class*="border-[#efe8da]"] {
-    border-color: #2e2e32;
+  html.dark .he-app [class*="text-[#8c755f]"]:not([class*="text-[#8b4cf6]"]) {
+    color: var(--color-he-soft);
   }
 }
 
@@ -137,13 +130,17 @@
   .app-shell {
     @apply mx-auto w-full max-w-[1280px] px-4 md:px-6;
   }
-  
+
   .glass {
-    @apply border border-[#f1e2b8] bg-white/85 backdrop-blur-xl dark:border-[#3a3a40] dark:bg-[#1c1c1f]/85;
+    @apply border border-[#f1e2b8]/80 bg-he-surface/85 backdrop-blur-xl;
+  }
+
+  html.dark .glass {
+    @apply border-he-border;
   }
 
   .nav-blur {
-    @apply bg-white/90 backdrop-blur-md dark:bg-[#1c1c1f]/90;
+    @apply bg-he-surface/90 backdrop-blur-md;
   }
 
   .brand-splash-logo {
@@ -180,7 +177,6 @@
   }
 }
 
-/* ── Liquid Logo Animation Keyframes ── */
 @keyframes he-dotIn {
   0%   { opacity: 0; transform: scale(0); }
   100% { opacity: 1; transform: scale(1); }

@@ -170,15 +170,15 @@ export default function ItemCard({
   }
 
   return (
-    <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:scale-[1.01] md:hover:border-[#8b4cf6]/30">
+    <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:border-he-purple/30">
       <Link
         to={itemHref}
-        className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26"
+        className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26"
         aria-label={`Open ${item.title}`}
       >
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
-            <StatusBadge status={item.status} className="border-0 bg-white/95 shadow-xs backdrop-blur-xs" />
+            <StatusBadge status={item.status} className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
           </div>
         ) : null}
         {item.image_url && imageAvailable ? (
@@ -199,7 +199,7 @@ export default function ItemCard({
         <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <Link to={itemHref} className="min-w-0 transition hover:text-[#8b4cf6]">
-              <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f]">
+              <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-he-ink">
                 {item.title}
               </h3>
             </Link>
@@ -216,13 +216,13 @@ export default function ItemCard({
                 {item.owner_badge ? <ReputationBadge label={item.owner_badge} compact /> : null}
               </div>
             ) : null}
-            <p className="line-clamp-2 text-[10px] leading-normal text-[#68766d]">
+            <p className="line-clamp-2 text-[10px] leading-normal text-he-muted">
               {item.description}
             </p>
           </Link>
         </div>
 
-        <div className="mt-2 flex flex-row items-center justify-between gap-2 border-t border-[#fcfbf9] pt-2">
+        <div className="mt-2 flex flex-row items-center justify-between gap-2 border-t border-he-border/40 pt-2">
           <div className="min-w-0">
             <Link to={itemHref} className="flex flex-wrap items-center gap-1 rounded-lg transition hover:text-[#8b4cf6]">
               <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location}</span>

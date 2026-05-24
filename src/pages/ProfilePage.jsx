@@ -142,7 +142,7 @@ export default function ProfilePage({
           </div>
         </div>
 
-        <div className="flex min-w-[140px] max-w-[200px] shrink-0 flex-col justify-center rounded-xl border border-[#efe8da]/40 bg-white/60 p-3">
+        <div className="flex min-w-[140px] max-w-[200px] shrink-0 flex-col justify-center rounded-xl border border-he-border/40 bg-he-surface/60 p-3">
           <div className="flex items-end gap-2 justify-between">
             <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/80">Trust Points</p>
             <p className="text-lg font-bold text-[#8b4cf6] md:text-xl">{trustScore}</p>
@@ -166,46 +166,46 @@ export default function ProfilePage({
           {reputationError ? <p className="mt-3 text-[10px] font-bold text-[#c65d4a]">{reputationError}</p> : null}
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Current Badge</p>
               <p className="mt-1 text-[11px] font-bold text-[#1f1f1f]">{myReputation?.current_badge || 'New Member'}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Average Rating</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Reviews</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{reviewCount}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Completed Shared</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedSharedCount}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Completed Received</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedReceivedCount}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Total Exchanges</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{completedExchangesCount}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Items Listed</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{itemsSharedCount}</p>
             </div>
-            <div className="rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 p-3 text-center">
+            <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Requests Made</p>
               <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{requestedCount}</p>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-dashed border-[#efe8da] bg-[#fffdfb] p-3 text-center">
+            <div className="rounded-xl border border-dashed border-he-border bg-he-input p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Account Type</p>
               <p className="mt-1 text-[11px] font-bold uppercase text-[#1f1f1f]">{currentUser.account_type}</p>
             </div>
-            <div className="rounded-xl border border-dashed border-[#efe8da] bg-[#fffdfb] p-3 text-center">
+            <div className="rounded-xl border border-dashed border-he-border bg-he-input p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Joined</p>
               <p className="mt-1 text-[11px] font-bold text-[#1f1f1f]">{joinedLabel}</p>
             </div>
@@ -281,18 +281,18 @@ export default function ProfilePage({
 
         <div className="space-y-4 md:space-y-6">
           <Surface className="p-5">
-            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] dark:text-[#f3f0ea] md:text-base">App Preferences</h2>
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-he-ink md:text-base">App Preferences</h2>
             <div className="mt-4 flex items-center justify-between py-2">
               <div>
-                <p className="text-xs font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">Dark Theme</p>
-                <p className="mt-0.5 text-[10px] text-[#68766d] dark:text-[#a8a29e]">Switch to a darker interface.</p>
+                <p className="text-xs font-bold text-he-ink">Dark Theme</p>
+                <p className="mt-0.5 text-[10px] text-he-muted">Switch to a darker interface.</p>
               </div>
               <ThemeToggle checked={isDark} onChange={() => toggleTheme()} label="Dark theme" />
             </div>
-            <div className="mt-1 flex items-center justify-between border-t border-[#efe8da]/40 py-2 dark:border-[#2e2e32]/60">
+            <div className="mt-1 flex items-center justify-between border-t border-he-border/40 py-2">
               <div>
-                <p className="text-xs font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">Email Notifications</p>
-                <p className="mt-0.5 text-[10px] text-[#68766d] dark:text-[#a8a29e]">Get alerted on new requests.</p>
+                <p className="text-xs font-bold text-he-ink">Email Notifications</p>
+                <p className="mt-0.5 text-[10px] text-he-muted">Get alerted on new requests.</p>
               </div>
               <ThemeToggle checked disabled label="Email notifications (coming soon)" />
             </div>
