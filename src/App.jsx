@@ -135,13 +135,25 @@ export default function App() {
   const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
   const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
-  const showSessionBootstrap = Boolean(token) && !sessionReady && !isAuthFlowRoute
+  const showSessionBootstrap = Boolean(token) && !sessionReady && !isAuthFlowRoute && location.pathname !== '/'
 
-  // Splash
+  // Splash — skip for returning visitors with a saved session
   useEffect(() => {
-    const t = window.setTimeout(() => setShowSplash(false), 1800)
+    const skipSplash = Boolean(localStorage.getItem(TOKEN_KEY))
+    if (skipSplash) {
+      setShowSplash(false)
+      return undefined
+    }
+    const t = window.setTimeout(() => setShowSplash(false), 1200)
     return () => window.clearTimeout(t)
   }, [])
+
+  // Never block the app forever if session restore hangs
+  useEffect(() => {
+    if (!token || sessionReady) return undefined
+    const t = window.setTimeout(() => setSessionReady(true), 25000)
+    return () => window.clearTimeout(t)
+  }, [token, sessionReady])
 
   useEffect(() => { loadItems() }, [])
 
@@ -623,7 +635,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className={`flex flex-1 flex-col ${showSplash ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}>
+        <div className="flex flex-1 flex-col">
           {currentUser && !currentUser.is_verified ? (
             <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap">
               <span>Verify your email to list, request, chat, and review.</span>
