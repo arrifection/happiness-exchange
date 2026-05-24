@@ -16,7 +16,7 @@ export default function ThemeToggle({ checked, onChange, disabled = false, label
     >
       <span
         className={[
-          'inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200',
+          'inline-block h-3 w-3 rounded-full bg-[#ffffff] shadow-sm transition-transform duration-200',
           checked ? 'translate-x-5' : 'translate-x-1',
         ].join(' ')}
       />

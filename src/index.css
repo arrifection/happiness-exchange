@@ -93,6 +93,10 @@ html.dark {
     position: relative;
   }
 
+  html.dark #root {
+    box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+  }
+
   @media (min-width: 768px) {
     #root {
       max-width: 100%;
@@ -112,8 +116,9 @@ html.dark {
     color: inherit;
   }
 
-  /* Text-only fallbacks for legacy hardcoded colors — never override backgrounds/borders */
-  html.dark .he-app [class*="text-[#1f1f1f]"]:not([class*="text-white"]) {
+  /* Legacy hardcoded colors inside the authenticated app shell */
+  html.dark .he-app [class*="text-[#1f1f1f]"]:not([class*="text-white"]),
+  html.dark .he-app [class*="text-[#1f3328]"] {
     color: var(--color-he-ink);
   }
 
@@ -123,6 +128,44 @@ html.dark {
 
   html.dark .he-app [class*="text-[#8c755f]"]:not([class*="text-[#8b4cf6]"]) {
     color: var(--color-he-soft);
+  }
+
+  html.dark .he-app [class*="border-[#efe8da]"],
+  html.dark .he-app [class*="border-[#eadfce]"] {
+    border-color: var(--color-he-border);
+  }
+
+  html.dark .he-app input[class*="bg-[#fffdfb]"],
+  html.dark .he-app select[class*="bg-[#fffdfb]"],
+  html.dark .he-app textarea[class*="bg-[#fffdfb]"] {
+    background-color: var(--color-he-input);
+    color: var(--color-he-ink);
+  }
+
+  html.dark .he-app [class*="bg-[#fffdfb]"]:not(input):not(select):not(textarea) {
+    background-color: var(--color-he-surface-soft);
+  }
+
+  html.dark .he-app [class*="bg-[#faf7f1]"]:not([class*="from-"]):not([class*="to-"]) {
+    background-color: color-mix(in srgb, var(--color-he-surface-soft) 85%, transparent);
+  }
+
+  html.dark .he-app [class*="bg-white"]:not([class*="bg-white/"]):not([class*="from-"]):not([class*="bg-[#8b4cf6]"]) {
+    background-color: var(--color-he-surface);
+  }
+
+  html.dark .he-app [class*="bg-[#efe8da]"]:not([class*="gradient"]) {
+    background-color: var(--color-he-border);
+  }
+
+  html.dark .he-app [class*="hover:bg-[#faf7f1]"]:hover,
+  html.dark .he-app [class*="hover:bg-[#f5f0ff]"]:hover,
+  html.dark .he-app [class*="hover:bg-white"]:hover:not([class*="bg-[#8b4cf6]"]) {
+    background-color: var(--color-he-surface-soft);
+  }
+
+  html.dark .he-app [class*="divide-[#efe8da]"] > :not(:last-child) {
+    border-color: var(--color-he-border);
   }
 }
 
@@ -174,6 +217,18 @@ html.dark {
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .he-field {
+    @apply w-full rounded-input border border-he-border bg-he-input text-he-ink outline-none transition placeholder:text-he-soft/60 focus:border-he-purple focus:ring-2 focus:ring-he-purple/10;
+  }
+
+  .he-chip {
+    @apply shrink-0 rounded-full border border-he-border bg-he-surface-soft font-bold text-he-soft transition-all duration-200 hover:text-he-ink;
+  }
+
+  .he-chip-active {
+    @apply border-transparent bg-he-purple text-white shadow-xs;
   }
 }
 

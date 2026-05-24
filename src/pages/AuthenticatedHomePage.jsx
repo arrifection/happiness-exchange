@@ -37,8 +37,8 @@ function HowItWorksStep({ number, title, description, isActive }) {
       className={[
         'flex flex-col gap-1 rounded-card border p-3.5 md:p-5 transition-all duration-700 ease-in-out',
         isActive
-          ? 'z-10 scale-[1.02] border-[#8b4cf6]/40 bg-white shadow-[0_0_16px_rgba(139,76,246,0.12),0_0_12px_rgba(255,204,34,0.08)] md:scale-105'
-          : 'z-0 scale-100 border-[#efe8da]/60 bg-[#faf7f1] shadow-none',
+          ? 'z-10 scale-[1.02] border-he-purple/40 bg-he-surface shadow-[0_0_16px_rgba(139,76,246,0.12),0_0_12px_rgba(255,204,34,0.08)] md:scale-105'
+          : 'z-0 scale-100 border-he-border/60 bg-he-surface-soft shadow-none',
       ].join(' ')}
     >
       <div
@@ -49,10 +49,10 @@ function HowItWorksStep({ number, title, description, isActive }) {
       >
         {number}
       </div>
-      <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[12px] font-bold text-[#1f1f1f] md:text-[15px]">
+      <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[12px] font-bold text-he-ink md:text-[15px]">
         {title}
       </h3>
-      <p className="text-[10px] leading-relaxed text-[#68766d] md:text-[12px]">{description}</p>
+      <p className="text-[10px] leading-relaxed text-he-muted md:text-[12px]">{description}</p>
     </div>
   )
 }
@@ -130,7 +130,7 @@ export default function AuthenticatedHomePage({
               as="link"
               to="/give"
               variant="secondary"
-              className="min-h-12 flex-1 bg-white px-6 py-3 text-[13px] font-bold transition-all duration-300 hover:-translate-y-1 hover:border-[#ffcc22]/40 hover:shadow-[0_8px_20px_rgba(255,204,34,0.15)] md:text-[15px]"
+              className="min-h-12 flex-1 px-6 py-3 text-[13px] font-bold transition-all duration-300 hover:-translate-y-1 hover:border-[#ffcc22]/40 hover:shadow-[0_8px_20px_rgba(255,204,34,0.15)] md:text-[15px]"
             >
               List Item
             </Button>
@@ -144,19 +144,19 @@ export default function AuthenticatedHomePage({
           </div>
         </div>
 
-        <div className="flex items-center gap-5 border-t border-[#efe8da] bg-[#faf7f1]/40 px-5 py-3 md:px-8">
+        <div className="flex items-center gap-5 border-t border-he-border bg-he-surface-soft/40 px-5 py-3 md:px-8">
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">Listed Items</p>
-            <p className="text-xs font-bold text-[#1f1f1f]">{items.length}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
+            <p className="text-xs font-bold text-he-ink">{items.length}</p>
           </div>
-          <div className="h-3 w-px bg-[#efe8da]" />
+          <div className="h-3 w-px bg-he-border" />
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">Total Requests</p>
-            <p className="text-xs font-bold text-[#1f1f1f]">{asArray(myRequests).length}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Total Requests</p>
+            <p className="text-xs font-bold text-he-ink">{asArray(myRequests).length}</p>
           </div>
           {asArray(ownerRequests).length > 0 ? (
             <>
-              <div className="h-3 w-px bg-[#efe8da]" />
+              <div className="h-3 w-px bg-he-border" />
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">To Review</p>
                 <p className="text-xs font-bold text-[#8b4cf6]">{asArray(ownerRequests).length}</p>

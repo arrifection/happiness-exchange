@@ -22,7 +22,7 @@ function StatCard({ label, value, onClick, highlight, to }) {
         hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(139,76,246,0.15)] active:scale-[0.97]
         ${highlight
           ? 'border-transparent bg-gradient-to-br from-[#8b4cf6] to-[#7340d2] cursor-pointer'
-          : 'border-[#efe8da]/80 bg-white cursor-pointer hover:border-[#8b4cf6]/30'
+          : 'border-he-border/80 bg-he-surface cursor-pointer hover:border-he-purple/30'
         }`}
     >
       <p className={`mb-1 text-[9px] font-bold uppercase tracking-wider md:text-[10px] ${highlight ? 'text-white/80' : 'text-[#8c755f]/70'}`}>
@@ -43,7 +43,7 @@ function StatCard({ label, value, onClick, highlight, to }) {
 
 function RequestCard({ request, children }) {
   return (
-    <article className="rounded-card border border-[#efe8da] bg-white p-3.5 transition-colors hover:bg-[#faf7f1]/30">
+    <article className="rounded-card border border-he-border bg-he-surface p-3.5 transition-colors hover:bg-he-surface-soft/30">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-[#1f1f1f]">{request.item_title}</h3>

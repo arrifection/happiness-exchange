@@ -144,6 +144,7 @@ export default function App() {
 
   const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
+  const isMessagesRoute = location.pathname.startsWith('/messages')
   const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
 
   useEffect(() => { loadItems() }, [])
@@ -649,7 +650,7 @@ export default function App() {
 
         <div className="flex flex-1 flex-col">
           {currentUser && !currentUser.is_verified ? (
-            <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap">
+            <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900/40">
               <span>Verify your email to list, request, chat, and review.</span>
               <button
                 type="button"
@@ -756,7 +757,7 @@ export default function App() {
                   <NavLink
                     to="/profile"
                     className={({ isActive }) => [
-                      'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-[#8c755f] transition-all duration-200 hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
+                      'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-he-soft transition-all duration-200 hover:bg-he-surface-soft hover:text-he-ink',
                       isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : '',
                     ].join(' ')}
                     aria-label="Open profile settings"
@@ -770,7 +771,13 @@ export default function App() {
             </header>
           ) : null}
 
-          <main className={isMarketingHome ? 'flex-1' : 'app-shell flex-1 pt-4 pb-20 md:pb-8'}>
+          <main className={
+            isMarketingHome
+              ? 'flex-1'
+              : isMessagesRoute
+                ? 'app-shell flex-1 pb-20 md:pb-8'
+                : 'app-shell flex-1 pt-4 pb-20 md:pb-8'
+          }>
             <Routes>
               <Route
                 path="/"

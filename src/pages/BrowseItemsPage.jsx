@@ -94,10 +94,10 @@ export default function BrowseItemsPage({
       <div className="space-y-3 md:space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg md:text-xl font-bold tracking-tight text-[#1f1f1f]">
+            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg md:text-xl font-bold tracking-tight text-he-ink">
               Browse Items
             </h1>
-            <p className="text-[10px] md:text-xs text-[#68766d]">Find items shared by your community.</p>
+            <p className="text-[10px] md:text-xs text-he-muted">Find items shared by your community.</p>
           </div>
           <button
             type="button"
@@ -119,7 +119,7 @@ export default function BrowseItemsPage({
             placeholder="Search items, locations..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="min-h-9 md:min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] pl-9 pr-12 text-xs md:text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+            className="he-field min-h-9 md:min-h-10 pl-9 pr-12 text-xs md:text-sm"
           />
           <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8c755f]/60">
             <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -146,10 +146,8 @@ export default function BrowseItemsPage({
                 type="button"
                 onClick={() => setCategoryFilter(cat)}
                 className={[
-                  'shrink-0 rounded-full px-3.5 py-1.5 md:px-4 md:py-2 text-[10px] md:text-[13px] font-bold transition-all duration-200',
-                  isActive
-                    ? 'bg-[#8b4cf6] text-white shadow-xs'
-                    : 'border border-[#efe8da] bg-[#fffdfb] text-[#8c755f] hover:text-[#1f1f1f]',
+                  'he-chip px-3.5 py-1.5 md:px-4 md:py-2 text-[10px] md:text-[13px]',
+                  isActive ? 'he-chip-active' : '',
                 ].join(' ')}
               >
                 {cat === 'All' ? 'All Categories' : cat}
@@ -164,7 +162,7 @@ export default function BrowseItemsPage({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 md:h-10 w-full appearance-none rounded-input border border-[#efe8da] bg-[#fffdfb] px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-[#8c755f] outline-none transition focus:border-[#8b4cf6]"
+              className="he-field h-8 md:h-10 appearance-none px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-he-soft"
             >
               {STATUSES.map((stat) => (
                 <option key={stat} value={stat}>
@@ -183,7 +181,7 @@ export default function BrowseItemsPage({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="h-8 md:h-10 w-full appearance-none rounded-input border border-[#efe8da] bg-[#fffdfb] px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-[#8c755f] outline-none transition focus:border-[#8b4cf6]"
+              className="he-field h-8 md:h-10 appearance-none px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-he-soft"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>

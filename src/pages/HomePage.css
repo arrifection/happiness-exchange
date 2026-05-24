@@ -1382,3 +1382,111 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* ── Dark mode for marketing homepage ── */
+html.dark .he-home {
+  --he-purple-light: #2d2640;
+  --he-yellow-light: #3d3520;
+  --he-dark: #f5f0e8;
+  --he-gray: #a39e96;
+  --he-border: #3a3632;
+  --he-bg: #1a1918;
+  background: #171615;
+  color: #f5f0e8;
+}
+
+html.dark .he-home .he-nav,
+html.dark .he-home .he-nav-mobile-menu,
+html.dark .he-home .he-hero,
+html.dark .he-home .he-app-search,
+html.dark .he-home .he-item-card,
+html.dark .he-home .he-concept-col,
+html.dark .he-home .he-delivery-section,
+html.dark .he-home .he-impact-section {
+  background: #222020;
+}
+
+html.dark .he-home .he-nav-links a,
+html.dark .he-home .he-nav-mobile-menu a {
+  color: #c4b5fd;
+}
+
+html.dark .he-home .he-hero::before {
+  background: radial-gradient(circle, #2d2640 0%, transparent 70%);
+}
+
+html.dark .he-home .he-step-text {
+  color: #a39e96;
+}
+
+html.dark .he-home .he-step-text strong {
+  color: #f5f0e8;
+}
+
+html.dark .he-home .he-concept-col.get-col .he-step-num {
+  background: #3d3520;
+  color: #ffcc22;
+}
+
+html.dark .he-home .he-del-card.courier {
+  background: linear-gradient(140deg, #2d2640, #1f1a2e);
+}
+
+html.dark .he-home .he-del-card.carrier {
+  background: linear-gradient(140deg, #3d3520, #2a2418);
+}
+
+html.dark .he-home .he-del-card.courier h4 {
+  color: #c4b5fd;
+}
+
+html.dark .he-home .he-del-card.carrier h4 {
+  color: #ffcc22;
+}
+
+html.dark .he-home .he-del-card.courier p,
+html.dark .he-home .he-del-card.courier .he-df {
+  color: #a78bfa;
+}
+
+html.dark .he-home .he-del-card.carrier p,
+html.dark .he-home .he-del-card.carrier .he-df {
+  color: #d4a017;
+}
+
+html.dark .he-home .he-item-loc {
+  color: #8a837a;
+}
+
+html.dark .he-home .he-app-search {
+  color: #8a837a;
+}
+
+html.dark .he-home .he-anon-section {
+  background: #0f0e0d;
+}
+
+html.dark .he-home .he-cta-section {
+  background: #1a1918;
+}
+
+html.dark .he-home .he-footer {
+  background: #0a0a0a;
+  border-top-color: #3a3632;
+}
+
+html.dark .he-home .he-anon-stamp {
+  background: linear-gradient(135deg, rgba(45, 38, 64, 0.9) 0%, rgba(42, 40, 32, 0.9) 100%);
+}
+
+html.dark .he-home .he-anon-stamp-icon {
+  background: rgba(139, 76, 246, 0.2);
+}
+
+html.dark .he-home .he-anon-stamp-title {
+  color: #f5f0e8;
+}
+
+html.dark .he-home .he-anon-stamp-sub {
+  color: #a39e96;
+}
+

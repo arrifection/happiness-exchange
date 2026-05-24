@@ -43,7 +43,7 @@ function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPendi
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((current) => !current)}
         disabled={ownerActionPending}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#eadfce] bg-[#faf7f1] text-[#8c755f] transition hover:border-[#d8cab8] hover:bg-white hover:text-[#1f3328] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1f6f50]/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-he-border bg-he-surface-soft text-he-soft transition hover:border-he-border hover:bg-he-surface hover:text-he-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-he-purple/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {ownerActionPending ? (
           <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -59,7 +59,7 @@ function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPendi
       </button>
 
       {menuOpen ? (
-        <div className="absolute right-0 top-11 z-20 w-48 overflow-hidden rounded-2xl border border-[#eadfce] bg-white p-1.5 shadow-xl shadow-[#1f3328]/10">
+        <div className="absolute right-0 top-11 z-20 w-48 overflow-hidden rounded-2xl border border-he-border bg-he-surface p-1.5 shadow-xl shadow-black/20">
           {item.status !== 'completed' ? (
             <button
               type="button"
