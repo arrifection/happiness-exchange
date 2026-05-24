@@ -1,4 +1,4 @@
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
@@ -69,6 +69,7 @@ function formatApiError(errorData, fallbackMessage) {
 
 export default function App() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [showSplash, setShowSplash] = useState(true)
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
   const [currentUser, setCurrentUser] = useState(null)
@@ -151,6 +152,19 @@ export default function App() {
       setItemForm((c) => ({ ...c, owner_name: c.owner_name || currentUser.name }))
     }
   }, [currentUser])
+
+  async function refreshCurrentUser() {
+    if (!token) return
+    try {
+      const res = await fetch(ME_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (res.ok) setCurrentUser(data)
+    } catch {
+      /* silent — verify page still shows success */
+    }
+  }
 
   async function loadUserData() {
     setLoadingUser(true)
@@ -598,7 +612,17 @@ export default function App() {
                     })
                     const data = await res.json().catch(() => ({}))
                     if (res.ok) {
-                      setAuthNotice('Verification email sent. Check your inbox and spam folder.')
+                      if (data.status === 'already_verified') {
+                        await refreshCurrentUser()
+                        setAuthNotice('Your email is already verified.')
+                        return
+                      }
+                      navigate('/check-email', {
+                        state: {
+                          email: currentUser.email,
+                          resendSuccess: true,
+                        },
+                      })
                       return
                     }
                     const detail = typeof data.detail === 'string'
@@ -703,12 +727,13 @@ export default function App() {
                     apiBase={API_BASE}
                     token={token}
                     currentUser={currentUser}
+                    onRefreshUser={refreshCurrentUser}
                   />
                 }
               />
               <Route
                 path="/verify-email"
-                element={<VerifyEmailPage currentUser={currentUser} onAuthSuccess={handleAuthSuccess} />}
+                element={<VerifyEmailPage currentUser={currentUser} onRefreshUser={refreshCurrentUser} />}
               />
               <Route
                 path="/browse"
@@ -860,7 +885,7 @@ export default function App() {
             />
             <Route
               path="/verify-email"
-              element={<VerifyEmailPage currentUser={currentUser} onAuthSuccess={handleAuthSuccess} />}
+              element={<VerifyEmailPage currentUser={currentUser} onRefreshUser={refreshCurrentUser} />}
             />
             <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

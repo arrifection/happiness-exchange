@@ -5,7 +5,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.roles import UserRole
 from app.db.mongodb import get_users_collection_async
-from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
+from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, VerifyEmailResponse, ResendVerificationResponse
 from app.services.auth import (
     create_access_token,
     generate_verification_token,
@@ -18,7 +18,7 @@ from app.services.auth import (
 from app.core.config import settings
 from app.services.email import EmailSendError, get_email_diagnostics, send_verification_email
 from app.services.notifications import notify_admins
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_user, get_optional_current_user
 
 router = APIRouter()
 
@@ -161,8 +161,11 @@ async def login(payload: LoginRequest):
     }
 
 
-@router.get("/verify-email")
-async def verify_email(token: str):
+@router.get("/verify-email", response_model=VerifyEmailResponse)
+async def verify_email(
+    token: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+):
     """Verify a user's email using the token sent to them."""
     users_collection = await get_users_collection_async()
     if users_collection is None:
@@ -175,18 +178,29 @@ async def verify_email(token: str):
     user = await users_collection.find_one({"email_verification_token_hash": token_hash})
 
     if not user:
+        if current_user and current_user.get("is_verified"):
+            return {
+                "message": "Your email is already verified.",
+                "status": "already_verified",
+            }
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification link.",
+            detail="This verification link is invalid or expired.",
         )
+
+    if user.get("is_verified"):
+        return {
+            "message": "Your email is already verified.",
+            "status": "already_verified",
+        }
 
     now = datetime.now(timezone.utc)
     expires_at = user.get("email_verification_expires_at")
-    
+
     if not expires_at or now > expires_at.replace(tzinfo=timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This verification link has expired. Please request a new one.",
+            detail="This verification link is invalid or expired.",
         )
 
     await users_collection.update_one(
@@ -202,17 +216,20 @@ async def verify_email(token: str):
             }
         }
     )
-    return {"message": "Email verified successfully."}
+    return {
+        "message": "Email verified successfully.",
+        "status": "verified",
+    }
 
 
-@router.post("/resend-verification")
+@router.post("/resend-verification", response_model=ResendVerificationResponse)
 async def resend_verification(current_user: dict = Depends(get_current_user)):
     """Resend verification email if user is not already verified."""
     if current_user.get("is_verified"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Your email is already verified.",
-        )
+        return {
+            "message": "Your email is already verified.",
+            "status": "already_verified",
+        }
 
     users_collection = await get_users_collection_async()
     if users_collection is None:
@@ -246,4 +263,7 @@ async def resend_verification(current_user: dict = Depends(get_current_user)):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=exc.message,
         )
-    return {"message": "Verification email sent."}
+    return {
+        "message": "New verification email sent. Please check your inbox.",
+        "status": "sent",
+    }

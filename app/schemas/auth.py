@@ -39,6 +39,16 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class VerifyEmailResponse(BaseModel):
+    message: str
+    status: str  # "verified" | "already_verified"
+
+
+class ResendVerificationResponse(BaseModel):
+    message: str
+    status: str = "sent"  # "sent" | "already_verified"
+
+
 class TokenPayload(BaseModel):
     sub: str
     email: EmailStr

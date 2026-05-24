@@ -4,50 +4,76 @@ import { Button } from '../components/ui.jsx'
 import BrandLogo from '../components/BrandLogo.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+const TOKEN_KEY = 'happiness_exchange_token'
 
-export default function VerifyEmailPage({ currentUser, onAuthSuccess }) {
+function isCompleteStatus(status) {
+  return status === 'success' || status === 'already_verified'
+}
+
+export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const navigate = useNavigate()
 
   const [status, setStatus] = useState('loading')
-  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [redirectIn, setRedirectIn] = useState(3)
 
   useEffect(() => {
     if (!token) {
       setStatus('error')
-      setError('No verification token provided.')
-      return
+      setMessage('This verification link is invalid or expired.')
+      return undefined
     }
+
+    let cancelled = false
 
     async function verifyToken() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+        const authToken = localStorage.getItem(TOKEN_KEY)
+        const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
+        const response = await fetch(
+          `${API_BASE_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
+          { headers },
+        )
         const data = await response.json()
 
+        if (cancelled) return
+
         if (!response.ok) {
-          throw new Error(data.detail || 'Verification failed.')
+          setStatus('error')
+          setMessage(data.detail || 'This verification link is invalid or expired.')
+          return
         }
 
-        setStatus('success')
-
-        if (currentUser && onAuthSuccess) {
-          onAuthSuccess({
-            user: { ...currentUser, is_verified: true },
-          })
+        if (data.status === 'already_verified') {
+          setStatus('already_verified')
+          setMessage(data.message || 'Your email is already verified.')
+        } else {
+          setStatus('success')
+          setMessage(data.message || 'Email verified successfully.')
         }
-      } catch (err) {
-        setStatus('error')
-        setError(err.message)
+
+        if (onRefreshUser) {
+          await onRefreshUser()
+        }
+      } catch {
+        if (!cancelled) {
+          setStatus('error')
+          setMessage('Could not reach the server. Please try again.')
+        }
       }
     }
 
     verifyToken()
-  }, [token, currentUser, onAuthSuccess])
+    return () => {
+      cancelled = true
+    }
+    // Verify once per token — onRefreshUser intentionally omitted to avoid re-runs.
+  }, [token])
 
   useEffect(() => {
-    if (status !== 'success') return undefined
+    if (!isCompleteStatus(status)) return undefined
 
     setRedirectIn(3)
     const countdown = setInterval(() => {
@@ -90,10 +116,28 @@ export default function VerifyEmailPage({ currentUser, onAuthSuccess }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Email verified!</h2>
-            <p className="text-sm text-[#68766d]">
-              Thank you for verifying your email. You now have full access to Happiness Exchange.
+            <h2 className="text-xl font-bold text-[#1f1f1f]">Email verified successfully</h2>
+            <p className="text-sm text-[#68766d]">{message}</p>
+            <p className="text-xs text-[#8c755f]">
+              Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
             </p>
+            <div className="pt-2">
+              <Button variant="primary" className="w-full" onClick={goHome}>
+                Go to Home
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {status === 'already_verified' && (
+          <div className="space-y-4">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f0faf4]">
+              <svg className="h-8 w-8 text-[#3d8b5f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-[#1f1f1f]">Your email is already verified</h2>
+            <p className="text-sm text-[#68766d]">You are all set. No further action is needed.</p>
             <p className="text-xs text-[#8c755f]">
               Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
             </p>
@@ -112,11 +156,14 @@ export default function VerifyEmailPage({ currentUser, onAuthSuccess }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Verification failed</h2>
-            <p className="text-sm text-[#c65d4a]">{error}</p>
+            <h2 className="text-xl font-bold text-[#1f1f1f]">Verification link unavailable</h2>
+            <p className="text-sm text-[#c65d4a]">{message}</p>
             <div className="pt-4 space-y-2">
               <Button variant="primary" className="w-full" onClick={() => navigate('/check-email')}>
                 Resend verification email
+              </Button>
+              <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>
+                Go to Login
               </Button>
               <Button variant="secondary" className="w-full" onClick={goHome}>
                 Go to Home

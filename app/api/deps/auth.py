@@ -48,6 +48,32 @@ async def get_current_user(
     return serialize_user(user)
 
 
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> dict | None:
+    """Return the current user when a valid bearer token is present, else None."""
+    if credentials is None:
+        return None
+
+    token_data = decode_access_token(credentials.credentials)
+    if token_data is None:
+        return None
+
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        return None
+
+    user_id = parse_object_id(token_data.sub)
+    if user_id is None:
+        return None
+
+    user = await users_collection.find_one({"_id": user_id})
+    if user is None:
+        return None
+
+    return serialize_user(user)
+
+
 async def get_verified_user(
     current_user: dict = Depends(get_current_user),
 ):
