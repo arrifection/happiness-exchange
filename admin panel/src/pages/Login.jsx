@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { APP_NAME } from '../lib/env'
-import { Shield, Eye, EyeOff, Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { Shield, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login, demoLogin, isAuthenticated } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -19,11 +19,6 @@ export default function LoginPage() {
   if (isAuthenticated) {
     navigate(from, { replace: true })
     return null
-  }
-
-  const handleDemo = () => {
-    demoLogin()
-    navigate('/dashboard', { replace: true })
   }
 
   const handleSubmit = async (e) => {
@@ -46,16 +41,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-surface-100 flex items-center justify-center p-4">
-      {/* Background gradient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-100/60 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-lavender-100/60 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Card */}
         <div className="card border-surface-300 shadow-card">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
               <Shield className="w-7 h-7 text-white" />
@@ -64,7 +56,6 @@ export default function LoginPage() {
             <p className="text-sm text-surface-500 mt-1">{APP_NAME}</p>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="mb-5 flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 animate-fade-in">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -72,7 +63,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="form-label">Email address</label>
@@ -127,27 +117,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mt-5">
-            <div className="flex-1 h-px bg-surface-300" />
-            <span className="text-xs text-surface-500">or</span>
-            <div className="flex-1 h-px bg-surface-300" />
-          </div>
-
-          {/* Demo button */}
-          <button
-            type="button"
-            onClick={handleDemo}
-            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 hover:border-brand-300 transition-all duration-200 text-sm font-medium group"
-          >
-            <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
-            Preview Dashboard (Demo Mode)
-          </button>
-          <p className="text-center text-[11px] text-surface-500 mt-2">
-            Explore the UI with sample data — no backend required
-          </p>
-
-          <p className="text-center text-xs text-surface-500 mt-4 border-t border-surface-300 pt-4">
+          <p className="text-center text-xs text-surface-500 mt-6 border-t border-surface-300 pt-4">
             Admin access only. Accounts are created by the Happiness Exchange team.
           </p>
         </div>

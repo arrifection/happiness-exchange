@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { reviewsApi } from '../lib/api'
+import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
 import { Star, Trash2, RefreshCw } from 'lucide-react'
 
@@ -33,7 +34,7 @@ export default function ReviewsPage() {
       setReviews(Array.isArray(data) ? data : (data.reviews || data.items || []))
       setTotal(data.total || (Array.isArray(data) ? data.length : 0))
     } catch (err) {
-      setError(err.response?.data?.detail || err.message)
+      setError(resolveApiError(err))
     } finally {
       setLoading(false)
     }

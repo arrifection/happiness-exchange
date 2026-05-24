@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { requestsApi } from '../lib/api'
+import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
 import { FileText, Search, Filter, RefreshCw } from 'lucide-react'
 
@@ -27,7 +28,7 @@ export default function RequestsPage() {
       setRequests(Array.isArray(data) ? data : (data.requests || data.items || []))
       setTotal(data.total || (Array.isArray(data) ? data.length : 0))
     } catch (err) {
-      setError(err.response?.data?.detail || err.message)
+      setError(resolveApiError(err))
     } finally {
       setLoading(false)
     }

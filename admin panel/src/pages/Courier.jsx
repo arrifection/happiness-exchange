@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Truck, Package, MapPin, Phone, Clock, CheckCircle, AlertCircle, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react'
 import { deliveriesApi } from '../lib/api'
+import { resolveApiError } from '../lib/backend'
 
 const statusConfig = {
   awaiting_dropoff_address: { badge: 'badge-yellow', icon: Clock,        label: 'Awaiting Address' },
@@ -31,7 +32,7 @@ export default function CourierPage() {
       const res = await deliveriesApi.list()
       setDeliveries(res.data)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to fetch deliveries')
+      setError(resolveApiError(err))
     } finally {
       setLoading(false)
     }

@@ -9,9 +9,21 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.health import router as health_router
 from app.api.routes.items import router as items_router
+from app.api.routes.notifications import router as notifications_router
 from app.api.routes.reviews import router as reviews_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
+from app.api.routes.leaderboard import router as leaderboard_router
+from app.api.routes.deliveries import router as deliveries_router
+# ── Admin routes ──────────────────────────────────────────────────────────────
+from app.api.routes.admin.auth      import router as admin_auth_router
+from app.api.routes.admin.users     import router as admin_users_router
+from app.api.routes.admin.items     import router as admin_items_router
+from app.api.routes.admin.reviews   import router as admin_reviews_router
+from app.api.routes.admin.reports   import router as admin_reports_router
+from app.api.routes.admin.analytics import router as admin_analytics_router
+from app.api.routes.admin.team      import router as admin_team_router
+from app.api.routes.admin.deliveries import router as admin_deliveries_router
 from app.core.config import settings
 from app.db.mongodb import (
     close_mongo_connection,
@@ -41,8 +53,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://happiness-exchange.*\.vercel\.app",
+    allow_origins=settings.ALLOWED_ORIGINS + [
+        # Admin panel (local dev)
+        "http://localhost:5200",
+        "http://127.0.0.1:5200",
+    ],
+    allow_origin_regex=r"https://(happiness-exchange.*|arrifection-happiness-exchange.*|.*-admin.*)\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,6 +71,19 @@ app.include_router(items_router, prefix="/api", tags=["Items"])
 app.include_router(requests_router, prefix="/api", tags=["Requests"])
 app.include_router(reviews_router, prefix="/api", tags=["Reviews"])
 app.include_router(conversations_router, prefix="/api", tags=["Conversations"])
+app.include_router(notifications_router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["Leaderboard"])
+app.include_router(deliveries_router, prefix="/api", tags=["Deliveries"])
+
+# ── Admin API ─────────────────────────────────────────────────────────────────
+app.include_router(admin_auth_router,      prefix="/api/admin/auth",      tags=["Admin · Auth"])
+app.include_router(admin_users_router,     prefix="/api/admin/users",     tags=["Admin · Users"])
+app.include_router(admin_items_router,     prefix="/api/admin/items",     tags=["Admin · Items"])
+app.include_router(admin_reviews_router,   prefix="/api/admin/reviews",   tags=["Admin · Reviews"])
+app.include_router(admin_reports_router,   prefix="/api/admin/reports",   tags=["Admin · Reports"])
+app.include_router(admin_analytics_router, prefix="/api/admin/analytics", tags=["Admin · Analytics"])
+app.include_router(admin_team_router,      prefix="/api/admin/team",      tags=["Admin · Team"])
+app.include_router(admin_deliveries_router, prefix="/api/admin",          tags=["Admin · Deliveries"])
 
 # ── Diagnostic endpoint ───────────────────────────────────────────────────────
 # SAFE: never returns MONGODB_URI, password, or any secret value.

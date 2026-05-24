@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usersApi } from '../lib/api'
+import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
 import { Users, Search, Ban, RefreshCw, MoreVertical } from 'lucide-react'
 
@@ -25,7 +26,7 @@ export default function UsersPage() {
       setUsers(Array.isArray(data) ? data : (data.users || data.items || []))
       setTotal(data.total || (Array.isArray(data) ? data.length : 0))
     } catch (err) {
-      setError(err.response?.data?.detail || err.message)
+      setError(resolveApiError(err))
     } finally {
       setLoading(false)
     }

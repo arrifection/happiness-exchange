@@ -1,6 +1,6 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Search, Sparkles, LogOut } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { statusApi } from '../lib/api'
 import NotificationBell from './NotificationBell'
@@ -19,20 +19,13 @@ const routeLabels = {
 }
 
 export default function TopBar() {
-  const { user, logout, isDemo } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
-  const [apiStatus, setApiStatus] = useState(isDemo ? 'demo' : 'checking')
-
-  const handleExitDemo = () => {
-    logout()
-    navigate('/login')
-  }
+  const [apiStatus, setApiStatus] = useState('checking')
 
   const pageTitle = routeLabels[location.pathname] || 'Admin Panel'
 
   useEffect(() => {
-    if (isDemo) return
     const checkStatus = async () => {
       try {
         await statusApi.check()
@@ -44,65 +37,44 @@ export default function TopBar() {
     checkStatus()
     const interval = setInterval(checkStatus, 30_000)
     return () => clearInterval(interval)
-  }, [isDemo])
+  }, [])
 
   return (
-    <>
-      {isDemo && (
-        <div className="bg-accent-50 border-b border-accent-200 px-6 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-accent-600" />
-            <span className="text-xs text-accent-800 font-medium">
-              Demo Mode — You&apos;re viewing the admin panel with sample data. Live data requires the backend API.
-            </span>
-          </div>
-          <button
-            onClick={handleExitDemo}
-            className="flex items-center gap-1.5 text-xs text-accent-700 hover:text-accent-900 transition-colors font-medium"
-          >
-            <LogOut className="w-3 h-3" />
-            Exit Demo
-          </button>
+    <header className="h-16 bg-white/90 backdrop-blur-sm border-b border-surface-300 flex items-center justify-between px-6 sticky top-0 z-30 shadow-soft">
+      <div>
+        <h1 className="text-base font-semibold text-surface-800">{pageTitle}</h1>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              apiStatus === 'online'   ? 'bg-emerald-500 animate-pulse-slow' :
+              apiStatus === 'offline'  ? 'bg-red-500' :
+              'bg-accent-400 animate-pulse'
+            }`}
+          />
+          <span className="text-xs text-surface-500">
+            {apiStatus === 'checking' ? 'Backend connecting…' :
+             apiStatus === 'online'   ? 'Backend online' :
+             'Backend offline'}
+          </span>
         </div>
-      )}
+      </div>
 
-      <header className="h-16 bg-white/90 backdrop-blur-sm border-b border-surface-300 flex items-center justify-between px-6 sticky top-0 z-30 shadow-soft">
-        <div>
-          <h1 className="text-base font-semibold text-surface-800">{pageTitle}</h1>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <div
-              className={`w-1.5 h-1.5 rounded-full ${
-                isDemo            ? 'bg-accent-500' :
-                apiStatus === 'online'   ? 'bg-emerald-500 animate-pulse-slow' :
-                apiStatus === 'offline'  ? 'bg-red-500' :
-                'bg-accent-400 animate-pulse'
-              }`}
-            />
-            <span className="text-xs text-surface-500">
-              {isDemo ? 'Demo mode — no backend' :
-               apiStatus === 'checking' ? 'Backend connecting…' :
-               `Backend ${apiStatus}`}
-            </span>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="relative hidden md:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-500" />
+          <input
+            type="search"
+            placeholder="Quick search…"
+            className="form-input pl-8 py-1.5 w-52 text-xs rounded-lg bg-surface-100/50"
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-500" />
-            <input
-              type="search"
-              placeholder="Quick search…"
-              className="form-input pl-8 py-1.5 w-52 text-xs rounded-lg bg-surface-100/50"
-            />
-          </div>
+        <NotificationBell />
 
-          <NotificationBell />
-
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold uppercase shadow-soft ring-2 ring-white">
-            {(user?.full_name || user?.username || user?.email || 'A')[0]}
-          </div>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold uppercase shadow-soft ring-2 ring-white">
+          {(user?.full_name || user?.name || user?.username || user?.email || 'A')[0]}
         </div>
-      </header>
-    </>
+      </div>
+    </header>
   )
 }

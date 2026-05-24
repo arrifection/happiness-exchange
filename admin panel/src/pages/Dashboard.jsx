@@ -3,10 +3,10 @@ import { useAuth } from '../contexts/AuthContext'
 import StatCard from '../components/StatCard'
 import { LoadingSpinner, ErrorState } from '../components/States'
 import {
-  Package, Users, FileText, Star, Flag,
-  TrendingUp, Clock, CheckCircle, AlertTriangle,
+  Package, Users, FileText, Star, TrendingUp, CheckCircle, AlertTriangle,
 } from 'lucide-react'
-import { itemsApi, usersApi, requestsApi, reviewsApi } from '../lib/api'
+import { analyticsApi, itemsApi, reportsApi, statusApi } from '../lib/api'
+import { resolveApiError } from '../lib/backend'
 
 const RECENT_ITEMS_COUNT = 5
 
@@ -14,33 +14,37 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const [stats, setStats]     = useState(null)
   const [recent, setRecent]   = useState([])
+  const [health, setHealth]   = useState({ api: 'checking', openReports: null })
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [itemsRes, usersRes, requestsRes, reviewsRes] = await Promise.allSettled([
+        const [summaryRes, itemsRes, reportsRes] = await Promise.all([
+          analyticsApi.summary(),
           itemsApi.list({ limit: RECENT_ITEMS_COUNT }),
-          usersApi.list({ limit: 1 }),
-          requestsApi.list({ limit: 1 }),
-          reviewsApi.list({ limit: 1 }),
+          reportsApi.list({ status: 'open', limit: 1 }),
         ])
 
-        const items    = itemsRes.status    === 'fulfilled' ? itemsRes.value.data    : { items: [], total: 0 }
-        const users    = usersRes.status    === 'fulfilled' ? usersRes.value.data    : { total: 0 }
-        const requests = requestsRes.status === 'fulfilled' ? requestsRes.value.data : { total: 0 }
-        const reviews  = reviewsRes.status  === 'fulfilled' ? reviewsRes.value.data  : { total: 0 }
+        let apiStatus = 'online'
+        try {
+          await statusApi.check()
+        } catch {
+          apiStatus = 'offline'
+        }
 
+        const summary = summaryRes.data
+        setHealth({ api: apiStatus, openReports: reportsRes.data.total ?? 0 })
         setStats({
-          totalItems:    items.total    ?? (Array.isArray(items) ? items.length : 0),
-          totalUsers:    users.total    ?? (Array.isArray(users) ? users.length : 0),
-          totalRequests: requests.total ?? (Array.isArray(requests) ? requests.length : 0),
-          totalReviews:  reviews.total  ?? (Array.isArray(reviews) ? reviews.length : 0),
+          totalItems:    summary.items?.total ?? 0,
+          totalUsers:    summary.users?.total ?? 0,
+          totalRequests: summary.requests?.open ?? summary.requests?.total ?? 0,
+          totalReviews:  summary.reviews?.total ?? 0,
         })
-        setRecent(Array.isArray(items.items) ? items.items : (Array.isArray(items) ? items.slice(0, 5) : []))
+        setRecent(Array.isArray(itemsRes.data.items) ? itemsRes.data.items : [])
       } catch (err) {
-        setError(err.message)
+        setError(resolveApiError(err))
       } finally {
         setLoading(false)
       }
@@ -55,71 +59,40 @@ export default function DashboardPage() {
     return 'Good evening'
   })()
 
+  const displayName =
+    user?.full_name?.split(' ')[0] ||
+    user?.name?.split(' ')[0] ||
+    user?.username ||
+    'Admin'
+
   if (loading) return <LoadingSpinner message="Loading dashboard…" />
   if (error)   return <ErrorState message={error} onRetry={() => window.location.reload()} />
 
   return (
     <div className="animate-slide-in">
-      {/* Greeting */}
       <div className="page-header">
         <h2 className="page-title">
           {greeting},{' '}
-          <span className="text-gradient">
-            {user?.full_name?.split(' ')[0] || user?.username || 'Admin'}
-          </span>
+          <span className="text-gradient">{displayName}</span>
         </h2>
-        <p className="page-subtitle">
-          Here's what's happening on the platform today.
-        </p>
+        <p className="page-subtitle">Live platform data from the production backend.</p>
       </div>
 
-      {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        <StatCard
-          label="Total Listings"
-          value={stats?.totalItems?.toLocaleString() ?? '—'}
-          icon={Package}
-          color="brand"
-          trend="+8%"
-          sub="Active items on platform"
-        />
-        <StatCard
-          label="Registered Users"
-          value={stats?.totalUsers?.toLocaleString() ?? '—'}
-          icon={Users}
-          color="emerald"
-          trend="+12%"
-          sub="Total accounts"
-        />
-        <StatCard
-          label="Open Requests"
-          value={stats?.totalRequests?.toLocaleString() ?? '—'}
-          icon={FileText}
-          color="amber"
-          sub="Pending exchanges"
-        />
-        <StatCard
-          label="Reviews"
-          value={stats?.totalReviews?.toLocaleString() ?? '—'}
-          icon={Star}
-          color="purple"
-          trend="+3%"
-          sub="Platform feedback"
-        />
+        <StatCard label="Total Listings" value={stats?.totalItems?.toLocaleString() ?? '—'} icon={Package} color="brand" sub="All items on platform" />
+        <StatCard label="Registered Users" value={stats?.totalUsers?.toLocaleString() ?? '—'} icon={Users} color="emerald" sub="Total accounts" />
+        <StatCard label="Open Requests" value={stats?.totalRequests?.toLocaleString() ?? '—'} icon={FileText} color="amber" sub="Pending exchanges" />
+        <StatCard label="Reviews" value={stats?.totalReviews?.toLocaleString() ?? '—'} icon={Star} color="purple" sub="Platform feedback" />
       </div>
 
-      {/* Recent Activity */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Recent Listings */}
         <div className="xl:col-span-2 card">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-semibold text-surface-800 flex items-center gap-2">
               <Package className="w-4 h-4 text-brand-600" />
               Recent Listings
             </h3>
-            <a href="/listings" className="text-xs text-brand-600 hover:text-brand-700 transition-colors">
-              View all →
-            </a>
+            <a href="/listings" className="text-xs text-brand-600 hover:text-brand-700 transition-colors">View all →</a>
           </div>
           {recent.length === 0 ? (
             <p className="text-surface-500 text-sm py-6 text-center">No listings yet.</p>
@@ -131,12 +104,8 @@ export default function DashboardPage() {
                     <Package className="w-4 h-4 text-brand-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-surface-800 truncate">
-                      {item.title || item.name || 'Untitled'}
-                    </p>
-                    <p className="text-xs text-surface-500 truncate">
-                      {item.category || 'Uncategorized'}
-                    </p>
+                    <p className="text-sm font-medium text-surface-800 truncate">{item.title || item.name || 'Untitled'}</p>
+                    <p className="text-xs text-surface-500 truncate">{item.category || 'Uncategorized'}</p>
                   </div>
                   <span className={`badge ${item.status === 'active' ? 'badge-green' : item.status === 'pending' ? 'badge-yellow' : 'badge-gray'}`}>
                     {item.status || 'unknown'}
@@ -147,7 +116,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Quick Stats Panel */}
         <div className="card space-y-4">
           <h3 className="font-semibold text-surface-800 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
@@ -155,10 +123,18 @@ export default function DashboardPage() {
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'API Status',     value: 'Online',  icon: CheckCircle, color: 'text-emerald-600' },
-              { label: 'Pending Reviews', value: 'Check',  icon: Clock,       color: 'text-accent-600'  },
-              { label: 'Open Reports',   value: 'Review',  icon: Flag,        color: 'text-red-600'    },
-              { label: 'System Alerts',  value: 'None',    icon: AlertTriangle, color: 'text-surface-500' },
+              {
+                label: 'API Status',
+                value: health.api === 'online' ? 'Online' : health.api === 'offline' ? 'Offline' : 'Checking…',
+                icon: CheckCircle,
+                color: health.api === 'online' ? 'text-emerald-600' : health.api === 'offline' ? 'text-red-600' : 'text-accent-600',
+              },
+              {
+                label: 'Open Reports',
+                value: health.openReports?.toLocaleString() ?? '—',
+                icon: AlertTriangle,
+                color: (health.openReports ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600',
+              },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="flex items-center justify-between py-2 border-b border-surface-300/80 last:border-0">
                 <div className="flex items-center gap-2">

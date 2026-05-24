@@ -46,17 +46,27 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = ""
     CLOUDINARY_FOLDER: str = "happiness-exchange/items"
 
+    # SMTP / Email Configuration
+    SMTP_HOST: str = "smtp-relay.brevo.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = "verify@happyexchange.net"
+    APP_BASE_URL: str = "http://127.0.0.1:5173"
+
     # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
-        # Primary Vercel deployment
+        "http://localhost:5200",
+        "http://127.0.0.1:5200",
+        # Public app
+        "https://happyexchange.net",
+        "https://www.happyexchange.net",
         "https://happiness-exchange.vercel.app",
-        # Allow all *.vercel.app preview URLs for this project
-        "https://happiness-exchange-*.vercel.app",
-        "https://arrifection-happiness-exchange*.vercel.app",
+        "https://admin.happyexchange.net",
     ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
