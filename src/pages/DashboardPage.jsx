@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { asArray } from '../lib/api.js'
 import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
@@ -82,8 +83,9 @@ export default function DashboardPage({
   const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
   const [addAddressDelivery, setAddAddressDelivery] = useState(null)
 
-  const requestList = Array.isArray(myRequests) ? myRequests : []
-  const incomingRequests = Array.isArray(ownerRequests) ? ownerRequests : []
+  const requestList = asArray(myRequests)
+  const incomingRequests = asArray(ownerRequests)
+  const deliveries = asArray(myDeliveries)
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
   const itemsSharedCount = myItems?.length || 0
@@ -215,7 +217,7 @@ export default function DashboardPage({
                   <RequestCard key={request.id} request={request}>
                     <div className="mt-2.5 flex flex-col gap-1.5 border-t border-[#fcfbf9] pt-2">
                       {request.status === 'approved' && (() => {
-                        const delivery = myDeliveries?.find(d => d.request_id === request.id)
+                        const delivery = deliveries.find((d) => d.request_id === request.id)
                         if (delivery) {
                           if (delivery.status === 'awaiting_dropoff_address' && delivery.receiver_id === currentUser.id) {
                             return (
@@ -252,7 +254,7 @@ export default function DashboardPage({
                         <Button
                           className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
                           variant="secondary"
-                          onClick={() => onOpenReview(reviewContext)}
+                          onClick={() => onOpenReview?.(reviewContext)}
                         >
                           Leave Review
                         </Button>
@@ -286,12 +288,12 @@ export default function DashboardPage({
                   <RequestCard key={request.id} request={request}>
                     {request.status === 'pending' ? (
                       <div className="mt-2.5 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
-                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
-                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
+                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction?.(request.id, 'approve')}>Approve</Button>
+                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction?.(request.id, 'reject')}>Decline</Button>
                       </div>
                     ) : null}
                     {request.status === 'approved' && (() => {
-                      const delivery = myDeliveries?.find(d => d.request_id === request.id)
+                      const delivery = deliveries.find((d) => d.request_id === request.id)
                       if (!delivery) {
                         return (
                           <div className="mt-1.5 flex gap-1.5">
@@ -332,7 +334,7 @@ export default function DashboardPage({
                         <Button
                           className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
                           variant="secondary"
-                          onClick={() => onOpenReview(reviewContext)}
+                          onClick={() => onOpenReview?.(reviewContext)}
                         >
                           Leave Review
                         </Button>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
+import { asArray } from '../lib/api.js'
 import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, Surface } from '../components/ui.jsx'
@@ -87,7 +88,7 @@ export default function AuthenticatedHomePage({
     }
   }, [])
 
-  const recentItems = Array.isArray(items) ? items.slice(0, 4) : []
+  const recentItems = asArray(items).slice(0, 4)
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
   return (
@@ -151,14 +152,14 @@ export default function AuthenticatedHomePage({
           <div className="h-3 w-px bg-[#efe8da]" />
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">Total Requests</p>
-            <p className="text-xs font-bold text-[#1f1f1f]">{myRequests.length}</p>
+            <p className="text-xs font-bold text-[#1f1f1f]">{asArray(myRequests).length}</p>
           </div>
-          {ownerRequests.length > 0 ? (
+          {asArray(ownerRequests).length > 0 ? (
             <>
               <div className="h-3 w-px bg-[#efe8da]" />
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">To Review</p>
-                <p className="text-xs font-bold text-[#8b4cf6]">{ownerRequests.length}</p>
+                <p className="text-xs font-bold text-[#8b4cf6]">{asArray(ownerRequests).length}</p>
               </div>
             </>
           ) : null}

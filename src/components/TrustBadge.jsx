@@ -18,7 +18,7 @@ export default function TrustBadge({ level, trustScore, className = '' }) {
       title={`${trustScore} Trust Points`}
     >
       <span>{data.icon}</span>
-      <span>{level}</span>
+      <span>{level || 'New Member'}</span>
     </div>
   )
 }

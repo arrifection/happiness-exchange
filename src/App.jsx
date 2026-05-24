@@ -29,7 +29,7 @@ import {
   setResendCooldown,
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
-import { resolveApiBase } from './lib/api.js'
+import { resolveApiBase, asArray } from './lib/api.js'
 
 const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -254,7 +254,7 @@ export default function App() {
     try {
       const res = await fetch(MY_ITEMS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
-      if (res.ok) setMyItems(data)
+      if (res.ok) setMyItems(asArray(data))
       else setMyItemsError('Failed to load your items.')
     } catch { setMyItemsError('Connection issue.') }
     finally { setLoadingMyItems(false) }
@@ -270,9 +270,12 @@ export default function App() {
         fetch(DELIVERIES_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
       ])
       const [myData, ownerData, delivData] = await Promise.all([myRes.json(), ownerRes.json(), delivRes.json()])
-      if (myRes.ok && ownerRes.ok) { setMyRequests(myData); setOwnerRequests(ownerData) }
+      if (myRes.ok && ownerRes.ok) {
+        setMyRequests(asArray(myData))
+        setOwnerRequests(asArray(ownerData))
+      }
       else setRequestsError('Failed to sync activity.')
-      if (delivRes.ok) setMyDeliveries(delivData)
+      if (delivRes.ok) setMyDeliveries(asArray(delivData))
     } catch { setRequestsError('Unable to sync activity.') }
     finally { setLoadingRequests(false) }
   }
@@ -295,7 +298,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/api/users/${userId}/reviews`)
       const data = await res.json()
-      if (res.ok) setProfileReviews(data)
+      if (res.ok) setProfileReviews(asArray(data))
       else setProfileReviewsError(formatApiError(data, 'Unable to load profile reviews.'))
     } catch { setProfileReviewsError('Unable to load profile reviews.') }
     finally { setLoadingProfileReviews(false) }
@@ -307,8 +310,9 @@ export default function App() {
       const res = await fetch(CONVERSATIONS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (res.ok) {
-        setConversations(data)
-        setChatUnreadTotal(data.reduce((sum, c) => sum + (c.unread_count || 0), 0))
+        const list = asArray(data)
+        setConversations(list)
+        setChatUnreadTotal(list.reduce((sum, c) => sum + (c.unread_count || 0), 0))
       }
     } catch { /* silent */ }
   }
@@ -523,11 +527,12 @@ export default function App() {
   }
 
   function getMyRequestForItem(itemId) {
-    return myRequests.find((r) => r.item_id === itemId)
+    return asArray(myRequests).find((r) => r.item_id === itemId)
   }
 
   function hasSubmittedReviewForItem(itemId) {
-    return Boolean(myReputation?.submitted_review_item_ids?.includes(itemId))
+    const reviewed = myReputation?.submitted_review_item_ids
+    return Array.isArray(reviewed) && reviewed.includes(itemId)
   }
 
   function getReviewContextForItem(item) {
@@ -539,21 +544,21 @@ export default function App() {
 
   function getReviewContextForMyRequest(request) {
     if (!currentUser || !request || request.status !== 'approved' || hasSubmittedReviewForItem(request.item_id)) return null
-    const relatedItem = items.find((i) => i.id === request.item_id)
+    const relatedItem = asArray(items).find((i) => i.id === request.item_id)
     if (!relatedItem || relatedItem.status !== 'completed') return null
     return { itemId: request.item_id, itemTitle: request.item_title, reviewedUserId: relatedItem.owner_id, reviewedUserName: relatedItem.owner_name }
   }
 
   function getReviewContextForOwnerRequest(request) {
     if (!currentUser || !request || request.status !== 'approved' || hasSubmittedReviewForItem(request.item_id)) return null
-    const relatedItem = myItems.find((i) => i.id === request.item_id)
+    const relatedItem = asArray(myItems).find((i) => i.id === request.item_id)
     if (!relatedItem || relatedItem.status !== 'completed') return null
     return { itemId: request.item_id, itemTitle: request.item_title, reviewedUserId: request.requester_id, reviewedUserName: request.requester_name }
   }
 
   // Map requestId → conversationId for "Open Chat" buttons
   function getChatConversationForRequest(requestId) {
-    const conv = conversations.find((c) => c.request_id === requestId)
+    const conv = asArray(conversations).find((c) => c.request_id === requestId)
     return conv ? conv.id : null
   }
 

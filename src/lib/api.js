@@ -20,3 +20,8 @@ export function apiUrl(path) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${base}${normalizedPath}`
 }
+
+/** API responses are not always arrays — never call .find/.map on raw data. */
+export function asArray(value) {
+  return Array.isArray(value) ? value : []
+}

@@ -4,11 +4,11 @@ import { Button, Surface } from './ui.jsx'
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, errorMessage: '' }
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error?.message || 'Unknown error' }
   }
 
   componentDidCatch(error, info) {
@@ -24,6 +24,11 @@ export default class ErrorBoundary extends Component {
             <p className="text-sm text-[#68766d]">
               The page could not load. Please refresh or clear your session and try again.
             </p>
+            {this.state.errorMessage ? (
+              <p className="rounded-lg bg-[#faf7f1] px-3 py-2 text-left text-xs text-[#8c755f] break-words">
+                {this.state.errorMessage}
+              </p>
+            ) : null}
             <Button variant="primary" className="w-full" onClick={() => window.location.reload()}>
               Reload page
             </Button>

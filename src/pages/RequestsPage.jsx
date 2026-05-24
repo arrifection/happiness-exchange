@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { asArray } from '../lib/api.js'
 import { Button, EmptyState, StatusBadge, Surface } from '../components/ui.jsx'
 import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
@@ -104,14 +105,18 @@ export default function RequestsPage({
   const [activeFilter, setActiveFilter] = useState('all')
   const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
 
+  const safeMyItems = asArray(myItems)
+  const safeOwnerRequests = asArray(ownerRequests)
+  const safeDeliveries = asArray(myDeliveries)
+
   const itemLookup = useMemo(
-    () => Object.fromEntries(myItems.map((item) => [item.id, item])),
-    [myItems],
+    () => Object.fromEntries(safeMyItems.map((item) => [item.id, item])),
+    [safeMyItems],
   )
 
   const visibleRequests = activeFilter === 'all'
-    ? ownerRequests
-    : ownerRequests.filter((request) => request.status === activeFilter)
+    ? safeOwnerRequests
+    : safeOwnerRequests.filter((request) => request.status === activeFilter)
 
   if (!currentUser) {
     return (
@@ -203,7 +208,7 @@ export default function RequestsPage({
                   key={request.id}
                   request={request}
                   item={itemLookup[request.item_id]}
-                  delivery={myDeliveries?.find(d => d.request_id === request.id)}
+                  delivery={safeDeliveries.find((d) => d.request_id === request.id)}
                   onRequestAction={onRequestAction}
                   onArrangeDelivery={setArrangeDeliveryRequest}
                 >
