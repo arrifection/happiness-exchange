@@ -121,6 +121,8 @@ export default function App() {
   const [profileUpdating, setProfileUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const [accountDeleting, setAccountDeleting] = useState(false)
+  const [accountDeleteError, setAccountDeleteError] = useState('')
 
   const [myReputation, setMyReputation] = useState(null)
   const [loadingReputation, setLoadingReputation] = useState(false)
@@ -497,6 +499,27 @@ export default function App() {
       setProfileMessage('Profile updated successfully.'); return data
     } catch (error) { setProfileError(error.message); return null }
     finally { setProfileUpdating(false) }
+  }
+
+  async function handleDeleteAccount() {
+    setAccountDeleting(true)
+    setAccountDeleteError('')
+    try {
+      const res = await fetch(ME_ENDPOINT, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(formatApiError(data, 'Unable to delete your account.'))
+      handleLogout()
+      navigate('/signup')
+      return true
+    } catch (error) {
+      setAccountDeleteError(error.message)
+      return false
+    } finally {
+      setAccountDeleting(false)
+    }
   }
 
   function openReviewModal(reviewContext) { if (reviewContext) setReviewModalState(reviewContext) }
@@ -883,7 +906,9 @@ export default function App() {
                     profileReviewsError={profileReviewsError}
                     onUpdateProfile={handleProfileUpdate} profileUpdating={profileUpdating}
                     profileMessage={profileMessage} profileError={profileError}
-                    onLogout={handleLogout} myItems={myItems} myRequests={myRequests}
+                    onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
+                    accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
+                    myItems={myItems} myRequests={myRequests}
                   />
                 }
               />

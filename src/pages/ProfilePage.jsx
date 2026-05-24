@@ -49,11 +49,15 @@ export default function ProfilePage({
   profileMessage,
   profileError,
   onLogout,
+  onDeleteAccount,
+  accountDeleting,
+  accountDeleteError,
   myItems,
   myRequests,
 }) {
   const [name, setName] = useState(currentUser?.name || '')
   const [nameError, setNameError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     setName(currentUser?.name || '')
@@ -309,14 +313,53 @@ export default function ProfilePage({
               >
                 Sign Out
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled
-                className="h-10 min-h-0 w-full cursor-not-allowed border-[#c65d4a]/20 bg-[#fff3f0]/50 text-[12px] font-bold text-[#c65d4a] opacity-60"
-              >
-                Delete Account
-              </Button>
+
+              {!confirmDelete ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  disabled={accountDeleting}
+                  onClick={() => setConfirmDelete(true)}
+                  className="h-10 min-h-0 w-full text-[12px] font-bold"
+                >
+                  Delete Account
+                </Button>
+              ) : (
+                <div className="rounded-xl border border-[#c65d4a]/30 bg-[#fff3f0] p-3 space-y-3">
+                  <p className="text-[11px] leading-relaxed text-[#68766d]">
+                    This permanently deletes your account, listings, requests, messages, and reviews.
+                    This cannot be undone.
+                  </p>
+                  {accountDeleteError ? (
+                    <p className="text-[10px] font-bold text-[#c65d4a]">{accountDeleteError}</p>
+                  ) : null}
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={accountDeleting}
+                      onClick={async () => {
+                        const ok = await onDeleteAccount?.()
+                        if (ok) setConfirmDelete(false)
+                      }}
+                      className="h-10 min-h-0 flex-1 text-[12px] font-bold"
+                    >
+                      {accountDeleting ? 'Deleting...' : 'Yes, delete my account'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={accountDeleting}
+                      onClick={() => {
+                        setConfirmDelete(false)
+                      }}
+                      className="h-10 min-h-0 flex-1 text-[12px] font-bold"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </Surface>
         </div>

@@ -10,6 +10,9 @@ from app.db.mongodb import (
     get_users_collection_async,
 )
 from app.schemas.auth import ProfileUpdateRequest, UserResponse
+from app.core.roles import is_admin_role
+from app.services.account import delete_user_account
+
 from app.services.auth import USERNAME_CHANGE_WINDOW_DAYS, normalize_name, parse_object_id, serialize_user
 
 router = APIRouter()
@@ -120,6 +123,30 @@ async def update_me(
 
     updated_user = await users_collection.find_one({"_id": user_object_id})
     return serialize_user(updated_user)
+
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_me(current_user: dict = Depends(get_current_user)):
+    """Permanently delete the authenticated user's account and linked data."""
+    if current_user.get("is_seed_account"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account cannot be deleted.",
+        )
+    if is_admin_role(current_user.get("role", "")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts cannot be deleted from the public app. Contact support.",
+        )
+
+    deleted = await delete_user_account(current_user["id"])
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Account not found or could not be deleted.",
+        )
+
+    return {"status": "deleted", "message": "Your account has been permanently deleted."}
 
 
 @router.post("/{user_id}/block", response_model=dict)
