@@ -4,6 +4,9 @@ from app.db.mongodb import get_db_async, get_last_connection_error
 
 router = APIRouter()
 
+# Bump when deploying backend fixes — visible at /api/status/
+API_BUILD = "2026-05-24-items-v2"
+
 
 @router.get("/", summary="Backend status check")
 async def health_check():
@@ -20,6 +23,7 @@ async def health_check():
     return {
         "status": "online",
         "project": settings.PROJECT_NAME,
+        "api_build": API_BUILD,
         "database": "connected" if database is not None else "disconnected",
         "database_error": None if database is not None else get_last_connection_error(),
     }

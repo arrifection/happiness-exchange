@@ -69,9 +69,7 @@ async def create_item(
 async def list_items():
     """Return public item listings with their current status."""
     items_collection = await get_items_collection_async()
-    requests_collection = await get_requests_collection_async()
-    reviews_collection = await get_reviews_collection_async()
-    if items_collection is None or requests_collection is None or reviews_collection is None:
+    if items_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
@@ -83,13 +81,16 @@ async def list_items():
 
     owner_reputation_lookup: dict[str, dict] = {}
     try:
-        raw_lookup = await build_reputation_lookup(
-            owner_ids,
-            items_collection=items_collection,
-            requests_collection=requests_collection,
-            reviews_collection=reviews_collection,
-        )
-        owner_reputation_lookup = {str(key): value for key, value in raw_lookup.items()}
+        requests_collection = await get_requests_collection_async()
+        reviews_collection = await get_reviews_collection_async()
+        if requests_collection is not None and reviews_collection is not None and owner_ids:
+            raw_lookup = await build_reputation_lookup(
+                owner_ids,
+                items_collection=items_collection,
+                requests_collection=requests_collection,
+                reviews_collection=reviews_collection,
+            )
+            owner_reputation_lookup = {str(key): value for key, value in raw_lookup.items()}
     except Exception:
         logger.exception("Failed to build reputation lookup for public items list")
 
