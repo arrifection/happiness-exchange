@@ -122,13 +122,13 @@ export default function ListingsPage() {
                 <tbody>
                   {items.map((item) => (
                     <tr key={item._id || item.id}>
-                      <td className="font-medium text-surface-200 max-w-[200px] truncate">
+                      <td className="font-medium text-surface-800 max-w-[200px] truncate">
                         {item.title || item.name || '—'}
                       </td>
                       <td>
                         <span className="badge badge-blue">{item.category || '—'}</span>
                       </td>
-                      <td className="text-surface-400 text-xs font-mono">
+                      <td className="text-surface-600 text-xs font-mono">
                         {item.owner_id || item.user_id || '—'}
                       </td>
                       <td>
@@ -172,7 +172,7 @@ export default function ListingsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-800">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-300">
                 <p className="text-xs text-surface-500">
                   Page {page} of {totalPages} · {total} results
                 </p>

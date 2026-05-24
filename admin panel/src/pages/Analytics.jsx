@@ -5,7 +5,7 @@ import { LoadingSpinner } from '../components/States'
 import StatCard from '../components/StatCard'
 
 // Simple bar chart using pure CSS
-function BarChart({ data, label, color = '#3b65ff' }) {
+function BarChart({ data, label, color = '#7c3aed' }) {
   const max = Math.max(...data.map((d) => d.value), 1)
   return (
     <div>
@@ -23,7 +23,7 @@ function BarChart({ data, label, color = '#3b65ff' }) {
               }}
               title={`${d.label}: ${d.value}`}
             />
-            <span className="text-[9px] text-surface-600 rotate-45 origin-left">{d.label}</span>
+            <span className="text-[9px] text-surface-500">{d.label}</span>
           </div>
         ))}
       </div>
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
           <h2 className="page-title">Analytics</h2>
           <p className="page-subtitle">Platform performance overview</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-surface-500 bg-surface-900 border border-surface-800 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-surface-600 bg-white border border-surface-300 rounded-lg px-3 py-2 shadow-soft">
           <Calendar className="w-3.5 h-3.5" />
           Last 6 months
         </div>
@@ -103,31 +103,31 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <Package className="w-4 h-4 text-brand-400" />
-            <h3 className="font-semibold text-surface-100 text-sm">Listings Growth</h3>
+            <Package className="w-4 h-4 text-brand-600" />
+            <h3 className="font-semibold text-surface-800 text-sm">Listings Growth</h3>
           </div>
-          <BarChart data={itemsTrend} label="Monthly new listings" color="#3b65ff" />
+          <BarChart data={itemsTrend} label="Monthly new listings" color="#7c3aed" />
         </div>
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-semibold text-surface-100 text-sm">User Registrations</h3>
+            <Users className="w-4 h-4 text-emerald-600" />
+            <h3 className="font-semibold text-surface-800 text-sm">User Registrations</h3>
           </div>
-          <BarChart data={usersTrend} label="Monthly new users" color="#34d399" />
+          <BarChart data={usersTrend} label="Monthly new users" color="#059669" />
         </div>
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-4 h-4 text-amber-400" />
-            <h3 className="font-semibold text-surface-100 text-sm">Request Activity</h3>
+            <FileText className="w-4 h-4 text-accent-600" />
+            <h3 className="font-semibold text-surface-800 text-sm">Request Activity</h3>
           </div>
-          <BarChart data={requestsTrend} label="Monthly requests" color="#fbbf24" />
+          <BarChart data={requestsTrend} label="Monthly requests" color="#f59e0b" />
         </div>
       </div>
 
       {/* Breakdown table */}
       <div className="card">
-        <h3 className="font-semibold text-surface-100 mb-4 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-brand-400" />
+        <h3 className="font-semibold text-surface-800 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-brand-600" />
           Category Breakdown (Estimated)
         </h3>
         <div className="space-y-3">
@@ -141,10 +141,10 @@ export default function AnalyticsPage() {
           ].map(({ name, pct, color }) => (
             <div key={name}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-surface-300">{name}</span>
+                <span className="text-sm text-surface-700 font-medium">{name}</span>
                 <span className="text-xs text-surface-500 font-mono">{pct}%</span>
               </div>
-              <div className="h-1.5 bg-surface-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-surface-200 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${color} rounded-full transition-all duration-700`}
                   style={{ width: `${pct}%` }}

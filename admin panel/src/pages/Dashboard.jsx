@@ -113,11 +113,11 @@ export default function DashboardPage() {
         {/* Recent Listings */}
         <div className="xl:col-span-2 card">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-semibold text-surface-100 flex items-center gap-2">
-              <Package className="w-4 h-4 text-brand-400" />
+            <h3 className="font-semibold text-surface-800 flex items-center gap-2">
+              <Package className="w-4 h-4 text-brand-600" />
               Recent Listings
             </h3>
-            <a href="/listings" className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+            <a href="/listings" className="text-xs text-brand-600 hover:text-brand-700 transition-colors">
               View all →
             </a>
           </div>
@@ -126,12 +126,12 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {recent.map((item, i) => (
-                <div key={item._id || item.id || i} className="flex items-center gap-4 py-2 border-b border-surface-800/50 last:border-0">
-                  <div className="w-9 h-9 rounded-lg bg-surface-800 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-4 h-4 text-surface-500" />
+                <div key={item._id || item.id || i} className="flex items-center gap-4 py-2 border-b border-surface-300/80 last:border-0">
+                  <div className="w-9 h-9 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-4 h-4 text-brand-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-surface-200 truncate">
+                    <p className="text-sm font-medium text-surface-800 truncate">
                       {item.title || item.name || 'Untitled'}
                     </p>
                     <p className="text-xs text-surface-500 truncate">
@@ -149,21 +149,21 @@ export default function DashboardPage() {
 
         {/* Quick Stats Panel */}
         <div className="card space-y-4">
-          <h3 className="font-semibold text-surface-100 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <h3 className="font-semibold text-surface-800 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-600" />
             Platform Health
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'API Status',     value: 'Online',  icon: CheckCircle, color: 'text-emerald-400' },
-              { label: 'Pending Reviews', value: 'Check',  icon: Clock,       color: 'text-amber-400'  },
-              { label: 'Open Reports',   value: 'Review',  icon: Flag,        color: 'text-red-400'    },
+              { label: 'API Status',     value: 'Online',  icon: CheckCircle, color: 'text-emerald-600' },
+              { label: 'Pending Reviews', value: 'Check',  icon: Clock,       color: 'text-accent-600'  },
+              { label: 'Open Reports',   value: 'Review',  icon: Flag,        color: 'text-red-600'    },
               { label: 'System Alerts',  value: 'None',    icon: AlertTriangle, color: 'text-surface-500' },
             ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="flex items-center justify-between py-2 border-b border-surface-800/50 last:border-0">
+              <div key={label} className="flex items-center justify-between py-2 border-b border-surface-300/80 last:border-0">
                 <div className="flex items-center gap-2">
                   <Icon className={`w-3.5 h-3.5 ${color}`} />
-                  <span className="text-sm text-surface-400">{label}</span>
+                  <span className="text-sm text-surface-700">{label}</span>
                 </div>
                 <span className={`text-sm font-medium ${color}`}>{value}</span>
               </div>

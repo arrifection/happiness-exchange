@@ -16,10 +16,10 @@ export function ErrorState({ message, onRetry }) {
     <div className="flex items-center justify-center py-16">
       <div className="flex flex-col items-center gap-4 max-w-sm text-center">
         <div className="w-12 h-12 rounded-full bg-red-500/10 ring-1 ring-red-500/20 flex items-center justify-center">
-          <AlertCircle className="w-6 h-6 text-red-400" />
+          <AlertCircle className="w-6 h-6 text-red-600" />
         </div>
         <div>
-          <p className="text-surface-200 font-medium">Something went wrong</p>
+          <p className="text-surface-800 font-medium">Something went wrong</p>
           <p className="text-surface-500 text-sm mt-1">{message || 'Unable to load data.'}</p>
         </div>
         {onRetry && (
@@ -38,11 +38,11 @@ export function EmptyState({ title = 'No data', description, icon: Icon }) {
     <div className="flex items-center justify-center py-16">
       <div className="flex flex-col items-center gap-3 text-center max-w-sm">
         {Icon && (
-          <div className="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-surface-600" />
+          <div className="w-12 h-12 rounded-full bg-surface-100 border border-surface-300 flex items-center justify-center">
+            <Icon className="w-5 h-5 text-surface-500" />
           </div>
         )}
-        <p className="text-surface-300 font-medium">{title}</p>
+        <p className="text-surface-700 font-medium">{title}</p>
         {description && <p className="text-surface-500 text-sm">{description}</p>}
       </div>
     </div>

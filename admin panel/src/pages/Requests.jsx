@@ -95,9 +95,9 @@ export default function RequestsPage() {
                   {requests.map((req) => (
                     <tr key={req._id || req.id}>
                       <td className="font-mono text-xs text-surface-500">{(req._id || req.id || '').slice(-8)}</td>
-                      <td className="text-surface-200 font-medium">{req.item_title || req.item_id || '—'}</td>
-                      <td className="text-surface-400 text-xs font-mono">{req.requester_id || req.user_id || '—'}</td>
-                      <td className="text-surface-400 text-xs font-mono">{req.owner_id || '—'}</td>
+                      <td className="text-surface-800 font-medium">{req.item_title || req.item_id || '—'}</td>
+                      <td className="text-surface-600 text-xs font-mono">{req.requester_id || req.user_id || '—'}</td>
+                      <td className="text-surface-600 text-xs font-mono">{req.owner_id || '—'}</td>
                       <td><span className={`badge ${statusBadge(req.status)}`}>{req.status || '—'}</span></td>
                       <td className="text-surface-500 text-xs">{req.created_at ? new Date(req.created_at).toLocaleDateString() : '—'}</td>
                     </tr>
@@ -106,7 +106,7 @@ export default function RequestsPage() {
               </table>
             </div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-800">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-300">
                 <p className="text-xs text-surface-500">Page {page} of {totalPages}</p>
                 <div className="flex gap-2">
                   <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary py-1.5 px-3 text-xs">Previous</button>

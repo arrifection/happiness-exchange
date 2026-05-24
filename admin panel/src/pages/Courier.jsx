@@ -88,14 +88,14 @@ export default function CourierPage() {
         </button>
       </div>
 
-      {error && <p className="mb-4 text-xs font-bold text-red-400 bg-red-400/10 p-3 rounded-lg">{error}</p>}
+      {error && <p className="mb-4 text-xs font-bold text-red-600 bg-red-400/10 p-3 rounded-lg">{error}</p>}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: 'Active',      value: activeCount,    icon: Truck,       color: 'text-brand-400',   bg: 'bg-brand-500/10',   ring: 'ring-brand-500/20' },
-          { label: 'Pending',     value: pendingCount,   icon: Clock,       color: 'text-amber-400',   bg: 'bg-amber-500/10',   ring: 'ring-amber-500/20' },
-          { label: 'Completed',   value: deliveredCount, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/20' },
+          { label: 'Active',      value: activeCount,    icon: Truck,       color: 'text-brand-600',   bg: 'bg-brand-500/10',   ring: 'ring-brand-500/20' },
+          { label: 'Pending',     value: pendingCount,   icon: Clock,       color: 'text-accent-600',   bg: 'bg-amber-500/10',   ring: 'ring-amber-500/20' },
+          { label: 'Completed',   value: deliveredCount, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/20' },
         ].map(({ label, value, icon: Icon, color, bg, ring }) => (
           <div key={label} className="card-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-xl ${bg} ring-1 ${ring} flex items-center justify-center`}>
@@ -110,13 +110,13 @@ export default function CourierPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-1 mb-5 p-1 bg-surface-900 border border-surface-800 rounded-xl w-fit">
+      <div className="flex items-center gap-1 mb-5 p-1 bg-white border border-surface-300 rounded-xl w-fit shadow-soft">
         {['all', 'pending', 'active', 'delivered'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-              filter === f ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-400 hover:text-surface-200'
+              filter === f ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:text-surface-800'
             }`}
           >
             {f === 'active' ? 'In Transit' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -129,7 +129,7 @@ export default function CourierPage() {
         {filtered.map((d) => {
           const s = statusConfig[d.status] || statusConfig.failed
           return (
-            <div key={d.id} className="card hover:border-surface-700 transition-all duration-200">
+            <div key={d.id} className="card hover:border-surface-300 transition-all duration-200">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -139,7 +139,7 @@ export default function CourierPage() {
                       {s.label}
                     </span>
                   </div>
-                  <p className="font-semibold text-surface-100">{d.item_title}</p>
+                  <p className="font-semibold text-surface-800">{d.item_title}</p>
                 </div>
                 
                 {/* Actions */}
@@ -168,22 +168,22 @@ export default function CourierPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm mt-3 pt-4 border-t border-surface-800">
+              <div className="grid grid-cols-2 gap-4 text-sm mt-3 pt-4 border-t border-surface-300">
                 {/* Pickup details */}
                 <div className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-surface-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-[10px] font-bold tracking-wider text-surface-500 uppercase mb-1">Pickup (Giver)</p>
-                    <p className="text-surface-200 text-xs font-medium">{d.pickup_address}</p>
+                    <p className="text-surface-800 text-xs font-medium">{d.pickup_address}</p>
                     <div className="flex items-center gap-1.5 mt-1.5">
                       <Phone className="w-3 h-3 text-surface-600" />
-                      <p className="text-surface-400 text-xs">{d.pickup_contact_number}</p>
+                      <p className="text-surface-600 text-xs">{d.pickup_contact_number}</p>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <Clock className="w-3 h-3 text-surface-600" />
-                      <p className="text-surface-400 text-xs">{d.pickup_preferred_time}</p>
+                      <p className="text-surface-600 text-xs">{d.pickup_preferred_time}</p>
                     </div>
-                    {d.pickup_notes && <p className="text-surface-500 text-[10px] mt-1 bg-surface-800 p-1 rounded">Note: {d.pickup_notes}</p>}
+                    {d.pickup_notes && <p className="text-surface-500 text-[10px] mt-1 bg-surface-100 p-1 rounded">Note: {d.pickup_notes}</p>}
                   </div>
                 </div>
 
@@ -192,33 +192,33 @@ export default function CourierPage() {
                   <MapPin className="w-4 h-4 text-brand-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-[10px] font-bold tracking-wider text-brand-500 uppercase mb-1">Dropoff (Receiver)</p>
-                    <p className="text-surface-200 text-xs font-medium">{d.dropoff_address || 'Pending...'}</p>
+                    <p className="text-surface-800 text-xs font-medium">{d.dropoff_address || 'Pending...'}</p>
                     {d.receiver_contact_number && (
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <Phone className="w-3 h-3 text-surface-600" />
-                        <p className="text-surface-400 text-xs">{d.receiver_contact_number}</p>
+                        <p className="text-surface-600 text-xs">{d.receiver_contact_number}</p>
                       </div>
                     )}
                     {d.dropoff_preferred_time && (
                       <div className="flex items-center gap-1.5 mt-1">
                         <Clock className="w-3 h-3 text-surface-600" />
-                        <p className="text-surface-400 text-xs">{d.dropoff_preferred_time}</p>
+                        <p className="text-surface-600 text-xs">{d.dropoff_preferred_time}</p>
                       </div>
                     )}
-                    {d.dropoff_notes && <p className="text-surface-500 text-[10px] mt-1 bg-surface-800 p-1 rounded">Note: {d.dropoff_notes}</p>}
+                    {d.dropoff_notes && <p className="text-surface-500 text-[10px] mt-1 bg-surface-100 p-1 rounded">Note: {d.dropoff_notes}</p>}
                   </div>
                 </div>
               </div>
 
               {/* Proof of Delivery */}
               {(d.status === 'delivered' || d.status === 'completed') && (
-                <div className="mt-4 pt-4 border-t border-surface-800 flex items-center justify-between">
+                <div className="mt-4 pt-4 border-t border-surface-300 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ImageIcon className="w-4 h-4 text-surface-500" />
-                    <span className="text-xs text-surface-400">Proof of Delivery:</span>
+                    <span className="text-xs text-surface-600">Proof of Delivery:</span>
                   </div>
                   {d.proof_of_delivery_url ? (
-                    <a href={d.proof_of_delivery_url} target="_blank" rel="noreferrer" className="text-brand-400 text-xs hover:underline">View Image</a>
+                    <a href={d.proof_of_delivery_url} target="_blank" rel="noreferrer" className="text-brand-600 text-xs hover:underline">View Image</a>
                   ) : (
                     <label className="btn-secondary text-[10px] py-1 px-2 cursor-pointer flex items-center gap-1">
                       <Upload className="w-3 h-3" />

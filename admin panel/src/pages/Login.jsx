@@ -45,28 +45,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface-100 flex items-center justify-center p-4">
       {/* Background gradient orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-100/60 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-lavender-100/60 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
         {/* Card */}
-        <div className="card border-surface-700 shadow-2xl shadow-black/50">
+        <div className="card border-surface-300 shadow-card">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow-lg">
+            <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-soft">
               <Shield className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-surface-50">Admin Sign In</h1>
+            <h1 className="text-xl font-bold text-surface-800">Admin Sign In</h1>
             <p className="text-sm text-surface-500 mt-1">{APP_NAME}</p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="mb-5 flex items-start gap-3 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 animate-fade-in">
+            <div className="mb-5 flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 animate-fade-in">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-700 transition-colors"
                 >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -129,30 +129,30 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center gap-3 mt-5">
-            <div className="flex-1 h-px bg-surface-800" />
-            <span className="text-xs text-surface-600">or</span>
-            <div className="flex-1 h-px bg-surface-800" />
+            <div className="flex-1 h-px bg-surface-300" />
+            <span className="text-xs text-surface-500">or</span>
+            <div className="flex-1 h-px bg-surface-300" />
           </div>
 
           {/* Demo button */}
           <button
             type="button"
             onClick={handleDemo}
-            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400/50 hover:text-purple-200 transition-all duration-200 text-sm font-medium group"
+            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 hover:border-brand-300 transition-all duration-200 text-sm font-medium group"
           >
             <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
             Preview Dashboard (Demo Mode)
           </button>
-          <p className="text-center text-[11px] text-surface-600 mt-2">
+          <p className="text-center text-[11px] text-surface-500 mt-2">
             Explore the UI with sample data — no backend required
           </p>
 
-          <p className="text-center text-xs text-surface-700 mt-4 border-t border-surface-800 pt-4">
+          <p className="text-center text-xs text-surface-500 mt-4 border-t border-surface-300 pt-4">
             Admin access only. Accounts are created by the Happiness Exchange team.
           </p>
         </div>
 
-        <p className="text-center text-xs text-surface-700 mt-4">
+        <p className="text-center text-xs text-surface-500 mt-4">
           © {new Date().getFullYear()} Happiness Exchange
         </p>
       </div>

@@ -61,7 +61,7 @@ export default function TeamPage() {
       {showInvite && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md shadow-2xl animate-slide-in">
-            <h3 className="text-lg font-semibold text-surface-100 mb-5">Invite Team Member</h3>
+            <h3 className="text-lg font-semibold text-surface-800 mb-5">Invite Team Member</h3>
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
                 <label className="form-label">Email Address</label>
@@ -88,14 +88,14 @@ export default function TeamPage() {
       {/* Team grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {members.map((m) => (
-          <div key={m.id} className="card hover:border-surface-700 transition-all duration-200">
+          <div key={m.id} className="card hover:border-surface-300 transition-all duration-200">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${roleGradients[m.role] || 'from-brand-600 to-purple-600'} flex items-center justify-center text-white text-lg font-bold shadow-lg`}>
                   {m.name[0]}
                 </div>
                 <div>
-                  <p className="font-semibold text-surface-100">{m.name}</p>
+                  <p className="font-semibold text-surface-800">{m.name}</p>
                   <span className={`badge mt-1 ${roleColors[m.role] || 'badge-gray'}`}>
                     <Shield className="w-2.5 h-2.5" />
                     {m.role.replace('_', ' ')}
@@ -103,13 +103,13 @@ export default function TeamPage() {
                 </div>
               </div>
               {isSuperAdmin() && (
-                <button onClick={() => remove(m.id)} className="btn-icon btn-ghost text-surface-600 hover:text-red-400">
+                <button onClick={() => remove(m.id)} className="btn-icon btn-ghost text-surface-600 hover:text-red-600">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-surface-400">
+              <div className="flex items-center gap-2 text-surface-600">
                 <Mail className="w-3.5 h-3.5 text-surface-600 flex-shrink-0" />
                 <span className="truncate">{m.email}</span>
               </div>

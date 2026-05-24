@@ -123,10 +123,10 @@ export default function UsersPage() {
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                               {name[0].toUpperCase()}
                             </div>
-                            <span className="font-medium text-surface-200">{name}</span>
+                            <span className="font-medium text-surface-800">{name}</span>
                           </div>
                         </td>
-                        <td className="text-surface-400">{email}</td>
+                        <td className="text-surface-600">{email}</td>
                         <td>
                           <span className={`badge ${
                             role === 'super_admin' ? 'badge-purple' :
@@ -170,7 +170,7 @@ export default function UsersPage() {
               </table>
             </div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-800">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-300">
                 <p className="text-xs text-surface-500">Page {page} of {totalPages} · {total} users</p>
                 <div className="flex gap-2">
                   <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary py-1.5 px-3 text-xs">Previous</button>

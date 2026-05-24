@@ -39,11 +39,11 @@ export default function ProtectedRoute({
       <div className="min-h-screen bg-surface-100 flex items-center justify-center p-4">
         <div className="card max-w-md w-full text-center">
           <div className="text-5xl mb-4">🔒</div>
-          <h1 className="text-xl font-bold text-surface-100 mb-2">Access Denied</h1>
-          <p className="text-surface-400 text-sm mb-6">
-            Your role (<span className="text-brand-400 font-mono">{user?.role}</span>) does not
+          <h1 className="text-xl font-bold text-surface-800 mb-2">Access Denied</h1>
+          <p className="text-surface-500 text-sm mb-6">
+            Your role (<span className="text-brand-600 font-mono font-medium">{user?.role}</span>) does not
             have permission to access this page. Required:{' '}
-            <span className="text-amber-400 font-mono">{requiredRole}</span>.
+            <span className="text-accent-600 font-mono font-medium">{requiredRole}</span>.
           </p>
           <button
             className="btn-secondary"

@@ -9,7 +9,7 @@ function StarRating({ rating }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
-          className={`w-3.5 h-3.5 ${i <= rating ? 'text-amber-400 fill-amber-400' : 'text-surface-700'}`}
+          className={`w-3.5 h-3.5 ${i <= rating ? 'text-accent-600 fill-amber-400' : 'text-surface-700'}`}
         />
       ))}
     </div>
@@ -87,11 +87,11 @@ export default function ReviewsPage() {
                 <tbody>
                   {reviews.map((r) => (
                     <tr key={r._id || r.id}>
-                      <td className="font-mono text-xs text-surface-400">{r.reviewer_id || r.reviewer || '—'}</td>
-                      <td className="font-mono text-xs text-surface-400">{r.reviewee_id || r.reviewee || '—'}</td>
+                      <td className="font-mono text-xs text-surface-600">{r.reviewer_id || r.reviewer || '—'}</td>
+                      <td className="font-mono text-xs text-surface-600">{r.reviewee_id || r.reviewee || '—'}</td>
                       <td><StarRating rating={r.rating || r.score || 0} /></td>
                       <td className="max-w-[240px]">
-                        <p className="text-sm text-surface-300 truncate">{r.comment || r.text || '—'}</p>
+                        <p className="text-sm text-surface-700 truncate">{r.comment || r.text || '—'}</p>
                       </td>
                       <td className="text-surface-500 text-xs">
                         {r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}
@@ -109,7 +109,7 @@ export default function ReviewsPage() {
               </table>
             </div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-800">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-surface-300">
                 <p className="text-xs text-surface-500">Page {page} of {totalPages}</p>
                 <div className="flex gap-2">
                   <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary py-1.5 px-3 text-xs">Previous</button>
