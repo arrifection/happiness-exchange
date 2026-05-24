@@ -820,8 +820,8 @@ export default function App() {
                     myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
-                    getReviewContextForOwnerRequ  getChatConversatest={getReviewContextForOwnerRequest}
-                  ionForRequest={getChatConversationForRequest}
+                    getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
+                    getChatConversationForRequest={getChatConversationForRequest}
                     loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
                   />
                 }

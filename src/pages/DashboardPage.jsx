@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
@@ -81,8 +82,12 @@ export default function DashboardPage({
   const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
   const [addAddressDelivery, setAddAddressDelivery] = useState(null)
 
+  const requestList = Array.isArray(myRequests) ? myRequests : []
+  const incomingRequests = Array.isArray(ownerRequests) ? ownerRequests : []
+  const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
+
   const itemsSharedCount = myItems?.length || 0
-  const itemsRequestedCount = myRequests?.length || 0
+  const itemsRequestedCount = requestList.length
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
   const trustPoints = (myReputation?.completed_shared_count || 0) * 10 + completedExchangesCount * 50
 
@@ -106,7 +111,7 @@ export default function DashboardPage({
             Community Member
           </p>
           <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold tracking-tight text-[#1f1f1f] md:text-3xl">
-            Welcome back, {currentUser.name.split(' ')[0]}
+            Welcome back, {displayName}
           </h1>
           <p className="mt-2 max-w-sm text-xs leading-relaxed text-[#68766d] md:text-sm">
             Give, receive, and connect — anonymously and with trust at the heart of every exchange.
@@ -197,14 +202,14 @@ export default function DashboardPage({
             description="Your active requests for community items."
           />
           <div className="grid grid-cols-1 gap-3 md:gap-5 sm:grid-cols-2">
-            {myRequests.length === 0 ? (
+            {requestList.length === 0 ? (
               <EmptyState
                 title="No active requests"
                 description="When you request an item, it will appear here."
               />
             ) : (
-              myRequests.map((request) => {
-                const reviewContext = getReviewContextForMyRequest(request)
+              requestList.map((request) => {
+                const reviewContext = getReviewContextForMyRequest?.(request)
                 const convId = getChatConversationForRequest?.(request.id)
                 return (
                   <RequestCard key={request.id} request={request}>
@@ -268,14 +273,14 @@ export default function DashboardPage({
             action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
           />
           <div className="flex flex-col gap-3">
-            {ownerRequests.length === 0 ? (
+            {incomingRequests.length === 0 ? (
               <EmptyState
                 title="No pending reviews"
                 description="Requests will appear here."
               />
             ) : (
-              ownerRequests.slice(0, 5).map((request) => {
-                const reviewContext = getReviewContextForOwnerRequest(request)
+              incomingRequests.slice(0, 5).map((request) => {
+                const reviewContext = getReviewContextForOwnerRequest?.(request)
                 const convId = getChatConversationForRequest?.(request.id)
                 return (
                   <RequestCard key={request.id} request={request}>

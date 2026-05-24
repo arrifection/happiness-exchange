@@ -101,6 +101,7 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
   const trustEvents = myReputation?.trust_events || []
   
   const levelData = LEVEL_DATA[currentLevel] || LEVEL_DATA['New Member']
+  const displayName = currentUser?.name?.split(' ')[0] || 'Your'
 
   const progressPct = nextLevelPts ? Math.min(100, Math.max(0, (trustScore / nextLevelPts) * 100)) : 100
 
@@ -128,7 +129,7 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
             Community Reputation
           </p>
           <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-3xl font-bold md:text-4xl">
-            {currentUser.name.split(' ')[0]}'s Trust Score
+            {displayName}'s Trust Score
           </h1>
 
           <div className="mt-6 flex items-end gap-6">
