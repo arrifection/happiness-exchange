@@ -1,6 +1,11 @@
 from app.schemas.items import ItemCreateRequest
 
 
+def _owner_id_str(item: dict) -> str:
+    owner_id = item.get("owner_id")
+    return str(owner_id) if owner_id is not None else ""
+
+
 def serialize_item(
     item: dict,
     request_count: int | None = None,
@@ -16,7 +21,7 @@ def serialize_item(
         "location": item["location"],
         "image_url": item.get("image_url"),
         "status": item["status"],
-        "owner_id": item["owner_id"],
+        "owner_id": _owner_id_str(item),
         "owner_name": item["owner_name"],
         "owner_badge": owner_reputation.get("level") if owner_reputation else None,
         "owner_average_rating": owner_reputation.get("average_rating") if owner_reputation else None,

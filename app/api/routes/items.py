@@ -1,3 +1,5 @@
+import logging
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -27,6 +29,7 @@ from app.services.notifications import notify_moderators, create_notification
 from app.services.trust import award_completed_donation
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/items", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -76,19 +79,33 @@ async def list_items():
 
     cursor = items_collection.find({}).sort("created_at", DESCENDING)
     items = await cursor.to_list(length=100)
-    owner_reputation_lookup = await build_reputation_lookup(
-        [item["owner_id"] for item in items],
-        items_collection=items_collection,
-        requests_collection=requests_collection,
-        reviews_collection=reviews_collection,
-    )
-    return [
-        serialize_item(
-            item,
-            owner_reputation=owner_reputation_lookup.get(item["owner_id"]),
+    owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
+
+    owner_reputation_lookup: dict[str, dict] = {}
+    try:
+        raw_lookup = await build_reputation_lookup(
+            owner_ids,
+            items_collection=items_collection,
+            requests_collection=requests_collection,
+            reviews_collection=reviews_collection,
         )
-        for item in items
-    ]
+        owner_reputation_lookup = {str(key): value for key, value in raw_lookup.items()}
+    except Exception:
+        logger.exception("Failed to build reputation lookup for public items list")
+
+    results = []
+    for item in items:
+        owner_id = str(item.get("owner_id", ""))
+        try:
+            results.append(
+                serialize_item(
+                    item,
+                    owner_reputation=owner_reputation_lookup.get(owner_id),
+                )
+            )
+        except Exception:
+            logger.exception("Failed to serialize item %s", item.get("_id"))
+    return results
 
 
 @router.get("/items/my", response_model=list[ItemResponse])

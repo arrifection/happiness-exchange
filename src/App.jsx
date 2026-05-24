@@ -232,11 +232,20 @@ export default function App() {
     setLoadingItems(true); setItemsError('')
     try {
       const res = await fetch(ITEMS_ENDPOINT)
-      const data = await res.json()
+      let data = null
+      try {
+        data = await res.json()
+      } catch {
+        if (!res.ok) {
+          setItemsError(`Unable to load items (server error ${res.status}). The backend may still be updating — try Refresh in a minute.`)
+          return
+        }
+      }
       if (res.ok) setItems(Array.isArray(data) ? data : [])
-      else setItemsError('Failed to load items.')
-    } catch { setItemsError('Unable to fetch community items.') }
-    finally { setLoadingItems(false) }
+      else setItemsError(formatApiError(data, 'Failed to load items.'))
+    } catch {
+      setItemsError('Unable to fetch community items. Check your connection and try again.')
+    } finally { setLoadingItems(false) }
   }
 
   async function loadMyItems() {

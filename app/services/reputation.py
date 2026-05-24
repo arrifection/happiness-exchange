@@ -1,8 +1,12 @@
+import logging
+
 from pymongo import DESCENDING
 
 from app.services.auth import parse_object_id
 
 from app.db.mongodb import get_users_collection_async, get_trust_events_collection_async
+
+logger = logging.getLogger(__name__)
 
 # Dynamic Levels
 LEVEL_NEW = "New Member"
@@ -128,13 +132,14 @@ async def build_reputation_lookup(
 ) -> dict[str, dict]:
     """Build a simple reputation map for the given user ids."""
     lookup = {}
-    for user_id in dict.fromkeys(user_ids):
-        if not user_id:
-            continue
-        lookup[user_id] = await calculate_reputation_summary(
-            user_id,
-            items_collection=items_collection,
-            requests_collection=requests_collection,
-            reviews_collection=reviews_collection,
-        )
+    for user_id in dict.fromkeys(str(uid) for uid in user_ids if uid):
+        try:
+            lookup[user_id] = await calculate_reputation_summary(
+                user_id,
+                items_collection=items_collection,
+                requests_collection=requests_collection,
+                reviews_collection=reviews_collection,
+            )
+        except Exception:
+            logger.exception("Failed to calculate reputation for user %s", user_id)
     return lookup
