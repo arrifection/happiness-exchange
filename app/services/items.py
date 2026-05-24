@@ -18,9 +18,9 @@ def serialize_item(
         "status": item["status"],
         "owner_id": item["owner_id"],
         "owner_name": item["owner_name"],
-        "owner_badge": owner_reputation["current_badge"] if owner_reputation else None,
-        "owner_average_rating": owner_reputation["average_rating"] if owner_reputation else None,
-        "owner_review_count": owner_reputation["review_count"] if owner_reputation else None,
+        "owner_badge": owner_reputation.get("level") if owner_reputation else None,
+        "owner_average_rating": owner_reputation.get("average_rating") if owner_reputation else None,
+        "owner_review_count": owner_reputation.get("review_count") if owner_reputation else None,
         "created_at": item["created_at"],
         "request_count": request_count,
     }

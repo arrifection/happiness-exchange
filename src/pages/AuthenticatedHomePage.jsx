@@ -87,7 +87,7 @@ export default function AuthenticatedHomePage({
     }
   }, [])
 
-  const recentItems = items.slice(0, 4)
+  const recentItems = Array.isArray(items) ? items.slice(0, 4) : []
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
   return (

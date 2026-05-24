@@ -18,8 +18,9 @@ export function NotificationProvider({ token, children }) {
       })
       if (res.ok) {
         const data = await res.json()
-        setNotifications(data)
-        setUnreadCount(data.filter(n => !n.read).length)
+        const list = Array.isArray(data) ? data : []
+        setNotifications(list)
+        setUnreadCount(list.filter((n) => !n.read).length)
       }
     } catch {
       // silent fail
@@ -73,6 +74,14 @@ export function NotificationProvider({ token, children }) {
   )
 }
 
+const EMPTY_NOTIFICATIONS = {
+  notifications: [],
+  unreadCount: 0,
+  markAsRead: async () => {},
+  markAllAsRead: async () => {},
+  fetchNotifications: async () => {},
+}
+
 export function useNotifications() {
-  return useContext(NotificationContext)
+  return useContext(NotificationContext) ?? EMPTY_NOTIFICATIONS
 }

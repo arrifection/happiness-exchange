@@ -19,6 +19,7 @@ import SignupPage from './pages/SignupPage.jsx'
 import CheckYourEmailPage from './pages/CheckYourEmailPage.jsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
+import NotificationBell from './components/NotificationBell.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
 import { Button, Surface } from './components/ui.jsx'
@@ -232,7 +233,7 @@ export default function App() {
     try {
       const res = await fetch(ITEMS_ENDPOINT)
       const data = await res.json()
-      if (res.ok) setItems(data)
+      if (res.ok) setItems(Array.isArray(data) ? data : [])
       else setItemsError('Failed to load items.')
     } catch { setItemsError('Unable to fetch community items.') }
     finally { setLoadingItems(false) }

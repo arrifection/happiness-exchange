@@ -82,7 +82,7 @@ async def calculate_reputation_summary(
     # Fetch User Trust Score
     users_collection = await get_users_collection_async()
     user_oid = parse_object_id(user_id)
-    user_doc = await users_collection.find_one({"_id": user_oid}) if user_oid and users_collection else None
+    user_doc = await users_collection.find_one({"_id": user_oid}) if user_oid and users_collection is not None else None
     trust_score = user_doc.get("trust_score", 0) if user_doc else 0
 
     # Fetch Trust Events
