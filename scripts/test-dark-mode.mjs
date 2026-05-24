@@ -49,8 +49,8 @@ try {
   const css = readFileSync(join(root, 'src/index.css'), 'utf8')
   const checks = [
     ['html.dark {', 'dark root variables'],
-    ['--color-he-page: #171615', 'dark page color'],
-    ['--color-he-surface: #222020', 'dark surface color'],
+    ['--color-he-page: #111014', 'dark page color'],
+    ['--color-he-surface: #1b1a20', 'dark surface color'],
     ['html.dark .he-app [class*="bg-white"]', 'legacy white card override'],
     ['.he-field {', 'he-field utility'],
     ['.he-chip {', 'he-chip utility'],
@@ -132,7 +132,7 @@ try {
     ok(`dist CSS file: ${cssFiles[0]}`)
     if (built.includes('html.dark')) ok('built CSS contains dark rules')
     else fail('built CSS missing dark rules')
-    if (built.includes('#171615')) ok('built CSS has dark page token')
+    if (built.includes('#111014')) ok('built CSS has dark page token')
     else fail('built CSS missing dark page color')
   }
 } catch (e) {

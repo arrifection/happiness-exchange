@@ -24,8 +24,8 @@ function formatRequestDate(value) {
 
 function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelivery, children }) {
   return (
-    <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-xs">
-      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26">
+    <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface shadow-sm transition-all duration-300 hover:border-he-purple/30 hover:shadow-md">
+      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
         {item?.image_url ? (
           <img
             src={item.image_url}
@@ -33,7 +33,7 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">
+          <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-he-muted/60">
             No image
           </div>
         )}
@@ -42,14 +42,14 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f]">
+            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-he-ink">
               {request.item_title}
             </h3>
             <div className="origin-top-right shrink-0 scale-90">
               <StatusBadge status={request.status} />
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
             <span>By {request.requester_name.split(' ')[0]}</span>
             <span className="opacity-40">/</span>
             <span>{formatRequestDate(request.created_at)}</span>
@@ -57,12 +57,12 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
         </div>
 
         {request.status === 'pending' ? (
-          <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+          <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
             <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
             <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
           </div>
         ) : request.status === 'approved' ? (
-          <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+          <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
             {!delivery ? (
               <Button
                 className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
@@ -121,8 +121,8 @@ export default function RequestsPage({
   if (!currentUser) {
     return (
       <Surface className="p-5">
-        <h1 className="text-lg font-bold tracking-tight text-[#1f1f1f]">Please log in</h1>
-        <p className="mt-2 text-xs leading-relaxed text-[#68766d]">
+        <h1 className="text-lg font-bold tracking-tight text-he-ink">Please log in</h1>
+        <p className="mt-2 text-xs leading-relaxed text-he-muted">
           Sign in to review requests for your listings.
         </p>
       </Surface>
@@ -134,10 +134,10 @@ export default function RequestsPage({
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f] md:text-xl">
+            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink md:text-xl">
               Incoming Requests
             </h1>
-            <p className="text-[10px] text-[#68766d] md:text-xs">Review neighbors who are interested in your items.</p>
+            <p className="text-[10px] text-he-muted md:text-xs">Review neighbors who are interested in your items.</p>
           </div>
         </div>
 
@@ -151,9 +151,7 @@ export default function RequestsPage({
                 onClick={() => setActiveFilter(filter)}
                 className={[
                   'shrink-0 rounded-full px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 md:px-5 md:py-2 md:text-[11px]',
-                  isActive
-                    ? 'bg-[#8b4cf6] text-white shadow-xs'
-                    : 'border border-[#efe8da] bg-[#fffdfb] text-[#8c755f] hover:text-[#1f1f1f]',
+                  isActive ? 'he-chip-active' : 'he-chip',
                 ].join(' ')}
               >
                 {filter}
@@ -165,9 +163,9 @@ export default function RequestsPage({
 
       {(loadingRequests || requestsMessage || requestsError) ? (
         <div className="space-y-1.5 pt-1">
-          {loadingRequests ? <p className="text-[9px] font-bold uppercase tracking-widest text-[#68766d]">Refreshing...</p> : null}
-          {requestsMessage ? <p className="text-[9px] font-bold uppercase tracking-widest text-[#8b4cf6]">{requestsMessage}</p> : null}
-          {requestsError ? <p className="text-[9px] font-bold uppercase tracking-widest text-[#c65d4a]">{requestsError}</p> : null}
+          {loadingRequests ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-muted">Refreshing...</p> : null}
+          {requestsMessage ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-purple">{requestsMessage}</p> : null}
+          {requestsError ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-danger">{requestsError}</p> : null}
         </div>
       ) : null}
 
@@ -213,7 +211,7 @@ export default function RequestsPage({
                   onArrangeDelivery={setArrangeDeliveryRequest}
                 >
                   {reviewContext ? (
-                    <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+                    <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
                       <Button
                         className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
                         variant="secondary"

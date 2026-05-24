@@ -37,10 +37,10 @@ export default function ItemDetailsPage({
       {/* Header and Back navigation */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f]">
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink">
             Item Details
           </h1>
-          <p className="text-[10px] text-[#68766d]">View the listing and make requests.</p>
+          <p className="text-[10px] text-he-muted">View the listing and make requests.</p>
         </div>
         <Button as="link" to="/browse" variant="ghost" className="h-7 min-h-0 px-2.5 text-[10px] text-[#8b4cf6] hover:bg-[#8b4cf6]/5">
           ← Back
@@ -62,16 +62,16 @@ export default function ItemDetailsPage({
 
       {/* Detail Block */}
       <Surface className="p-4.5">
-        <h2 className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80">Description & Pickup Details</h2>
-        <p className="mt-2 text-xs leading-relaxed text-[#68766d]">{item.description}</p>
-        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-[#fcfbf9] pt-3.5">
-          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
+        <h2 className="text-[9px] font-bold uppercase tracking-widest text-he-soft">Description & Pickup Details</h2>
+        <p className="mt-2 text-xs leading-relaxed text-he-muted">{item.description}</p>
+        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-he-border/60 pt-3.5">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
             {item.category}
           </span>
-          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
             {item.condition}
           </span>
-          <span className="rounded-full bg-[#faf7f1] border border-[#efe8da]/60 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
             {item.location}
           </span>
         </div>

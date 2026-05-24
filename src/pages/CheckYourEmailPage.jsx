@@ -16,8 +16,8 @@ function LoadingState() {
       <svg className="mx-auto h-12 w-12 animate-spin text-[#8b4cf6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 8v4m8-8h-4M8 12H4m13.657-5.657l-2.828 2.828M9.172 14.828l-2.829 2.829m11.314 0l-2.828-2.829M9.172 9.172 6.343 6.343" />
       </svg>
-      <h1 className="text-xl font-bold text-[#1f1f1f]">Loading…</h1>
-      <p className="text-sm text-[#68766d]">Checking your account status.</p>
+      <h1 className="text-xl font-bold text-he-ink">Loading…</h1>
+      <p className="text-sm text-he-muted">Checking your account status.</p>
     </div>
   )
 }
@@ -31,10 +31,10 @@ function VerifiedState({ redirectIn, onGoHome }) {
         </svg>
       </div>
       <div className="space-y-2">
-        <h1 className="text-xl font-bold text-[#1f1f1f]">Your email is already verified</h1>
-        <p className="text-sm text-[#68766d]">You have full access to Happiness Exchange.</p>
+        <h1 className="text-xl font-bold text-he-ink">Your email is already verified</h1>
+        <p className="text-sm text-he-muted">You have full access to Happiness Exchange.</p>
         {redirectIn > 0 ? (
-          <p className="text-xs text-[#8c755f]">
+          <p className="text-xs text-he-soft">
             Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
           </p>
         ) : null}
@@ -55,8 +55,8 @@ function SignInRequiredState({ onGoLogin }) {
         </svg>
       </div>
       <div className="space-y-2">
-        <h1 className="text-xl font-bold text-[#1f1f1f]">Sign in required</h1>
-        <p className="text-sm text-[#68766d]">Please sign in to verify your email.</p>
+        <h1 className="text-xl font-bold text-he-ink">Sign in required</h1>
+        <p className="text-sm text-he-muted">Please sign in to verify your email.</p>
       </div>
       <Button variant="primary" className="w-full" onClick={onGoLogin}>
         Go to Login
@@ -189,7 +189,7 @@ export default function CheckYourEmailPage({
     <div className="flex min-h-[80vh] flex-col items-center justify-center p-6 text-center">
       <BrandLogo size="lg" className="mb-8 mx-auto" />
 
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#efe8da]">
+      <div className="w-full max-w-md rounded-2xl border border-he-border bg-he-surface p-8 shadow-sm dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]">
         {loadingUser ? (
           <LoadingState />
         ) : !token ? (
@@ -207,33 +207,33 @@ export default function CheckYourEmailPage({
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-xl font-bold text-[#1f1f1f]">Check your email</h1>
-              <p className="text-sm text-[#68766d]">
+              <h1 className="text-xl font-bold text-he-ink">Check your email</h1>
+              <p className="text-sm text-he-muted">
                 We sent a verification link to{' '}
-                <span className="font-semibold text-[#1f1f1f]">{email}</span>.
+                <span className="font-semibold text-he-ink">{email}</span>.
               </p>
             </div>
 
-            <div className="rounded-xl border border-[#efe8da] bg-[#fffdfb] p-4 text-left text-sm text-[#68766d] space-y-2">
-              <p className="font-semibold text-[#1f1f1f]">What to do next</p>
+            <div className="space-y-2 rounded-xl border border-he-border bg-he-input p-4 text-left text-sm text-he-muted">
+              <p className="font-semibold text-he-ink">What to do next</p>
               <ol className="list-decimal list-inside space-y-1">
                 <li>Open the email from Happiness Exchange.</li>
                 <li>Click <strong>Verify Email</strong> in the message.</li>
                 <li>Return here after verification to browse and give items.</li>
               </ol>
-              <p className="text-xs pt-1 text-[#8c755f]">
+              <p className="text-xs pt-1 text-he-soft">
                 Check your spam or promotions folder if you do not see it.
                 Each link expires after 24 hours — use only the most recent email.
               </p>
             </div>
 
             {resendMessage ? (
-              <div className="rounded-xl border border-[#8b4cf6]/20 bg-[#f5efff] px-4 py-3 text-sm font-medium text-[#8b4cf6]">
+              <div className="rounded-xl border border-he-purple/30 bg-[#f5efff] px-4 py-3 text-sm font-medium text-he-purple dark:bg-[#2d2640] dark:text-[#ddd6fe]">
                 {resendMessage}
               </div>
             ) : null}
             {resendError ? (
-              <div className="rounded-xl border border-[#c65d4a]/20 bg-[#fff3f0] px-4 py-3 text-sm font-medium text-[#c65d4a]">
+              <div className="rounded-xl border border-he-danger/30 bg-[#fff3f0] px-4 py-3 text-sm font-medium text-he-danger dark:bg-rose-950/40">
                 {resendError}
               </div>
             ) : null}
@@ -254,13 +254,13 @@ export default function CheckYourEmailPage({
             {!showWrongEmail ? (
               <button
                 type="button"
-                className="text-xs text-[#8c755f] hover:text-[#8b4cf6] hover:underline"
+                className="text-xs text-he-soft hover:text-[#8b4cf6] hover:underline"
                 onClick={() => setShowWrongEmail(true)}
               >
                 Wrong email?
               </button>
             ) : (
-              <p className="text-xs text-[#68766d]">
+              <p className="text-xs text-he-muted">
                 Sign in with the correct account on the{' '}
                 <button type="button" className="font-bold text-[#8b4cf6] hover:underline" onClick={goLogin}>
                   login page

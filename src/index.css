@@ -8,6 +8,7 @@
   --color-he-page-outer: #f3efe5;
   --color-he-surface: #ffffff;
   --color-he-surface-soft: #faf7f1;
+  --color-he-elevated: #ffffff;
   --color-he-ink: #1f1f1f;
   --color-he-muted: #68766d;
   --color-he-soft: #8c755f;
@@ -15,7 +16,10 @@
   --color-he-input: #fffdfb;
   --color-he-nav-active: #efe7ff;
   --color-he-purple: #8b4cf6;
+  --color-he-purple-hover: #7b40e6;
   --color-he-yellow: #ffcc22;
+  --color-he-danger: #c65d4a;
+  --color-he-success: #22c55e;
 
   --radius-card: 16px;
   --radius-btn: 14px;
@@ -24,16 +28,22 @@
 
 html.dark {
   color-scheme: dark;
-  --color-he-page: #171615;
-  --color-he-page-outer: #0f0e0d;
-  --color-he-surface: #222020;
-  --color-he-surface-soft: #2a2826;
-  --color-he-ink: #f5f0e8;
-  --color-he-muted: #a39e96;
-  --color-he-soft: #8a837a;
-  --color-he-border: #3a3632;
-  --color-he-input: #1a1918;
+  --color-he-page: #111014;
+  --color-he-page-outer: #0f0f12;
+  --color-he-surface: #1b1a20;
+  --color-he-surface-soft: #24212b;
+  --color-he-elevated: #2c2834;
+  --color-he-ink: #f8fafc;
+  --color-he-muted: #94a3b8;
+  --color-he-soft: #cbd5e1;
+  --color-he-border: #3f3a4a;
+  --color-he-input: #24212b;
   --color-he-nav-active: #2d2640;
+  --color-he-purple: #8b4cf6;
+  --color-he-purple-hover: #7c3aed;
+  --color-he-yellow: #facc15;
+  --color-he-danger: #ef4444;
+  --color-he-success: #22c55e;
 }
 
 @layer base {
@@ -94,31 +104,18 @@ html.dark {
   }
 
   html.dark #root {
-    box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.45);
   }
 
-  @media (min-width: 768px) {
-    #root {
-      max-width: 100%;
-      box-shadow: none;
-      border-left: none;
-      border-right: none;
-    }
-
-    html,
-    body {
-      background: var(--color-he-page);
-    }
-  }
-
-  ::selection {
-    background: rgba(139, 76, 246, 0.16);
-    color: inherit;
+  html.dark ::selection {
+    background: rgba(139, 76, 246, 0.35);
+    color: #f8fafc;
   }
 
   /* Legacy hardcoded colors inside the authenticated app shell */
   html.dark .he-app [class*="text-[#1f1f1f]"]:not([class*="text-white"]),
-  html.dark .he-app [class*="text-[#1f3328]"] {
+  html.dark .he-app [class*="text-[#1f3328]"],
+  html.dark .he-app [class*="text-[#2d2d2d]"] {
     color: var(--color-he-ink);
   }
 
@@ -166,6 +163,25 @@ html.dark {
 
   html.dark .he-app [class*="divide-[#efe8da]"] > :not(:last-child) {
     border-color: var(--color-he-border);
+  }
+
+  @media (min-width: 768px) {
+    #root {
+      max-width: 100%;
+      box-shadow: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    html,
+    body {
+      background: var(--color-he-page);
+    }
+  }
+
+  ::selection {
+    background: rgba(139, 76, 246, 0.16);
+    color: inherit;
   }
 }
 
@@ -228,7 +244,24 @@ html.dark {
   }
 
   .he-chip-active {
-    @apply border-transparent bg-he-purple text-white shadow-xs;
+    @apply border-transparent bg-he-purple text-white shadow-xs hover:bg-he-purple-hover;
+  }
+
+  .he-card {
+    @apply rounded-card border border-he-border bg-he-surface shadow-sm;
+  }
+
+  html.dark .he-card {
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 8px 24px -8px rgba(0, 0, 0, 0.55);
+  }
+
+  html.dark .he-stat-card {
+    @apply border-he-border bg-he-surface shadow-sm;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset;
+  }
+
+  html.dark .he-stat-card:hover {
+    @apply border-he-purple/40 bg-he-surface-soft;
   }
 }
 

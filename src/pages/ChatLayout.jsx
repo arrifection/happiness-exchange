@@ -386,7 +386,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 space-y-2 overflow-y-auto bg-he-page/50 px-4 py-4">
+            <div className="flex-1 space-y-2 overflow-y-auto bg-he-page px-4 py-4">
               {messages.map((msg, i) => {
                 const isMe = msg.sender_id === currentUser?.id
                 const showSep = shouldShowDateSeparator(messages, i)
@@ -405,7 +405,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
                       <div className={`group flex max-w-[75%] flex-col md:max-w-[60%] ${isMe ? 'items-end' : 'items-start'}`}>
                         <div
                           className={`overflow-hidden rounded-2xl text-[14px] leading-relaxed shadow-sm ${
-                            isMe ? 'rounded-br-sm bg-he-purple text-white' : 'rounded-bl-sm border border-he-border bg-he-surface-soft text-he-ink'
+                            isMe ? 'rounded-br-sm bg-he-purple text-white' : 'rounded-bl-sm border border-he-border bg-he-elevated text-he-ink'
                           }`}
                         >
                           {msg.message_type === 'image' && msg.image_url ? (

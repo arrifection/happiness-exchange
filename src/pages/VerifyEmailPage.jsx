@@ -104,27 +104,27 @@ export default function VerifyEmailPage({ onRefreshUser }) {
     <div className="flex min-h-[80vh] flex-col items-center justify-center p-6 text-center">
       <BrandLogo size="lg" className="mb-8 mx-auto" />
 
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#efe8da]">
+      <div className="w-full max-w-md rounded-2xl border border-he-border bg-he-surface p-8 shadow-sm dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]">
         {status === 'loading' && (
           <div className="space-y-4">
             <svg className="mx-auto h-12 w-12 animate-spin text-[#8b4cf6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 8v4m8-8h-4M8 12H4m13.657-5.657l-2.828 2.828M9.172 14.828l-2.829 2.829m11.314 0l-2.828-2.829M9.172 9.172 6.343 6.343" />
             </svg>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Verifying your email…</h2>
-            <p className="text-sm text-[#68766d]">Please wait while we confirm your link.</p>
+            <h2 className="text-xl font-bold text-he-ink">Verifying your email…</h2>
+            <p className="text-sm text-he-muted">Please wait while we confirm your link.</p>
           </div>
         )}
 
         {status === 'success' && (
           <div className="space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f5efff]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f5efff] dark:bg-[#2d2640]">
               <svg className="h-8 w-8 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Email verified successfully</h2>
-            <p className="text-sm text-[#68766d]">{message}</p>
-            <p className="text-xs text-[#8c755f]">
+            <h2 className="text-xl font-bold text-he-ink">Email verified successfully</h2>
+            <p className="text-sm text-he-muted">{message}</p>
+            <p className="text-xs text-he-soft">
               Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
             </p>
             <div className="pt-2">
@@ -137,14 +137,14 @@ export default function VerifyEmailPage({ onRefreshUser }) {
 
         {status === 'already_verified' && (
           <div className="space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f0faf4]">
-              <svg className="h-8 w-8 text-[#3d8b5f]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f0faf4] dark:bg-emerald-950/40">
+              <svg className="h-8 w-8 text-he-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Your email is already verified</h2>
-            <p className="text-sm text-[#68766d]">You are all set. No further action is needed.</p>
-            <p className="text-xs text-[#8c755f]">
+            <h2 className="text-xl font-bold text-he-ink">Your email is already verified</h2>
+            <p className="text-sm text-he-muted">You are all set. No further action is needed.</p>
+            <p className="text-xs text-he-soft">
               Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
             </p>
             <div className="pt-2">
@@ -157,13 +157,13 @@ export default function VerifyEmailPage({ onRefreshUser }) {
 
         {status === 'error' && (
           <div className="space-y-4">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff3f0]">
-              <svg className="h-8 w-8 text-[#c65d4a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff3f0] dark:bg-rose-950/40">
+              <svg className="h-8 w-8 text-he-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-[#1f1f1f]">Verification link unavailable</h2>
-            <p className="text-sm text-[#c65d4a]">{message}</p>
+            <h2 className="text-xl font-bold text-he-ink">Verification link unavailable</h2>
+            <p className="text-sm text-he-danger">{message}</p>
             <div className="pt-4 space-y-2">
               <Button variant="primary" className="w-full" onClick={() => navigate('/check-email')}>
                 Request new verification email

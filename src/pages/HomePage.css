@@ -1386,12 +1386,12 @@
 html.dark .he-home {
   --he-purple-light: #2d2640;
   --he-yellow-light: #3d3520;
-  --he-dark: #f5f0e8;
-  --he-gray: #a39e96;
-  --he-border: #3a3632;
-  --he-bg: #1a1918;
-  background: #171615;
-  color: #f5f0e8;
+  --he-dark: #f8fafc;
+  --he-gray: #94a3b8;
+  --he-border: #3f3a4a;
+  --he-bg: #111014;
+  background: #0f0f12;
+  color: #f8fafc;
 }
 
 html.dark .he-home .he-nav,
@@ -1402,7 +1402,7 @@ html.dark .he-home .he-item-card,
 html.dark .he-home .he-concept-col,
 html.dark .he-home .he-delivery-section,
 html.dark .he-home .he-impact-section {
-  background: #222020;
+  background: #1b1a20;
 }
 
 html.dark .he-home .he-nav-links a,
@@ -1415,11 +1415,11 @@ html.dark .he-home .he-hero::before {
 }
 
 html.dark .he-home .he-step-text {
-  color: #a39e96;
+  color: #cbd5e1;
 }
 
 html.dark .he-home .he-step-text strong {
-  color: #f5f0e8;
+  color: #f8fafc;
 }
 
 html.dark .he-home .he-concept-col.get-col .he-step-num {
@@ -1483,10 +1483,10 @@ html.dark .he-home .he-anon-stamp-icon {
 }
 
 html.dark .he-home .he-anon-stamp-title {
-  color: #f5f0e8;
+  color: #f8fafc;
 }
 
 html.dark .he-home .he-anon-stamp-sub {
-  color: #a39e96;
+  color: #94a3b8;
 }
 

@@ -705,7 +705,7 @@ export default function App() {
           ) : null}
 
           {showAppChrome ? (
-            <header className="sticky top-0 z-50 border-b border-he-border bg-he-surface/85 backdrop-blur-md">
+            <header className="sticky top-0 z-50 border-b border-he-border bg-he-surface/95 backdrop-blur-md dark:bg-he-surface/98">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
                 <div className="flex flex-1 items-center justify-start">

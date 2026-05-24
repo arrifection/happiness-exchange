@@ -94,8 +94,8 @@ export default function AuthenticatedHomePage({
   return (
     <div className="space-y-4 md:space-y-6">
       <Surface className="overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-[#8b4cf6]/5 via-[#ffcc22]/2 to-transparent p-5 md:flex md:flex-col md:items-center md:px-8 md:py-12 md:text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#8c755f] md:text-xs">
+        <div className="bg-gradient-to-br from-he-purple/10 via-transparent to-he-yellow/5 p-5 dark:from-he-purple/20 dark:to-transparent md:flex md:flex-col md:items-center md:px-8 md:py-12 md:text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-he-soft md:text-xs">
             Welcome back, {displayName}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2 md:justify-center">
@@ -107,7 +107,7 @@ export default function AuthenticatedHomePage({
               <h1
                 key={tagline}
                 className={[
-                  "absolute flex w-full items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold leading-snug tracking-tight text-[#1f1f1f] transition-all duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] md:text-3xl lg:text-[32px]",
+                  "absolute flex w-full items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold leading-snug tracking-tight text-he-ink transition-all duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] md:text-3xl lg:text-[32px]",
                   index === taglineIndex
                     ? 'translate-y-0 scale-100 opacity-100'
                     : 'translate-y-3 scale-[0.98] opacity-0',

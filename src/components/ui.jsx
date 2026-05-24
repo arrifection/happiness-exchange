@@ -17,10 +17,10 @@ export function Button({
     'inline-flex min-h-9 items-center justify-center rounded-btn px-4 py-2 text-[13px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-[0.98]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-he-purple/20',
     'disabled:cursor-not-allowed disabled:opacity-60',
-    variant === 'primary' && 'bg-he-purple text-white shadow-sm hover:bg-[#7b40e6] hover:shadow-md transition-shadow',
-    variant === 'secondary' && 'border border-he-border bg-he-surface text-he-ink hover:bg-he-page',
-    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-he-ink dark:text-[#c4b5fd] dark:hover:bg-he-surface-soft dark:hover:text-he-ink',
-    variant === 'danger' && 'bg-[#c65d4a] text-white hover:bg-[#ae4e3d]',
+    variant === 'primary' && 'bg-he-purple text-white shadow-sm hover:bg-he-purple-hover hover:shadow-md transition-shadow',
+    variant === 'secondary' && 'border border-he-border bg-he-surface text-he-ink hover:bg-he-surface-soft dark:hover:border-he-border',
+    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-he-ink dark:text-[#c4b5fd] dark:hover:bg-he-elevated dark:hover:text-he-ink',
+    variant === 'danger' && 'bg-he-danger text-white hover:bg-[#dc2626]',
     className,
   )
 
@@ -41,12 +41,12 @@ export function Button({
 
 export function StatusBadge({ status, className = '' }) {
   const palette = {
-    available: 'bg-[#fff6d9] text-[#8c6900] ring-[#ffcc22]/50 dark:bg-[#3d3520] dark:text-[#ffcc22] dark:ring-[#ffcc22]/30',
-    reserved: 'bg-[#f8edff] text-[#8b4cf6] ring-[#8b4cf6]/20 dark:bg-[#2d2640] dark:text-[#c4b5fd] dark:ring-[#8b4cf6]/30',
-    completed: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#c4b5fd] dark:ring-[#8b4cf6]/30',
-    pending: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-[#ffcc22] dark:ring-[#ffcc22]/30',
-    approved: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#c4b5fd] dark:ring-[#8b4cf6]/30',
-    rejected: 'bg-rose-50 text-rose-700 ring-rose-200/50 dark:bg-rose-950/40 dark:text-rose-300 dark:ring-rose-800/50',
+    available: 'bg-[#fff6d9] text-[#8c6900] ring-[#ffcc22]/50 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
+    reserved: 'bg-[#f8edff] text-[#8b4cf6] ring-[#8b4cf6]/20 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
+    completed: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
+    pending: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
+    approved: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
+    rejected: 'bg-rose-50 text-rose-700 ring-rose-200/50 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-800/60',
   }
 
   return (
@@ -73,7 +73,7 @@ export function SectionHeading({
     <div className={classes('flex flex-col gap-3 sm:flex-row sm:items-end', align === 'between' && 'sm:justify-between')}>
       <div className="max-w-xl">
         {eyebrow ? (
-          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a07d22] dark:text-[#d4a017]">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#a07d22] dark:text-he-yellow">
             {eyebrow}
           </p>
         ) : null}
@@ -89,7 +89,7 @@ export function SectionHeading({
 
 export function EmptyState({ title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-[20px] border border-he-border/60 bg-gradient-to-b from-he-surface-soft/50 to-transparent p-6 md:p-8 text-center md:max-w-md md:mx-auto">
+    <div className="flex flex-col items-center justify-center rounded-[20px] border border-he-border bg-he-surface p-6 text-center shadow-sm md:mx-auto md:max-w-md md:p-8 dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#efe7ff]/50 text-he-purple shadow-sm dark:bg-[#2d2640]">
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -107,7 +107,7 @@ export function EmptyState({ title, description, action }) {
 export function Surface({ className = '', children, ...props }) {
   return (
     <section className={classes(
-      'rounded-card border border-he-border bg-he-surface shadow-[0_2px_8px_-2px_rgba(31,51,40,0.04)] transition-shadow duration-300 hover:shadow-[0_4px_12px_-2px_rgba(31,51,40,0.06)] dark:shadow-none dark:hover:shadow-none',
+      'rounded-card border border-he-border bg-he-surface shadow-sm transition-shadow duration-300 hover:shadow-md dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset,0_8px_24px_-8px_rgba(0,0,0,0.5)] dark:hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_12px_28px_-8px_rgba(0,0,0,0.55)]',
       className,
     )}
       {...props}
@@ -130,7 +130,7 @@ export function TextField({
 }) {
   return (
     <label className="grid gap-1.5" htmlFor={id}>
-      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-[#d4a017]">{label}</span>}
+      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">{label}</span>}
       <input
         id={id}
         name={name}
@@ -158,7 +158,7 @@ export function TextAreaField({
 }) {
   return (
     <label className="grid gap-1.5" htmlFor={id}>
-      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-[#d4a017]">{label}</span>}
+      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">{label}</span>}
       <textarea
         id={id}
         name={name}
@@ -185,7 +185,7 @@ export function SelectField({
 }) {
   return (
     <label className="grid gap-1.5" htmlFor={id}>
-      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-[#d4a017]">{label}</span>}
+      {label && <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">{label}</span>}
       <div className="relative">
         <select
           id={id}
