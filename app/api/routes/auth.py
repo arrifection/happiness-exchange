@@ -22,6 +22,33 @@ from app.api.deps.auth import get_current_user, get_optional_current_user
 
 router = APIRouter()
 
+RESEND_COOLDOWN = timedelta(minutes=10)
+
+
+def _resend_cooldown_seconds(user_doc: dict, now: datetime) -> int:
+    """Return seconds remaining before another verification email may be sent."""
+    last_sent = user_doc.get("verification_email_sent_at")
+    if not last_sent:
+        return 0
+    if last_sent.tzinfo is None:
+        last_sent = last_sent.replace(tzinfo=timezone.utc)
+    remaining = RESEND_COOLDOWN - (now - last_sent)
+    return max(0, int(remaining.total_seconds()))
+
+
+def _enforce_resend_cooldown(user_doc: dict, now: datetime) -> None:
+    remaining = _resend_cooldown_seconds(user_doc, now)
+    if remaining <= 0:
+        return
+    minutes = max(1, (remaining + 59) // 60)
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={
+            "message": f"You can request another verification email in {minutes} minute{'s' if minutes != 1 else ''}.",
+            "retry_after_seconds": remaining,
+        },
+    )
+
 
 def _email_diagnostics_allowed() -> bool:
     """Expose email config check only in dev or when explicitly enabled."""
@@ -106,6 +133,11 @@ async def signup(payload: SignupRequest):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=exc.message,
         )
+
+    await users_collection.update_one(
+        {"_id": result.inserted_id},
+        {"$set": {"verification_email_sent_at": now, "updated_at": now}},
+    )
 
     # Trigger admin notification
     import asyncio
@@ -245,6 +277,15 @@ async def resend_verification(current_user: dict = Depends(get_current_user)):
 
     from app.services.auth import parse_object_id
     user_id = parse_object_id(current_user["id"])
+
+    user_doc = await users_collection.find_one({"_id": user_id})
+    if user_doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    _enforce_resend_cooldown(user_doc, now)
     
     await users_collection.update_one(
         {"_id": user_id},
@@ -252,6 +293,8 @@ async def resend_verification(current_user: dict = Depends(get_current_user)):
             "$set": {
                 "email_verification_token_hash": token_hash,
                 "email_verification_expires_at": token_expiry,
+                "verification_email_sent_at": now,
+                "updated_at": now,
             }
         }
     )

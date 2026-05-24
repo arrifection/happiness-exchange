@@ -23,7 +23,11 @@ import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
 import { Button, Surface } from './components/ui.jsx'
 import { NotificationProvider } from './components/NotificationContext.jsx'
-import NotificationBell from './components/NotificationBell.jsx'
+import {
+  parseApiErrorDetail,
+  setResendCooldown,
+  syncResendCooldownFromSeconds,
+} from './lib/verificationResend.js'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -37,6 +41,7 @@ const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const CONVERSATIONS_ENDPOINT = `${API_BASE}/api/conversations/my`
 const DELIVERIES_ENDPOINT = `${API_BASE}/api/deliveries/my`
 const TOKEN_KEY = 'happiness_exchange_token'
+const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
 const emptyItemForm = {
@@ -125,7 +130,8 @@ export default function App() {
   // Deliveries state
   const [myDeliveries, setMyDeliveries] = useState([])
 
-  const isRestoringSession = Boolean(token) && !currentUser
+  const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
+  const isRestoringSession = Boolean(token) && !currentUser && !isAuthFlowRoute && loadingUser
   const isLandingHome = !currentUser && location.pathname === '/'
 
   // Splash
@@ -617,12 +623,24 @@ export default function App() {
                         setAuthNotice('Your email is already verified.')
                         return
                       }
+                      if (currentUser?.id) {
+                        setResendCooldown(currentUser.id)
+                      }
                       navigate('/check-email', {
                         state: {
                           email: currentUser.email,
                           resendSuccess: true,
                         },
                       })
+                      return
+                    }
+                    if (res.status === 429 && currentUser?.id) {
+                      const { message, retryAfterSeconds } = parseApiErrorDetail(
+                        data,
+                        'Please wait before requesting another email.',
+                      )
+                      syncResendCooldownFromSeconds(currentUser.id, retryAfterSeconds || 600)
+                      setAuthError(message)
                       return
                     }
                     const detail = typeof data.detail === 'string'
@@ -727,13 +745,14 @@ export default function App() {
                     apiBase={API_BASE}
                     token={token}
                     currentUser={currentUser}
+                    loadingUser={loadingUser}
                     onRefreshUser={refreshCurrentUser}
                   />
                 }
               />
               <Route
                 path="/verify-email"
-                element={<VerifyEmailPage currentUser={currentUser} onRefreshUser={refreshCurrentUser} />}
+                element={<VerifyEmailPage onRefreshUser={refreshCurrentUser} />}
               />
               <Route
                 path="/browse"
@@ -884,8 +903,20 @@ export default function App() {
               element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
             />
             <Route
+              path="/check-email"
+              element={
+                <CheckYourEmailPage
+                  apiBase={API_BASE}
+                  token={token}
+                  currentUser={currentUser}
+                  loadingUser={loadingUser}
+                  onRefreshUser={refreshCurrentUser}
+                />
+              }
+            />
+            <Route
               path="/verify-email"
-              element={<VerifyEmailPage currentUser={currentUser} onRefreshUser={refreshCurrentUser} />}
+              element={<VerifyEmailPage onRefreshUser={refreshCurrentUser} />}
             />
             <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

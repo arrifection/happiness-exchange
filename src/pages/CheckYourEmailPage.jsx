@@ -1,13 +1,28 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui.jsx'
 import BrandLogo from '../components/BrandLogo.jsx'
+import {
+  formatResendCooldown,
+  getResendCooldownRemainingMs,
+  parseApiErrorDetail,
+  setResendCooldown,
+  syncResendCooldownFromSeconds,
+} from '../lib/verificationResend.js'
 
-function formatApiError(errorData, fallbackMessage) {
-  return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
+function LoadingState() {
+  return (
+    <div className="space-y-4">
+      <svg className="mx-auto h-12 w-12 animate-spin text-[#8b4cf6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 8v4m8-8h-4M8 12H4m13.657-5.657l-2.828 2.828M9.172 14.828l-2.829 2.829m11.314 0l-2.828-2.829M9.172 9.172 6.343 6.343" />
+      </svg>
+      <h1 className="text-xl font-bold text-[#1f1f1f]">Loading…</h1>
+      <p className="text-sm text-[#68766d]">Checking your account status.</p>
+    </div>
+  )
 }
 
-function VerifiedBanner({ onGoHome }) {
+function VerifiedState({ redirectIn, onGoHome }) {
   return (
     <div className="space-y-5">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f0faf4]">
@@ -18,6 +33,11 @@ function VerifiedBanner({ onGoHome }) {
       <div className="space-y-2">
         <h1 className="text-xl font-bold text-[#1f1f1f]">Your email is already verified</h1>
         <p className="text-sm text-[#68766d]">You have full access to Happiness Exchange.</p>
+        {redirectIn > 0 ? (
+          <p className="text-xs text-[#8c755f]">
+            Redirecting in {redirectIn} second{redirectIn === 1 ? '' : 's'}…
+          </p>
+        ) : null}
       </div>
       <Button variant="primary" className="w-full" onClick={onGoHome}>
         Go to Home
@@ -26,10 +46,37 @@ function VerifiedBanner({ onGoHome }) {
   )
 }
 
-export default function CheckYourEmailPage({ apiBase, token, currentUser, onRefreshUser }) {
+function SignInRequiredState({ onGoLogin }) {
+  return (
+    <div className="space-y-5">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f5efff]">
+        <svg className="h-8 w-8 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 19.5a7.5 7.5 0 0115 0v.75H4.5V19.5z" />
+        </svg>
+      </div>
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold text-[#1f1f1f]">Sign in required</h1>
+        <p className="text-sm text-[#68766d]">Please sign in to verify your email.</p>
+      </div>
+      <Button variant="primary" className="w-full" onClick={onGoLogin}>
+        Go to Login
+      </Button>
+    </div>
+  )
+}
+
+export default function CheckYourEmailPage({
+  apiBase,
+  token,
+  currentUser,
+  loadingUser,
+  onRefreshUser,
+}) {
   const location = useLocation()
   const navigate = useNavigate()
-  const email = location.state?.email || currentUser?.email || ''
+  const email = currentUser?.email || location.state?.email || ''
+  const userId = currentUser?.id || ''
+
   const [resending, setResending] = useState(false)
   const [resendMessage, setResendMessage] = useState(
     location.state?.resendSuccess
@@ -37,27 +84,62 @@ export default function CheckYourEmailPage({ apiBase, token, currentUser, onRefr
       : '',
   )
   const [resendError, setResendError] = useState('')
+  const [cooldownMs, setCooldownMs] = useState(() => getResendCooldownRemainingMs(userId))
+  const [redirectIn, setRedirectIn] = useState(2)
+  const [showWrongEmail, setShowWrongEmail] = useState(false)
 
   useEffect(() => {
     if (location.state?.resendSuccess) {
-      navigate(location.pathname, {
-        replace: true,
-        state: { email },
-      })
+      navigate(location.pathname, { replace: true, state: { email } })
     }
   }, [location.pathname, location.state?.resendSuccess, email, navigate])
 
-  if (!token && !email) {
-    return <Navigate to="/signup" replace />
-  }
+  useEffect(() => {
+    if (location.state?.resendSuccess && userId) {
+      setResendCooldown(userId)
+      setCooldownMs(getResendCooldownRemainingMs(userId))
+    }
+  }, [location.state?.resendSuccess, userId])
+
+  useEffect(() => {
+    if (!userId) return undefined
+    setCooldownMs(getResendCooldownRemainingMs(userId))
+    const timer = setInterval(() => {
+      setCooldownMs(getResendCooldownRemainingMs(userId))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [userId])
+
+  useEffect(() => {
+    if (!currentUser?.is_verified) return undefined
+    setRedirectIn(2)
+    const countdown = setInterval(() => {
+      setRedirectIn((value) => (value > 1 ? value - 1 : value))
+    }, 1000)
+    const redirectTimer = setTimeout(() => navigate('/', { replace: true }), 2000)
+    return () => {
+      clearInterval(countdown)
+      clearTimeout(redirectTimer)
+    }
+  }, [currentUser?.is_verified, navigate])
 
   function goHome() {
-    navigate(currentUser ? '/dashboard' : '/', { replace: true })
+    navigate('/', { replace: true })
+  }
+
+  function goLogin() {
+    navigate('/login', { replace: true })
   }
 
   async function handleResend() {
     if (!token) {
-      setResendError('Sign in again to resend the verification email.')
+      setResendError('Please sign in again to resend the verification email.')
+      return
+    }
+
+    const remaining = getResendCooldownRemainingMs(userId)
+    if (remaining > 0) {
+      setResendError(`You can request another email in ${formatResendCooldown(remaining)}.`)
       return
     }
 
@@ -74,14 +156,25 @@ export default function CheckYourEmailPage({ apiBase, token, currentUser, onRefr
 
       if (response.ok && data.status === 'already_verified') {
         if (onRefreshUser) await onRefreshUser()
-        setResendMessage('Your email is already verified.')
         return
       }
 
       if (!response.ok) {
-        throw new Error(formatApiError(data, 'Could not send verification email.'))
+        const { message, retryAfterSeconds } = parseApiErrorDetail(
+          data,
+          'Could not send verification email.',
+        )
+        if (response.status === 429 && userId) {
+          syncResendCooldownFromSeconds(userId, retryAfterSeconds || 600)
+          setCooldownMs(getResendCooldownRemainingMs(userId))
+        }
+        throw new Error(message)
       }
 
+      if (userId) {
+        setResendCooldown(userId)
+        setCooldownMs(getResendCooldownRemainingMs(userId))
+      }
       setResendMessage('New verification email sent. Please check your inbox.')
     } catch (err) {
       setResendError(err.message)
@@ -90,82 +183,93 @@ export default function CheckYourEmailPage({ apiBase, token, currentUser, onRefr
     }
   }
 
-  if (currentUser?.is_verified) {
-    return (
-      <div className="flex min-h-[80vh] flex-col items-center justify-center p-6 text-center">
-        <BrandLogo size="lg" className="mb-8 mx-auto" />
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#efe8da]">
-          <VerifiedBanner onGoHome={goHome} />
-        </div>
-      </div>
-    )
-  }
+  const resendDisabled = resending || cooldownMs > 0
 
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center p-6 text-center">
       <BrandLogo size="lg" className="mb-8 mx-auto" />
 
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#efe8da] space-y-5">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f5efff]">
-          <svg className="h-8 w-8 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-          </svg>
-        </div>
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#efe8da]">
+        {loadingUser ? (
+          <LoadingState />
+        ) : !token ? (
+          <SignInRequiredState onGoLogin={goLogin} />
+        ) : currentUser?.is_verified ? (
+          <VerifiedState redirectIn={redirectIn} onGoHome={goHome} />
+        ) : !currentUser ? (
+          <SignInRequiredState onGoLogin={goLogin} />
+        ) : (
+          <div className="space-y-5">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f5efff]">
+              <svg className="h-8 w-8 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </div>
 
-        <div className="space-y-2">
-          <h1 className="text-xl font-bold text-[#1f1f1f]">Check your email</h1>
-          <p className="text-sm text-[#68766d]">
-            We sent a verification link to{' '}
-            <span className="font-semibold text-[#1f1f1f]">{email || 'your email address'}</span>.
-          </p>
-        </div>
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold text-[#1f1f1f]">Check your email</h1>
+              <p className="text-sm text-[#68766d]">
+                We sent a verification link to{' '}
+                <span className="font-semibold text-[#1f1f1f]">{email}</span>.
+              </p>
+            </div>
 
-        <div className="rounded-xl border border-[#efe8da] bg-[#fffdfb] p-4 text-left text-sm text-[#68766d] space-y-2">
-          <p className="font-semibold text-[#1f1f1f]">What to do next</p>
-          <ol className="list-decimal list-inside space-y-1">
-            <li>Open the email from Happiness Exchange.</li>
-            <li>Click <strong>Verify Email</strong> in the message.</li>
-            <li>Return here after verification to browse and give items.</li>
-          </ol>
-          <p className="text-xs pt-1 text-[#8c755f]">
-            Did not see it? Check your spam or promotions folder. Each link expires after 24 hours.
-            If you requested a new email, use only the most recent link.
-          </p>
-        </div>
+            <div className="rounded-xl border border-[#efe8da] bg-[#fffdfb] p-4 text-left text-sm text-[#68766d] space-y-2">
+              <p className="font-semibold text-[#1f1f1f]">What to do next</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Open the email from Happiness Exchange.</li>
+                <li>Click <strong>Verify Email</strong> in the message.</li>
+                <li>Return here after verification to browse and give items.</li>
+              </ol>
+              <p className="text-xs pt-1 text-[#8c755f]">
+                Check your spam or promotions folder if you do not see it.
+                Each link expires after 24 hours — use only the most recent email.
+              </p>
+            </div>
 
-        {resendMessage ? (
-          <div className="rounded-xl border border-[#8b4cf6]/20 bg-[#f5efff] px-4 py-3 text-sm font-medium text-[#8b4cf6]">
-            {resendMessage}
+            {resendMessage ? (
+              <div className="rounded-xl border border-[#8b4cf6]/20 bg-[#f5efff] px-4 py-3 text-sm font-medium text-[#8b4cf6]">
+                {resendMessage}
+              </div>
+            ) : null}
+            {resendError ? (
+              <div className="rounded-xl border border-[#c65d4a]/20 bg-[#fff3f0] px-4 py-3 text-sm font-medium text-[#c65d4a]">
+                {resendError}
+              </div>
+            ) : null}
+
+            <Button
+              variant="primary"
+              className="w-full"
+              disabled={resendDisabled}
+              onClick={handleResend}
+            >
+              {resending
+                ? 'Sending…'
+                : cooldownMs > 0
+                  ? `You can request another email in ${formatResendCooldown(cooldownMs)}`
+                  : 'Resend verification email'}
+            </Button>
+
+            {!showWrongEmail ? (
+              <button
+                type="button"
+                className="text-xs text-[#8c755f] hover:text-[#8b4cf6] hover:underline"
+                onClick={() => setShowWrongEmail(true)}
+              >
+                Wrong email?
+              </button>
+            ) : (
+              <p className="text-xs text-[#68766d]">
+                Sign in with the correct account on the{' '}
+                <button type="button" className="font-bold text-[#8b4cf6] hover:underline" onClick={goLogin}>
+                  login page
+                </button>
+                .
+              </p>
+            )}
           </div>
-        ) : null}
-        {resendError ? (
-          <div className="rounded-xl border border-[#c65d4a]/20 bg-[#fff3f0] px-4 py-3 text-sm font-medium text-[#c65d4a]">
-            {resendError}
-          </div>
-        ) : null}
-
-        <Button
-          variant="primary"
-          className="w-full"
-          disabled={resending}
-          onClick={handleResend}
-        >
-          {resending ? 'Sending…' : 'Resend verification email'}
-        </Button>
-
-        <div className="pt-2 space-y-2 text-xs text-[#68766d]">
-          <p>
-            Wrong email?{' '}
-            <Link className="font-bold text-[#8b4cf6] hover:underline" to="/login">
-              Sign in with a different account
-            </Link>
-          </p>
-          <p>
-            <button type="button" className="font-bold text-[#8b4cf6] hover:underline" onClick={goHome}>
-              Continue to Home
-            </button>
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -5,19 +5,21 @@ import BrandLogo from '../components/BrandLogo.jsx'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 const TOKEN_KEY = 'happiness_exchange_token'
+const REDIRECT_SECONDS = 2
 
 function isCompleteStatus(status) {
   return status === 'success' || status === 'already_verified'
 }
 
-export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
+export default function VerifyEmailPage({ onRefreshUser }) {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const navigate = useNavigate()
 
   const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('')
-  const [redirectIn, setRedirectIn] = useState(3)
+  const [redirectIn, setRedirectIn] = useState(REDIRECT_SECONDS)
+  const [readyToRedirect, setReadyToRedirect] = useState(false)
 
   useEffect(() => {
     if (!token) {
@@ -46,6 +48,12 @@ export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
           return
         }
 
+        if (onRefreshUser) {
+          await onRefreshUser()
+        }
+
+        if (cancelled) return
+
         if (data.status === 'already_verified') {
           setStatus('already_verified')
           setMessage(data.message || 'Your email is already verified.')
@@ -53,10 +61,7 @@ export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
           setStatus('success')
           setMessage(data.message || 'Email verified successfully.')
         }
-
-        if (onRefreshUser) {
-          await onRefreshUser()
-        }
+        setReadyToRedirect(true)
       } catch {
         if (!cancelled) {
           setStatus('error')
@@ -69,29 +74,28 @@ export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
     return () => {
       cancelled = true
     }
-    // Verify once per token — onRefreshUser intentionally omitted to avoid re-runs.
-  }, [token])
+  }, [token, onRefreshUser])
 
   useEffect(() => {
-    if (!isCompleteStatus(status)) return undefined
+    if (!readyToRedirect || !isCompleteStatus(status)) return undefined
 
-    setRedirectIn(3)
+    setRedirectIn(REDIRECT_SECONDS)
     const countdown = setInterval(() => {
       setRedirectIn((value) => (value > 1 ? value - 1 : value))
     }, 1000)
 
     const redirectTimer = setTimeout(() => {
-      navigate(currentUser ? '/dashboard' : '/', { replace: true })
-    }, 3000)
+      navigate('/', { replace: true })
+    }, REDIRECT_SECONDS * 1000)
 
     return () => {
       clearInterval(countdown)
       clearTimeout(redirectTimer)
     }
-  }, [status, navigate, currentUser])
+  }, [readyToRedirect, status, navigate])
 
   function goHome() {
-    navigate(currentUser ? '/dashboard' : '/', { replace: true })
+    navigate('/', { replace: true })
   }
 
   return (
@@ -160,13 +164,10 @@ export default function VerifyEmailPage({ currentUser, onRefreshUser }) {
             <p className="text-sm text-[#c65d4a]">{message}</p>
             <div className="pt-4 space-y-2">
               <Button variant="primary" className="w-full" onClick={() => navigate('/check-email')}>
-                Resend verification email
+                Request new verification email
               </Button>
               <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>
                 Go to Login
-              </Button>
-              <Button variant="secondary" className="w-full" onClick={goHome}>
-                Go to Home
               </Button>
             </div>
           </div>

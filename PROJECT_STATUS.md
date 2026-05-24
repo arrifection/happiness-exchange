@@ -34,7 +34,8 @@
 
 ## 5. Systems Fully Implemented
 * **Authentication:** Registration, Login, JWT generation, and basic RBAC. Works fully.
-* **Email verification:** Resend API in production; local dev prints verification link to server terminal when `RESEND_API_KEY` is unset. Works fully.
+* **Email verification:** Resend API in production; local dev prints verification link to server terminal when `RESEND_API_KEY` is unset. Link-based verification with 24h token expiry and 10-minute resend cooldown. Works fully.
+* **Future enhancement:** OTP/code-based email verification (6-digit code entry) is a possible future UX improvement — not implemented yet; current flow uses email link/button verification only.
 * **Item listing flow:** Users can create, view, and manage items with Cloudinary image uploads. Works fully.
 * **Requests system:** Users can request items, owners can approve/reject. Works fully.
 * **Chat system:** Upgraded to a modern marketplace messaging experience with typing indicators, online status, image URLs, and unread counters. Works fully.
