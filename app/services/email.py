@@ -86,17 +86,19 @@ def _friendly_resend_error(status_code: int, body: str, from_address: str) -> st
     body_lower = (body or "").lower()
     domain = parse_from_domain(from_address)
 
+    if status_code == 401 or (status_code == 403 and ("api key" in body_lower or "invalid" in body_lower or "unauthorized" in body_lower)):
+        return (
+            "Resend rejected the API key (401). "
+            "In Hugging Face Secrets, set RESEND_API_KEY to a valid re_... key from "
+            "https://resend.com/api-keys — no quotes, no extra spaces, copy the full key."
+        )
+
     if status_code == 403:
         if "domain" in body_lower or "not verified" in body_lower or "from" in body_lower:
             return (
                 f"Resend rejected the sender address ({from_address}). "
                 f"Use your verified domain: Happiness Exchange <verify@{VERIFIED_SENDER_DOMAIN}>. "
                 f"Current domain: {domain or 'unknown'}."
-            )
-        if "api key" in body_lower or "invalid" in body_lower or "unauthorized" in body_lower:
-            return (
-                "Resend rejected the API key (403). "
-                "Check RESEND_API_KEY in Hugging Face Secrets — no quotes, no extra spaces, full re_... key."
             )
         return (
             f"Resend returned 403 Forbidden. Sender: {from_address}. "

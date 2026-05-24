@@ -194,13 +194,17 @@ async def get_messages_collection_async():
 
 
 async def get_notifications_collection_async() -> AsyncIOMotorCollection | None:
-    db = await get_db_async()
-    return db[NOTIFICATIONS_COLLECTION] if db is not None else None
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.notifications
 
 
 async def get_trust_events_collection_async() -> AsyncIOMotorCollection | None:
-    db = await get_db_async()
-    return db[TRUST_EVENTS_COLLECTION] if db is not None else None
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.trust_events
 
 
 async def get_deliveries_collection_async():
