@@ -3,7 +3,7 @@ import logging
 import os
 from contextlib import suppress
 
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 
 from app.core.config import settings
 
@@ -56,6 +56,24 @@ async def _ensure_indexes(database) -> None:
     await database.messages.create_index("conversation_id")
     await database.messages.create_index("created_at")
     await database.messages.create_index([("conversation_id", 1), ("created_at", 1)])
+    # Notifications indexes
+    await database.notifications.create_index("user_id")
+    await database.notifications.create_index("created_at")
+    await database.notifications.create_index("read")
+    await database.notifications.create_index([("user_id", 1), ("created_at", -1)])
+    # Deliveries indexes
+    await database.deliveries.create_index("request_id", unique=True)
+    await database.deliveries.create_index("giver_id")
+    await database.deliveries.create_index("receiver_id")
+    await database.deliveries.create_index("status")
+    await database.deliveries.create_index("created_at")
+    # Trust Events indexes
+    await database.trust_events.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await database.trust_events.create_index(
+        [("user_id", ASCENDING), ("event_type", ASCENDING), ("reference_id", ASCENDING)],
+        unique=True,
+        partialFilterExpression={"reference_id": {"$exists": True, "$ne": None}},
+    )
     _indexes_ready = True
 
 
@@ -175,6 +193,23 @@ async def get_messages_collection_async():
     return database.messages
 
 
+async def get_notifications_collection_async() -> AsyncIOMotorCollection | None:
+    db = await get_db_async()
+    return db[NOTIFICATIONS_COLLECTION] if db is not None else None
+
+
+async def get_trust_events_collection_async() -> AsyncIOMotorCollection | None:
+    db = await get_db_async()
+    return db[TRUST_EVENTS_COLLECTION] if db is not None else None
+
+
+async def get_deliveries_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.deliveries
+
+
 async def close_mongo_connection() -> None:
     """Called once at application shutdown."""
     global client, db, _indexes_ready
@@ -223,6 +258,22 @@ def get_reviews_collection():
     if database is None:
         return None
     return database.reviews
+
+
+def get_notifications_collection():
+    """Return the MongoDB collection used for user notifications."""
+    database = get_db()
+    if database is None:
+        return None
+    return database.notifications
+
+
+def get_deliveries_collection():
+    """Return the MongoDB collection used for deliveries."""
+    database = get_db()
+    if database is None:
+        return None
+    return database.deliveries
 
 
 def get_last_connection_error() -> str | None:

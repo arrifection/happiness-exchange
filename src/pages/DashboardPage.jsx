@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
+import { ArrangeDeliveryModal, AddDeliveryAddressModal } from '../components/delivery/DeliveryModals.jsx'
 
 function StatCard({ label, value, onClick, highlight, to }) {
   const navigate = useNavigate()
@@ -72,7 +74,13 @@ export default function DashboardPage({
   loadingRequests,
   requestsMessage,
   requestsError,
+  myDeliveries,
+  loadRequestData,
+  token
 }) {
+  const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
+  const [addAddressDelivery, setAddAddressDelivery] = useState(null)
+
   const itemsSharedCount = myItems?.length || 0
   const itemsRequestedCount = myRequests?.length || 0
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
@@ -104,9 +112,7 @@ export default function DashboardPage({
             Give, receive, and connect — anonymously and with trust at the heart of every exchange.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ReputationBadge label={myReputation?.current_badge} />
-            {trustPoints >= 300 && <PlaceholderBadge label="Top Donor of the Week" />}
-            {trustPoints >= 600 && <PlaceholderBadge label="Top Donor of the Month" />}
+            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
           </div>
           <div className="mt-3">
             <RatingStars
@@ -159,6 +165,30 @@ export default function DashboardPage({
         </div>
       ) : null}
 
+      {arrangeDeliveryRequest && (
+        <ArrangeDeliveryModal
+          request={arrangeDeliveryRequest}
+          token={token}
+          onComplete={(newDelivery) => {
+            setArrangeDeliveryRequest(null)
+            loadRequestData()
+          }}
+          onCancel={() => setArrangeDeliveryRequest(null)}
+        />
+      )}
+
+      {addAddressDelivery && (
+        <AddDeliveryAddressModal
+          delivery={addAddressDelivery}
+          token={token}
+          onComplete={(updatedDelivery) => {
+            setAddAddressDelivery(null)
+            loadRequestData()
+          }}
+          onCancel={() => setAddAddressDelivery(null)}
+        />
+      )}
+
       <div className="flex flex-col gap-6 md:gap-8 lg:flex-row">
         {/* My Requests */}
         <div className="flex-1 space-y-4 md:space-y-5">
@@ -179,6 +209,31 @@ export default function DashboardPage({
                 return (
                   <RequestCard key={request.id} request={request}>
                     <div className="mt-2.5 flex flex-col gap-1.5 border-t border-[#fcfbf9] pt-2">
+                      {request.status === 'approved' && (() => {
+                        const delivery = myDeliveries?.find(d => d.request_id === request.id)
+                        if (delivery) {
+                          if (delivery.status === 'awaiting_dropoff_address' && delivery.receiver_id === currentUser.id) {
+                            return (
+                              <Button
+                                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
+                                onClick={() => setAddAddressDelivery(delivery)}
+                              >
+                                📍 Add Delivery Address
+                              </Button>
+                            )
+                          }
+                          return (
+                            <Button
+                              as="link"
+                              to={`/deliveries/${delivery.id}`}
+                              className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
+                            >
+                              🚚 Track Delivery
+                            </Button>
+                          )
+                        }
+                        return null
+                      })()}
                       {request.status === 'approved' && convId && (
                         <Button
                           as="link"
@@ -230,6 +285,32 @@ export default function DashboardPage({
                         <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
                       </div>
                     ) : null}
+                    {request.status === 'approved' && (() => {
+                      const delivery = myDeliveries?.find(d => d.request_id === request.id)
+                      if (!delivery) {
+                        return (
+                          <div className="mt-1.5 flex gap-1.5">
+                            <Button
+                              className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
+                              onClick={() => setArrangeDeliveryRequest(request)}
+                            >
+                              📦 Arrange Delivery
+                            </Button>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="mt-1.5 flex gap-1.5">
+                          <Button
+                            as="link"
+                            to={`/deliveries/${delivery.id}`}
+                            className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
+                          >
+                            🚚 Track Delivery
+                          </Button>
+                        </div>
+                      )
+                    })()}
                     {request.status === 'approved' && convId && (
                       <div className="mt-1.5 flex gap-1.5">
                         <Button

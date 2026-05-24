@@ -61,6 +61,7 @@ export default function GiveItemPage({
         itemError={itemError}
         imageUploadMessage={imageUploadMessage}
         imageUploadError={imageUploadError}
+        disabled={!currentUser?.is_verified}
       />
     </Surface>
   )

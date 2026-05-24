@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { Button, EmptyState, StatusBadge, Surface } from '../components/ui.jsx'
+import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
 const FILTERS = ['all', 'pending', 'approved', 'rejected']
 
@@ -20,7 +21,7 @@ function formatRequestDate(value) {
   }).format(parsedDate)
 }
 
-function RequestCard({ request, item, onRequestAction, children }) {
+function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelivery, children }) {
   return (
     <article className="group flex overflow-hidden rounded-card border border-[#efe8da] bg-white transition-all duration-300 hover:shadow-xs">
       <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26">
@@ -59,6 +60,25 @@ function RequestCard({ request, item, onRequestAction, children }) {
             <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
             <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
           </div>
+        ) : request.status === 'approved' ? (
+          <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">
+            {!delivery ? (
+              <Button
+                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
+                onClick={() => onArrangeDelivery(request)}
+              >
+                📦 Arrange Delivery
+              </Button>
+            ) : (
+              <Button
+                as="link"
+                to={`/deliveries/${delivery.id}`}
+                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
+              >
+                🚚 Track Delivery
+              </Button>
+            )}
+          </div>
         ) : null}
 
         {children}
@@ -77,8 +97,12 @@ export default function RequestsPage({
   requestsMessage,
   requestsError,
   onRequestAction,
+  myDeliveries,
+  loadRequestData,
+  token
 }) {
   const [activeFilter, setActiveFilter] = useState('all')
+  const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
 
   const itemLookup = useMemo(
     () => Object.fromEntries(myItems.map((item) => [item.id, item])),
@@ -142,6 +166,18 @@ export default function RequestsPage({
         </div>
       ) : null}
 
+      {arrangeDeliveryRequest && (
+        <ArrangeDeliveryModal
+          request={arrangeDeliveryRequest}
+          token={token}
+          onComplete={() => {
+            setArrangeDeliveryRequest(null)
+            loadRequestData()
+          }}
+          onCancel={() => setArrangeDeliveryRequest(null)}
+        />
+      )}
+
       <div className="space-y-3 pt-1 md:pt-4">
         {!loadingRequests && visibleRequests.length === 0 ? (
           <div className="flex w-full justify-center md:px-8">
@@ -167,7 +203,9 @@ export default function RequestsPage({
                   key={request.id}
                   request={request}
                   item={itemLookup[request.item_id]}
+                  delivery={myDeliveries?.find(d => d.request_id === request.id)}
                   onRequestAction={onRequestAction}
+                  onArrangeDelivery={setArrangeDeliveryRequest}
                 >
                   {reviewContext ? (
                     <div className="mt-2 flex gap-1.5 border-t border-[#fcfbf9] pt-2">

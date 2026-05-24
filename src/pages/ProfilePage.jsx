@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
-import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { RatingStars } from '../components/reputation.jsx'
+import TrustBadge from '../components/TrustBadge.jsx'
+import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
 
 function formatProfileDate(value) {
@@ -101,7 +103,9 @@ export default function ProfilePage({
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
   const reviewCount = myReputation?.review_count || 0
   const averageRating = myReputation?.average_rating || 0
-  const trustPoints = completedSharedCount * 10 + completedExchangesCount * 50
+  const trustScore = myReputation?.trust_score || 0
+  const level = myReputation?.level || 'New Member'
+  const nextLevelPts = myReputation?.next_level_points
 
   return (
     <div className="space-y-4 md:mx-auto md:max-w-4xl md:space-y-6">
@@ -119,18 +123,24 @@ export default function ProfilePage({
           </h1>
           <p className="mt-0.5 text-[11px] text-[#68766d] md:text-xs">{currentUser.email}</p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-            <ReputationBadge label={myReputation?.current_badge} />
-            <PlaceholderBadge label="Top Donor of the Week" />
-            <PlaceholderBadge label="Top Donor of the Month" />
+            <TrustBadge level={level} trustScore={trustScore} />
+            {myReputation?.badges?.map(b => (
+               <div key={b} className="inline-flex items-center gap-1.5 rounded-full border border-[#efe8da] bg-[#faf7f1] px-2 py-0.5 text-[10px] font-bold text-[#8c755f]">
+                 🏅 {b}
+               </div>
+            ))}
           </div>
           <div className="mt-3 flex justify-center sm:justify-start">
             <RatingStars rating={averageRating} reviewCount={reviewCount} />
           </div>
         </div>
 
-        <div className="flex min-w-[100px] shrink-0 flex-col items-center justify-center rounded-xl border border-[#efe8da]/40 bg-white/60 p-3 sm:items-end">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/80">Trust Points</p>
-          <p className="mt-0.5 text-lg font-bold text-[#8b4cf6] md:text-xl">{trustPoints}</p>
+        <div className="flex min-w-[140px] max-w-[200px] shrink-0 flex-col justify-center rounded-xl border border-[#efe8da]/40 bg-white/60 p-3">
+          <div className="flex items-end gap-2 justify-between">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/80">Trust Points</p>
+            <p className="text-lg font-bold text-[#8b4cf6] md:text-xl">{trustScore}</p>
+          </div>
+          <LevelProgressBar currentLevel={level} trustScore={trustScore} nextLevelPts={nextLevelPts} className="mt-2" />
         </div>
       </div>
 

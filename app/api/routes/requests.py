@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_user, get_verified_user
 from app.db.mongodb import (
     get_conversations_collection_async,
     get_items_collection_async,
@@ -13,6 +13,7 @@ from app.db.mongodb import (
 from app.schemas.requests import RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
+from app.services.notifications import create_notification
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ router = APIRouter()
 @router.post("/requests/{item_id}", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_request(
     item_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Create an interest request for an item."""
     items_collection = await get_items_collection_async()
@@ -69,6 +70,19 @@ async def create_request(
         )
 
     created_request = await requests_collection.find_one({"_id": result.inserted_id})
+    
+    # Notify item owner
+    import asyncio
+    asyncio.create_task(
+        create_notification(
+            user_id=item["owner_id"],
+            title="New Request Received",
+            message=f"{current_user.get('name')} requested your item '{item.get('title')}'.",
+            type_="request_received",
+            action_url=f"/requests/incoming"
+        )
+    )
+    
     return serialize_request(created_request)
 
 
@@ -145,10 +159,11 @@ async def list_item_requests(
     return [serialize_request(request) for request in requests]
 
 
-@router.patch("/requests/{request_id}/approve", response_model=RequestResponse)
-async def approve_request(
+@router.patch("/requests/{request_id}/{action}", response_model=RequestResponse)
+async def update_request_status(
     request_id: str,
-    current_user: dict = Depends(get_current_user),
+    action: str,
+    current_user: dict = Depends(get_verified_user),
 ):
     """Approve a request and reserve the related item."""
     items_collection = await get_items_collection_async()
@@ -260,6 +275,18 @@ async def approve_request(
             }
             await conversations_collection.insert_one(conv_doc)
 
+    # Notify requester
+    import asyncio
+    asyncio.create_task(
+        create_notification(
+            user_id=request["requester_id"],
+            title="Request Approved!",
+            message=f"Your request for '{item.get('title')}' was approved. Check your messages to coordinate pickup.",
+            type_="request_approved",
+            action_url=f"/messages"
+        )
+    )
+
     updated_request = await requests_collection.find_one({"_id": request_object_id})
     return serialize_request(updated_request)
 
@@ -267,7 +294,7 @@ async def approve_request(
 @router.patch("/requests/{request_id}/reject", response_model=RequestResponse)
 async def reject_request(
     request_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Reject a pending request."""
     requests_collection = await get_requests_collection_async()
@@ -307,5 +334,18 @@ async def reject_request(
         {"_id": request_object_id},
         {"$set": {"status": "rejected"}},
     )
+    
+    # Notify requester
+    import asyncio
+    asyncio.create_task(
+        create_notification(
+            user_id=request["requester_id"],
+            title="Request Declined",
+            message=f"Your request was declined by the owner.",
+            type_="request_rejected",
+            action_url=f"/requests/my"
+        )
+    )
+    
     updated_request = await requests_collection.find_one({"_id": request_object_id})
     return serialize_request(updated_request)

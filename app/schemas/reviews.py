@@ -23,12 +23,23 @@ class ReviewResponse(BaseModel):
     created_at: datetime
 
 
+class TrustEvent(BaseModel):
+    event_type: str
+    points_change: int
+    description: str
+    created_at: datetime
+
+
 class ReputationResponse(BaseModel):
     user_id: str
-    current_badge: str
+    trust_score: int
+    level: str
+    next_level_points: int | None
+    badges: list[str]
     completed_shared_count: int
     completed_received_count: int
     completed_exchange_count: int
     average_rating: float
     review_count: int
     submitted_review_item_ids: list[str]
+    trust_events: list[TrustEvent]

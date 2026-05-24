@@ -46,3 +46,15 @@ async def get_current_user(
         )
 
     return serialize_user(user)
+
+
+async def get_verified_user(
+    current_user: dict = Depends(get_current_user),
+):
+    """Ensure the resolved user has verified their email."""
+    if not current_user.get("is_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must verify your email to perform this action.",
+        )
+    return current_user

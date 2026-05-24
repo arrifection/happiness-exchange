@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo import DESCENDING
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_user, get_verified_user
 from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
@@ -13,6 +13,8 @@ from app.schemas.reviews import ReputationResponse, ReviewCreateRequest, ReviewR
 from app.services.auth import parse_object_id
 from app.services.reputation import calculate_reputation_summary
 from app.services.reviews import build_review_document, serialize_review
+from app.services.notifications import create_notification, notify_moderators
+from app.services.trust import award_positive_review
 
 router = APIRouter()
 
@@ -20,7 +22,7 @@ router = APIRouter()
 @router.post("/reviews", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
 async def create_review(
     payload: ReviewCreateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Create a review for the other participant in a completed exchange."""
     items_collection = await get_items_collection_async()
@@ -115,6 +117,39 @@ async def create_review(
     )
     result = await reviews_collection.insert_one(review_document)
     created_review = await reviews_collection.find_one({"_id": result.inserted_id})
+    
+    # Award trust points to the reviewed user
+    if payload.rating >= 4:
+        await award_positive_review(
+            user_id=payload.reviewed_user_id,
+            review_id=str(result.inserted_id),
+            rating=payload.rating
+        )
+
+    import asyncio
+    
+    # Notify reviewed user
+    asyncio.create_task(
+        create_notification(
+            user_id=payload.reviewed_user_id,
+            title="New Review Received",
+            message=f"{current_user.get('name')} left you a {payload.rating}-star review.",
+            type_="review_received",
+            action_url=f"/profile"
+        )
+    )
+
+    # If low rating, notify moderators
+    if payload.rating <= 2:
+        asyncio.create_task(
+            notify_moderators(
+                title="Low Rating Review Alert",
+                message=f"A {payload.rating}-star review was posted.",
+                type_="low_rating_review",
+                action_url=f"/reviews/{str(result.inserted_id)}"
+            )
+        )
+
     return serialize_review(created_review)
 
 

@@ -126,7 +126,13 @@ export default function ItemCard({
         <Button
           variant="secondary"
           className="h-7 min-h-0 border-[#8b4cf6]/20 px-2.5 text-[9px] text-[#8b4cf6] hover:bg-[#f5efff]"
-          onClick={() => onOpenReview(reviewContext)}
+          onClick={() => {
+            if (!currentUser.is_verified) {
+              alert("Please verify your email to leave a review.")
+              return
+            }
+            onOpenReview(reviewContext)
+          }}
         >
           Leave Review
         </Button>
@@ -147,7 +153,17 @@ export default function ItemCard({
     }
 
     return (
-      <Button variant="primary" className="h-7 min-h-0 px-2.5 text-[9px]" onClick={() => onCreateRequest(item.id)}>
+      <Button 
+        variant="primary" 
+        className="h-7 min-h-0 px-2.5 text-[9px]" 
+        onClick={() => {
+          if (!currentUser.is_verified) {
+            alert("Please verify your email to request an item.")
+            return
+          }
+          onCreateRequest(item.id)
+        }}
+      >
         Interested
       </Button>
     )

@@ -40,14 +40,6 @@ export function ReputationBadge({ label, compact = false }) {
   )
 }
 
-export function PlaceholderBadge({ label }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-dashed border-[#efe8da] bg-[#faf7f1] px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">
-      {label}
-    </span>
-  )
-}
-
 export function RatingStars({ rating = 0, reviewCount = 0, showValue = true }) {
   const filledStars = Math.round(rating)
 

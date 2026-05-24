@@ -133,6 +133,7 @@ export default function ItemForm({
   itemError,
   imageUploadMessage,
   imageUploadError,
+  disabled,
 }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [imageAvailable, setImageAvailable] = useState(false)
@@ -341,9 +342,14 @@ export default function ItemForm({
         </div>
 
         <div className="pt-2">
+          {disabled && (
+             <div className="mb-4 text-center text-[12px] font-bold text-[#c65d4a] bg-[#fff3f0] p-2 rounded">
+               Please verify your email to publish items.
+             </div>
+          )}
           <Button
             type="submit"
-            disabled={creatingItem || uploadingItemImage || hasValidationErrors || !itemForm.image_url?.trim()}
+            disabled={disabled || creatingItem || uploadingItemImage || hasValidationErrors || !itemForm.image_url?.trim()}
             className="h-10 w-full text-xs shadow-xs md:text-[13px] md:h-11"
           >
             {uploadingItemImage ? 'Uploading Image...' : creatingItem ? 'Publishing Listing...' : 'Publish to Community'}

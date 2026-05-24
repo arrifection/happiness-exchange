@@ -1,67 +1,12 @@
 import { Link } from 'react-router-dom'
 
-const BADGE_LEVELS = [
-  {
-    id: 'new_member',
-    label: 'New Member',
-    icon: '🌱',
-    desc: 'Welcome to the community!',
-    minPoints: 0,
-    color: '#68766d',
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
-  },
-  {
-    id: 'kind_sharer',
-    label: 'Kind Sharer',
-    icon: '🤝',
-    desc: "You've shared your first items.",
-    minPoints: 10,
-    color: '#0369a1',
-    bg: '#e0f2fe',
-    border: '#7dd3fc',
-  },
-  {
-    id: 'trusted_member',
-    label: 'Trusted Member',
-    icon: '⭐',
-    desc: 'The community trusts you.',
-    minPoints: 60,
-    color: '#8b4cf6',
-    bg: '#efe7ff',
-    border: '#c084fc',
-  },
-  {
-    id: 'community_hero',
-    label: 'Community Hero',
-    icon: '🏆',
-    desc: 'An outstanding contributor.',
-    minPoints: 150,
-    color: '#c65d4a',
-    bg: '#fef2f2',
-    border: '#fca5a5',
-  },
-  {
-    id: 'top_donor_week',
-    label: 'Top Donor of the Week',
-    icon: '🔥',
-    desc: 'Most active sharer this week.',
-    minPoints: 300,
-    color: '#d97706',
-    bg: '#fffbeb',
-    border: '#fcd34d',
-  },
-  {
-    id: 'top_donor_month',
-    label: 'Top Donor of the Month',
-    icon: '👑',
-    desc: 'Community legend of the month.',
-    minPoints: 600,
-    color: '#7c3aed',
-    bg: '#f5f3ff',
-    border: '#8b4cf6',
-  },
-]
+const LEVEL_DATA = {
+  'New Member': { icon: '🌱', desc: 'Welcome to the community!', color: '#68766d', bg: '#f0fdf4', border: '#bbf7d0' },
+  'Trusted Sharer': { icon: '🤝', desc: "You've proven your kindness.", color: '#0369a1', bg: '#e0f2fe', border: '#7dd3fc' },
+  'Community Helper': { icon: '⭐', desc: 'The community loves you.', color: '#8b4cf6', bg: '#efe7ff', border: '#c084fc' },
+  'Kindness Champion': { icon: '🏆', desc: 'An outstanding contributor.', color: '#c65d4a', bg: '#fef2f2', border: '#fca5a5' },
+  'Elite Donor': { icon: '👑', desc: 'Community legend.', color: '#7c3aed', bg: '#f5f3ff', border: '#8b4cf6' },
+}
 
 function StarRating({ rating, size = 'md' }) {
   const stars = [1, 2, 3, 4, 5]
@@ -148,24 +93,16 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
   const sharedCount = myReputation?.completed_shared_count || 0
   const avgRating = myReputation?.average_rating || 0
   const reviewCount = myReputation?.review_count || 0
-  const trustPoints = sharedCount * 10 + completedCount * 50
-  const currentBadge = myReputation?.current_badge || 'New Member'
+  
+  const trustScore = myReputation?.trust_score || 0
+  const currentLevel = myReputation?.level || 'New Member'
+  const nextLevelPts = myReputation?.next_level_points
+  const badges = myReputation?.badges || []
+  const trustEvents = myReputation?.trust_events || []
+  
+  const levelData = LEVEL_DATA[currentLevel] || LEVEL_DATA['New Member']
 
-  // Progress to next badge
-  const currentLevel = BADGE_LEVELS.findIndex(
-    (b) => b.label.toLowerCase() === currentBadge.toLowerCase()
-  )
-  const currentLevelData = BADGE_LEVELS[Math.max(currentLevel, 0)]
-  const nextLevelData = BADGE_LEVELS[Math.min(currentLevel + 1, BADGE_LEVELS.length - 1)]
-  const progressPct =
-    currentLevelData && nextLevelData && currentLevelData.minPoints < nextLevelData.minPoints
-      ? Math.min(
-          100,
-          ((trustPoints - currentLevelData.minPoints) /
-            (nextLevelData.minPoints - currentLevelData.minPoints)) *
-            100
-        )
-      : 100
+  const progressPct = nextLevelPts ? Math.min(100, Math.max(0, (trustScore / nextLevelPts) * 100)) : 100
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-10">
@@ -198,23 +135,23 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Trust Points</p>
               <p className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-5xl font-bold text-[#ffcc22] drop-shadow-[0_0_20px_rgba(255,204,34,0.5)]">
-                {trustPoints}
+                {trustScore}
               </p>
             </div>
             <div className="mb-2">
               <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
-                <span className="text-2xl">{currentLevelData?.icon}</span>
-                <span className="text-[12px] font-bold">{currentBadge}</span>
+                <span className="text-2xl">{levelData.icon}</span>
+                <span className="text-[12px] font-bold">{currentLevel}</span>
               </div>
             </div>
           </div>
 
           {/* Progress to next badge */}
-          {currentLevel < BADGE_LEVELS.length - 1 && (
+          {nextLevelPts ? (
             <div className="mt-5">
               <div className="flex justify-between text-[10px] font-bold text-white/70">
-                <span>{currentBadge}</span>
-                <span>{nextLevelData?.label}</span>
+                <span>{currentLevel}</span>
+                <span>Next Level: {nextLevelPts} pts</span>
               </div>
               <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/20">
                 <div
@@ -223,13 +160,11 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
                 />
               </div>
               <p className="mt-1 text-right text-[9px] text-white/50">
-                {trustPoints} / {nextLevelData?.minPoints} pts to next badge
+                {nextLevelPts - trustScore} pts to next level
               </p>
             </div>
-          )}
-
-          {currentLevel === BADGE_LEVELS.length - 1 && (
-            <p className="mt-4 text-[11px] font-bold text-[#ffcc22]">🏆 You've reached the highest badge!</p>
+          ) : (
+            <p className="mt-4 text-[11px] font-bold text-[#ffcc22]">🏆 You've reached the highest level!</p>
           )}
         </div>
       </section>
@@ -271,22 +206,47 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
         </section>
       )}
 
-      {/* Badge Progression */}
+      {/* Trust Event History */}
       <section>
-        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Badge Progression</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {BADGE_LEVELS.map((badge) => {
-            const unlocked = trustPoints >= badge.minPoints
-            const isCurrent = badge.label.toLowerCase() === currentBadge.toLowerCase()
-            return (
-              <BadgeCard
-                key={badge.id}
-                badge={badge}
-                unlocked={unlocked}
-                isCurrent={isCurrent}
-              />
-            )
-          })}
+        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Trust History</h2>
+        {trustEvents.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#efe8da] bg-[#faf7f1] p-6 text-center">
+            <p className="text-[12px] font-bold text-[#1f1f1f]">No events yet</p>
+            <p className="mt-1 text-[11px] text-[#68766d]">Complete actions to earn trust points.</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-[#efe8da] bg-white overflow-hidden shadow-sm">
+            <ul className="divide-y divide-[#efe8da]">
+              {trustEvents.map((evt, idx) => (
+                <li key={idx} className="flex items-center justify-between p-4 hover:bg-[#fcfbf9]">
+                  <div>
+                    <p className="text-[12px] font-bold text-[#1f1f1f] capitalize">{evt.event_type.replace('_', ' ')}</p>
+                    <p className="text-[10px] text-[#68766d]">{evt.description}</p>
+                    <p className="text-[9px] text-[#8c755f]/60 mt-1">{new Date(evt.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className={`font-bold ${evt.points_change > 0 ? 'text-[#8b4cf6]' : 'text-red-500'}`}>
+                    {evt.points_change > 0 ? '+' : ''}{evt.points_change}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* Badges Earned */}
+      <section>
+        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Badges Earned</h2>
+        <div className="flex flex-wrap gap-2">
+          {badges.length === 0 ? (
+            <p className="text-[11px] text-[#68766d] italic">No badges earned yet.</p>
+          ) : (
+            badges.map(b => (
+              <div key={b} className="rounded-full bg-[#fcfbf9] border border-[#efe8da] px-4 py-1.5 text-[11px] font-bold text-[#1f3328] flex items-center gap-2">
+                <span>🏅</span> {b}
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -320,44 +280,7 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
         )}
       </section>
 
-      {/* Community Milestones */}
-      <section className="rounded-2xl border border-[#efe8da] bg-gradient-to-br from-[#fffdf7] to-[#fff9e6] p-6">
-        <h2 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Community Milestones</h2>
-        <div className="space-y-3">
-          {[
-            { label: 'First item shared', done: sharedCount >= 1, icon: '🎁' },
-            { label: 'First exchange completed', done: completedCount >= 1, icon: '🤝' },
-            { label: 'Reached Kind Sharer', done: trustPoints >= 10, icon: '💚' },
-            { label: 'Reached Trusted Member', done: trustPoints >= 60, icon: '⭐' },
-            { label: '5 items shared', done: sharedCount >= 5, icon: '📦' },
-            { label: '10 completed exchanges', done: completedCount >= 10, icon: '🏅' },
-          ].map((m) => (
-            <div key={m.label} className="flex items-center gap-3">
-              <div
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm transition-all ${
-                  m.done
-                    ? 'bg-[#8b4cf6]/15 shadow-[0_0_8px_rgba(139,76,246,0.3)]'
-                    : 'bg-[#f0f0f0]'
-                }`}
-              >
-                {m.done ? m.icon : '○'}
-              </div>
-              <p
-                className={`text-[12px] font-medium ${
-                  m.done ? 'text-[#1f1f1f]' : 'text-[#8c755f]/50 line-through'
-                }`}
-              >
-                {m.label}
-              </p>
-              {m.done && (
-                <svg className="ml-auto h-4 w-4 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Community Milestones removed in favor of badges/events */}
     </div>
   )
 }

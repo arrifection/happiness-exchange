@@ -16,6 +16,8 @@ class ConversationResponse(BaseModel):
     last_message_at: datetime | None = None
     last_message_text: str | None = None
     unread_count: int = 0
+    is_flagged: bool = False
+    typing_status: dict = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,6 +28,8 @@ class MessageResponse(BaseModel):
     sender_id: str
     sender_name: str
     text: str
+    message_type: str = "text"
+    image_url: str | None = None
     created_at: datetime
     read: bool = False
 
@@ -33,4 +37,6 @@ class MessageResponse(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=2000)
+    text: str | None = Field(default=None, max_length=2000)
+    message_type: str = "text"
+    image_url: str | None = None

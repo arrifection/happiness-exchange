@@ -245,6 +245,7 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
           <textarea
             ref={inputRef}
             value={text}
+            disabled={!currentUser?.is_verified}
             onChange={(e) => {
               setText(e.target.value)
               // Auto-resize
@@ -257,17 +258,17 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
                 handleSend(e)
               }
             }}
-            placeholder="Type a message…"
+            placeholder={currentUser?.is_verified ? "Type a message…" : "Verify your email to chat"}
             rows={1}
-            className="w-full resize-none bg-transparent text-[13px] text-[#1f1f1f] outline-none placeholder-[#8c755f]/50"
+            className="w-full resize-none bg-transparent text-[13px] text-[#1f1f1f] outline-none placeholder-[#8c755f]/50 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ maxHeight: '120px' }}
           />
         </div>
 
         <button
           type="submit"
-          disabled={!text.trim() || sending}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6] text-white shadow transition-all hover:bg-[#7b40e6] active:scale-90 disabled:opacity-40"
+          disabled={!text.trim() || sending || !currentUser?.is_verified}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6] text-white shadow transition-all hover:bg-[#7b40e6] active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {sending ? (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

@@ -44,9 +44,9 @@ async def upload_image_to_cloudinary(
         or not settings.CLOUDINARY_API_KEY
         or not settings.CLOUDINARY_API_SECRET
     ):
-        logger.warning("Cloudinary missing. Using mock upload.")
-        # Return a nice generic placeholder for local testing
-        return "https://images.unsplash.com/photo-1513360371669-4adf3dd7dff8?q=80&w=600&auto=format&fit=crop"
+        raise CloudinaryConfigError(
+            "Cloudinary credentials are not configured. Image uploads are disabled."
+        )
 
     timestamp = int(time())
     upload_params: dict[str, str | int] = {

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
-import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, Surface } from '../components/ui.jsx'
 
 const TAGLINES = [
@@ -97,9 +98,7 @@ export default function AuthenticatedHomePage({
             Welcome back, {displayName}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2 md:justify-center">
-            <ReputationBadge label={myReputation?.current_badge} />
-            <PlaceholderBadge label="Top Donor of the Week" />
-            <PlaceholderBadge label="Top Donor of the Month" />
+            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
           </div>
 
           <div className="relative mt-4 flex h-16 w-full max-w-2xl items-center justify-center md:h-20">

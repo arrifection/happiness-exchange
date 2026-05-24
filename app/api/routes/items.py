@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pymongo import DESCENDING
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.auth import get_current_user, get_verified_user
 from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
@@ -23,6 +23,8 @@ from app.services.cloudinary import (
 )
 from app.services.items import build_item_document, serialize_item
 from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
+from app.services.notifications import notify_moderators, create_notification
+from app.services.trust import award_completed_donation
 
 router = APIRouter()
 
@@ -30,7 +32,7 @@ router = APIRouter()
 @router.post("/items", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
 async def create_item(
     payload: ItemCreateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Create a new item listing for the logged-in user."""
     items_collection = await get_items_collection_async()
@@ -45,6 +47,18 @@ async def create_item(
 
     result = await items_collection.insert_one(item_document)
     created_item = await items_collection.find_one({"_id": result.inserted_id})
+    
+    # Notify moderators of a new item
+    import asyncio
+    asyncio.create_task(
+        notify_moderators(
+            title="New Item Listed",
+            message=f"'{payload.title}' was just listed and needs review.",
+            type_="new_item_listed",
+            action_url=f"/items/{str(result.inserted_id)}"
+        )
+    )
+    
     return serialize_item(created_item)
 
 
@@ -203,7 +217,7 @@ async def get_item(item_id: str):
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item(
     item_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Delete an item listing. Only the owner can delete."""
     items_collection = await get_items_collection_async()
@@ -246,7 +260,7 @@ async def delete_item(
 @router.patch("/items/{item_id}/complete", response_model=ItemResponse)
 async def complete_item(
     item_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_verified_user),
 ):
     """Mark an item as successfully taken/completed. Only the owner can do this."""
     items_collection = await get_items_collection_async()
@@ -276,13 +290,25 @@ async def complete_item(
             detail="You do not have permission to modify this item.",
         )
 
-    await items_collection.update_one(
+    result = await items_collection.update_one(
         {"_id": object_id},
         {"$set": {"status": "completed"}},
     )
 
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Item already completed or not updated")
+
+    # Award trust points for completed donation
+    await award_completed_donation(current_user["id"], item_id)
+
     requests_collection = await get_requests_collection_async()
     if requests_collection is not None:
+        # Find if there's an approved request to notify the requester
+        approved_request = await requests_collection.find_one({
+            "item_id": item_id,
+            "status": "approved"
+        })
+        
         await requests_collection.update_many(
             {
                 "item_id": item_id,
@@ -290,6 +316,18 @@ async def complete_item(
             },
             {"$set": {"status": "rejected"}},
         )
+        
+        if approved_request:
+            import asyncio
+            asyncio.create_task(
+                create_notification(
+                    user_id=approved_request["requester_id"],
+                    title="Item Completed!",
+                    message=f"The item '{item.get('title', 'you requested')}' has been marked as completed.",
+                    type_="item_completed",
+                    action_url=f"/items/{item_id}"
+                )
+            )
 
     updated_item = await items_collection.find_one({"_id": object_id})
     owner_reputation = None

@@ -3,22 +3,26 @@ import { useEffect, useState } from 'react'
 
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
 import AuthenticatedHomePage from './pages/AuthenticatedHomePage.jsx'
-import ChatConversationPage from './pages/ChatConversationPage.jsx'
-import ChatInboxPage from './pages/ChatInboxPage.jsx'
+import ChatLayout from './pages/ChatLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
+import DeliveryTrackingPage from './pages/DeliveryTrackingPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ItemDetailsPage from './pages/ItemDetailsPage.jsx'
 import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
+import LeaderboardPage from './pages/LeaderboardPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import ReputationPage from './pages/ReputationPage.jsx'
 import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
+import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
 import { Button, Surface } from './components/ui.jsx'
+import { NotificationProvider } from './components/NotificationContext.jsx'
+import NotificationBell from './components/NotificationBell.jsx'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -30,6 +34,7 @@ const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
 const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const CONVERSATIONS_ENDPOINT = `${API_BASE}/api/conversations/my`
+const DELIVERIES_ENDPOINT = `${API_BASE}/api/deliveries/my`
 const TOKEN_KEY = 'happiness_exchange_token'
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -114,6 +119,9 @@ export default function App() {
   const [conversations, setConversations] = useState([])
   const [chatUnreadTotal, setChatUnreadTotal] = useState(0)
 
+  // Deliveries state
+  const [myDeliveries, setMyDeliveries] = useState([])
+
   const isRestoringSession = Boolean(token) && !currentUser
   const isLandingHome = !currentUser && location.pathname === '/'
 
@@ -193,13 +201,15 @@ export default function App() {
     if (!currentUser) return
     setLoadingRequests(true); setRequestsError('')
     try {
-      const [myRes, ownerRes] = await Promise.all([
+      const [myRes, ownerRes, delivRes] = await Promise.all([
         fetch(MY_REQUESTS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/requests/incoming`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(DELIVERIES_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
       ])
-      const [myData, ownerData] = await Promise.all([myRes.json(), ownerRes.json()])
+      const [myData, ownerData, delivData] = await Promise.all([myRes.json(), ownerRes.json(), delivRes.json()])
       if (myRes.ok && ownerRes.ok) { setMyRequests(myData); setOwnerRequests(ownerData) }
       else setRequestsError('Failed to sync activity.')
+      if (delivRes.ok) setMyDeliveries(delivData)
     } catch { setRequestsError('Unable to sync activity.') }
     finally { setLoadingRequests(false) }
   }
@@ -253,6 +263,7 @@ export default function App() {
     setProfileReviews([]); setProfileReviewsError('')
     setReviewMessage(''); setReviewModalState(null)
     setConversations([]); setChatUnreadTotal(0)
+    setMyDeliveries([])
   }
 
   function handleAuthSuccess(data) {
@@ -565,10 +576,34 @@ export default function App() {
   ]
 
   return (
-    <div className="flex flex-1 flex-col">
-      <SplashScreen visible={showSplash} />
+    <NotificationProvider token={token}>
+      <div className="flex flex-1 flex-col">
+        <SplashScreen visible={showSplash} />
       {currentUser ? (
         <div className={`flex flex-1 flex-col transition-opacity duration-500 ${showSplash ? 'opacity-0' : 'opacity-100'}`}>
+          {!currentUser.is_verified && (
+            <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap">
+              <span>Verify your email to list, request, chat, and review.</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` }
+                    })
+                    if (res.ok) alert("Verification email sent.")
+                    else alert("Failed to send verification email.")
+                  } catch (e) {
+                    alert("Error: " + e.message)
+                  }
+                }}
+                className="underline hover:text-[#a04738] transition-colors"
+              >
+                Resend verification email
+              </button>
+            </div>
+          )}
           {!isLandingHome ? (
             <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
@@ -605,10 +640,20 @@ export default function App() {
                       )}
                     </NavLink>
                   ))}
+                  <NavLink
+                    to="/leaderboard"
+                    className={({ isActive }) => [
+                      'text-sm font-bold uppercase tracking-widest transition-colors duration-200',
+                      isActive ? 'text-[#8b4cf6]' : 'text-[#1f3328] hover:text-[#8b4cf6]',
+                    ].join(' ')}
+                  >
+                    Top Donors
+                  </NavLink>
                 </nav>
 
-                {/* Profile */}
-                <div className="flex flex-1 items-center justify-end gap-2">
+                {/* Profile and Notifications */}
+                <div className="flex flex-1 items-center justify-end gap-3">
+                  <NotificationBell />
                   <NavLink
                     to="/profile"
                     className={({ isActive }) => [
@@ -639,6 +684,10 @@ export default function App() {
                     myRequests={myRequests} ownerRequests={ownerRequests}
                   />
                 }
+              />
+              <Route
+                path="/verify-email"
+                element={<VerifyEmailPage currentUser={currentUser} onAuthSuccess={handleAuthSuccess} />}
               />
               <Route
                 path="/browse"
@@ -685,6 +734,7 @@ export default function App() {
                   <DashboardPage
                     currentUser={currentUser} items={items} myReputation={myReputation}
                     myItems={myItems} myRequests={myRequests} ownerRequests={ownerRequests}
+                    myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
@@ -702,16 +752,21 @@ export default function App() {
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
                     loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
                     onRequestAction={handleRequestAction}
+                    myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
                   />
                 }
               />
               <Route
                 path="/messages"
-                element={<ChatInboxPage apiBase={API_BASE} token={token} currentUser={currentUser} />}
+                element={<ChatLayout apiBase={API_BASE} token={token} currentUser={currentUser} />}
               />
               <Route
                 path="/messages/:conversationId"
-                element={<ChatConversationPage apiBase={API_BASE} token={token} currentUser={currentUser} />}
+                element={<ChatLayout apiBase={API_BASE} token={token} currentUser={currentUser} />}
+              />
+              <Route
+                path="/deliveries/:deliveryId"
+                element={<DeliveryTrackingPage token={token} currentUser={currentUser} />}
               />
               <Route
                 path="/reputation"
@@ -736,6 +791,7 @@ export default function App() {
                 }
               />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
+              <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
@@ -781,6 +837,7 @@ export default function App() {
               path="/signup"
               element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
             />
+            <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -805,6 +862,7 @@ export default function App() {
         onClose={closeReviewModal}
         onSubmit={handleSubmitReview}
       />
-    </div>
+      </div>
+    </NotificationProvider>
   )
 }

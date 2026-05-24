@@ -1,17 +1,23 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.errors import DuplicateKeyError
 
+from app.core.roles import UserRole
 from app.db.mongodb import get_users_collection_async
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse
 from app.services.auth import (
     create_access_token,
+    generate_verification_token,
     hash_password,
+    hash_verification_token,
     normalize_name,
     serialize_user,
     verify_password,
 )
+from app.services.email import send_verification_email
+from app.services.notifications import notify_admins
+from app.api.deps.auth import get_current_user
 
 router = APIRouter()
 
@@ -37,12 +43,21 @@ async def signup(payload: SignupRequest):
             detail="That username is already taken.",
         )
 
+    raw_token = generate_verification_token()
+    token_hash = hash_verification_token(raw_token)
+    token_expiry = now + timedelta(hours=24)
+
     user_document = {
         "name": " ".join(payload.name.strip().split()),
         "name_normalized": normalized_name,
         "email": normalized_email,
         "hashed_password": hash_password(payload.password),
+        "role": UserRole.USER,          # default role for all public signups
         "account_type": "member",
+        "is_verified": False,
+        "is_banned": False,
+        "email_verification_token_hash": token_hash,
+        "email_verification_expires_at": token_expiry,
         "created_at": now,
         "updated_at": now,
     }
@@ -60,11 +75,25 @@ async def signup(payload: SignupRequest):
         "name": user_document["name"],
         "email": user_document["email"],
         "account_type": user_document["account_type"],
+        "is_verified": False,
         "created_at": user_document["created_at"],
         "updated_at": user_document["updated_at"],
     }
     user_response = serialize_user(created_user)
-    token = create_access_token(user_response["id"], user_response["email"])
+    token = create_access_token(user_response["id"], user_response["email"], user_response["role"])
+
+    send_verification_email(normalized_email, raw_token)
+
+    # Trigger admin notification
+    import asyncio
+    asyncio.create_task(
+        notify_admins(
+            title="New User Signup",
+            message=f"A new user ({payload.name}) has joined the platform.",
+            type_="new_user_signup",
+            action_url=f"/users/{user_response['id']}" # URL intended for admin panel routing
+        )
+    )
 
     return {
         "access_token": token,
@@ -92,10 +121,100 @@ async def login(payload: LoginRequest):
         )
 
     user_response = serialize_user(user)
-    token = create_access_token(user_response["id"], user_response["email"])
+
+    # Block banned accounts from logging in
+    if user_response.get("is_banned"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been suspended.",
+        )
+
+    token = create_access_token(user_response["id"], user_response["email"], user_response["role"])
 
     return {
         "access_token": token,
         "token_type": "bearer",
         "user": user_response,
     }
+
+
+@router.get("/verify-email")
+async def verify_email(token: str):
+    """Verify a user's email using the token sent to them."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    token_hash = hash_verification_token(token)
+    user = await users_collection.find_one({"email_verification_token_hash": token_hash})
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification link.",
+        )
+
+    now = datetime.now(timezone.utc)
+    expires_at = user.get("email_verification_expires_at")
+    
+    if not expires_at or now > expires_at.replace(tzinfo=timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This verification link has expired. Please request a new one.",
+        )
+
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "is_verified": True,
+                "verified_at": now,
+            },
+            "$unset": {
+                "email_verification_token_hash": "",
+                "email_verification_expires_at": "",
+            }
+        }
+    )
+    return {"message": "Email verified successfully."}
+
+
+@router.post("/resend-verification")
+async def resend_verification(current_user: dict = Depends(get_current_user)):
+    """Resend verification email if user is not already verified."""
+    if current_user.get("is_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your email is already verified.",
+        )
+
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    raw_token = generate_verification_token()
+    token_hash = hash_verification_token(raw_token)
+    now = datetime.now(timezone.utc)
+    token_expiry = now + timedelta(hours=24)
+
+    from app.services.auth import parse_object_id
+    user_id = parse_object_id(current_user["id"])
+    
+    await users_collection.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "email_verification_token_hash": token_hash,
+                "email_verification_expires_at": token_expiry,
+            }
+        }
+    )
+
+    send_verification_email(current_user["email"], raw_token)
+    return {"message": "Verification email sent."}

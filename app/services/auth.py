@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -5,6 +7,7 @@ from bson import ObjectId
 from jose import JWTError, jwt
 
 from app.core.config import settings
+from app.core.roles import UserRole
 from app.schemas.auth import TokenPayload
 
 USERNAME_CHANGE_WINDOW_DAYS = 7
@@ -25,13 +28,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     )
 
 
-def create_access_token(user_id: str, email: str) -> str:
-    """Create a signed JWT access token for a user."""
+def generate_verification_token() -> str:
+    """Generate a random 64-character hex string for email verification."""
+    return secrets.token_hex(32)
+
+
+def hash_verification_token(token: str) -> str:
+    """Hash the verification token using SHA-256 for secure DB storage."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_access_token(user_id: str, email: str, role: str = UserRole.USER) -> str:
+    """Create a signed JWT access token for a user, embedding their role."""
     expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     expire = datetime.now(timezone.utc) + expires_delta
     payload = {
         "sub": user_id,
         "email": email,
+        "role": role,
         "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
@@ -68,11 +82,15 @@ def serialize_user(user: dict) -> dict:
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
+        "role": user.get("role", UserRole.USER),
         "account_type": user.get("account_type"),
         "created_at": created_at,
         "updated_at": user.get("updated_at"),
+        "is_verified": user.get("is_verified", False),
+        "is_banned": user.get("is_banned", False),
         "can_change_username": can_change_username,
         "username_change_deadline": username_change_deadline,
+        "blocked_users": user.get("blocked_users", []),
     }
 
 

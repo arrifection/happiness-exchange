@@ -120,3 +120,79 @@ async def update_me(
 
     updated_user = await users_collection.find_one({"_id": user_object_id})
     return serialize_user(updated_user)
+
+
+@router.post("/{user_id}/block", response_model=dict)
+async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Block a user."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+    
+    current_oid = parse_object_id(current_user["id"])
+    target_oid = parse_object_id(user_id)
+    if not current_oid or not target_oid:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    if current_user["id"] == user_id:
+        raise HTTPException(status_code=400, detail="Cannot block yourself")
+        
+    await users_collection.update_one(
+        {"_id": current_oid},
+        {"$addToSet": {"blocked_users": user_id}}
+    )
+    return {"status": "ok"}
+
+
+@router.post("/{user_id}/unblock", response_model=dict)
+async def unblock_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Unblock a user."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+        
+    current_oid = parse_object_id(current_user["id"])
+    if not current_oid:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    await users_collection.update_one(
+        {"_id": current_oid},
+        {"$pull": {"blocked_users": user_id}}
+    )
+    return {"status": "ok"}
+
+
+@router.patch("/me/online", response_model=dict)
+async def update_online_status(current_user: dict = Depends(get_current_user)):
+    """Update last_online_at timestamp for the current user."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+        
+    current_oid = parse_object_id(current_user["id"])
+    if not current_oid:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    await users_collection.update_one(
+        {"_id": current_oid},
+        {"$set": {"last_online_at": datetime.now(timezone.utc)}}
+    )
+    return {"status": "ok"}
+
+
+@router.get("/{user_id}/status", response_model=dict)
+async def get_user_status(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Get the online status (last_online_at) of another user."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="DB unavailable")
+        
+    target_oid = parse_object_id(user_id)
+    if not target_oid:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    user = await users_collection.find_one({"_id": target_oid}, {"last_online_at": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"last_online_at": user.get("last_online_at")}

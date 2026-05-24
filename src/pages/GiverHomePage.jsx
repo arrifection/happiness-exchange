@@ -1,5 +1,6 @@
 import ItemCard from '../components/ItemCard.jsx'
-import { PlaceholderBadge, RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
 
 function RequestPreviewCard({ request, onRequestAction, children }) {
@@ -77,9 +78,7 @@ export default function GiverHomePage({
             Your unused things can become someone else&apos;s blessing. What will you share today?
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ReputationBadge label={myReputation?.current_badge} />
-            <PlaceholderBadge label="Top Donor of the Week" />
-            <PlaceholderBadge label="Top Donor of the Month" />
+            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
           </div>
           <div className="mt-3">
             <RatingStars
