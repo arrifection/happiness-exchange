@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { API_BASE_URL } from './env'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const BASE_URL = API_BASE_URL
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -112,6 +113,20 @@ export const notificationsApi = {
   unreadCount: ()       => api.get('/api/notifications/unread-count'),
   markAsRead:  (id)     => api.patch(`/api/notifications/${id}/read`),
   markAllRead: ()       => api.patch('/api/notifications/read-all'),
+}
+
+// ── Deliveries endpoints (Admin / Courier) ────────────────────────────────────
+export const deliveriesApi = {
+  list: () => api.get('/api/admin/deliveries'),
+  updateStatus: (id, status) =>
+    api.patch(`/api/admin/deliveries/${id}/status`, { status }),
+  uploadProof: (id, file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.patch(`/api/admin/deliveries/${id}/proof`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
 }
 
 // ── Status endpoint ────────────────────────────────────────────────────────────

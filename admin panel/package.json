@@ -4,10 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node_modules\\.bin\\vite.cmd --port 5200",
-    "build": "node_modules\\.bin\\vite.cmd build",
-    "preview": "node_modules\\.bin\\vite.cmd preview --port 5200",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "dev": "vite --port 5200",
+    "build": "vite build",
+    "preview": "vite preview --port 5200"
   },
   "dependencies": {
     "react": "^18.3.1",

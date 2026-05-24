@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { APP_NAME } from '../lib/env'
 import { Shield, Eye, EyeOff, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
@@ -60,7 +61,7 @@ export default function LoginPage() {
               <Shield className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-xl font-bold text-surface-50">Admin Sign In</h1>
-            <p className="text-sm text-surface-500 mt-1">Happiness Exchange Control Panel</p>
+            <p className="text-sm text-surface-500 mt-1">{APP_NAME}</p>
           </div>
 
           {/* Error */}

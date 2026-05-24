@@ -139,3 +139,20 @@ JWT is stored in `localStorage` under `admin_token`.
 |--------------------|--------------------------|----------------------------|
 | `VITE_API_BASE_URL` | `http://localhost:8000`  | FastAPI backend base URL   |
 | `VITE_APP_NAME`     | `Happiness Exchange Admin` | App display name          |
+
+Copy `.env.example` to `.env` for local development.
+
+## Vercel Deployment
+
+| Setting            | Value              |
+|--------------------|--------------------|
+| Root Directory     | `admin panel`      |
+| Framework Preset   | Vite               |
+| Build Command      | `npm run build`    |
+| Output Directory   | `dist`             |
+| Install Command    | `npm install`      |
+
+Required environment variables in Vercel:
+
+- `VITE_API_BASE_URL` — production backend URL (e.g. `https://api.happyexchange.net`)
+- `VITE_APP_NAME` — optional display name (defaults to `Happiness Exchange Admin`)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Truck, Package, MapPin, Phone, Clock, CheckCircle, AlertCircle, RefreshCw, Upload, Image as ImageIcon } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { deliveriesApi } from '../lib/api'
 
 const statusConfig = {
   awaiting_dropoff_address: { badge: 'badge-yellow', icon: Clock,        label: 'Awaiting Address' },
@@ -14,7 +14,6 @@ const statusConfig = {
 }
 
 export default function CourierPage() {
-  const { token, user } = useAuth()
   const [deliveries, setDeliveries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -29,14 +28,10 @@ export default function CourierPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/deliveries`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await res.json()
-      if (res.ok) setDeliveries(data)
-      else setError(data.detail || 'Failed to fetch deliveries')
+      const res = await deliveriesApi.list()
+      setDeliveries(res.data)
     } catch (err) {
-      setError('Connection error')
+      setError(err.response?.data?.detail || 'Failed to fetch deliveries')
     } finally {
       setLoading(false)
     }
@@ -45,22 +40,10 @@ export default function CourierPage() {
   const handleUpdateStatus = async (id, newStatus) => {
     setUpdating(id)
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/deliveries/${id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      })
-      const updated = await res.json()
-      if (res.ok) {
-        setDeliveries((prev) => prev.map((d) => d.id === id ? updated : d))
-      } else {
-        alert(updated.detail || 'Update failed')
-      }
+      const res = await deliveriesApi.updateStatus(id, newStatus)
+      setDeliveries((prev) => prev.map((d) => d.id === id ? res.data : d))
     } catch (err) {
-      alert('Network error')
+      alert(err.response?.data?.detail || 'Update failed')
     } finally {
       setUpdating(null)
     }
@@ -70,22 +53,11 @@ export default function CourierPage() {
     if (!file) return
     setUpdating(id)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/deliveries/${id}/proof`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      })
-      const updated = await res.json()
-      if (res.ok) {
-        setDeliveries((prev) => prev.map((d) => d.id === id ? updated : d))
-        alert('Proof of delivery uploaded.')
-      } else {
-        alert(updated.detail || 'Upload failed')
-      }
+      const res = await deliveriesApi.uploadProof(id, file)
+      setDeliveries((prev) => prev.map((d) => d.id === id ? res.data : d))
+      alert('Proof of delivery uploaded.')
     } catch (err) {
-      alert('Network error')
+      alert(err.response?.data?.detail || 'Upload failed')
     } finally {
       setUpdating(null)
     }

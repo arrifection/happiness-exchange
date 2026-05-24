@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { APP_NAME } from '../lib/env'
 import {
   LayoutDashboard,
   Package,
@@ -81,7 +82,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="text-sm font-bold text-surface-50 leading-none">Happiness Exchange</p>
+            <p className="text-sm font-bold text-surface-50 leading-none">{APP_NAME}</p>
             <p className="text-[10px] text-surface-500 mt-0.5 tracking-widest uppercase">Admin Panel</p>
           </div>
         )}
