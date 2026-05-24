@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     try {
-      const res = await authApi.login({ username: email, password })
+      const res = await authApi.login({ email, password })
       const { access_token, ...userData } = res.data
       const userRole = userData.role || res.data.user?.role
       if (!userRole || !Object.values(ROLES).includes(userRole)) {
