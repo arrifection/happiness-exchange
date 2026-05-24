@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage.jsx'
 import ReputationPage from './pages/ReputationPage.jsx'
 import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
+import CheckYourEmailPage from './pages/CheckYourEmailPage.jsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import { ReviewModal } from './components/reputation.jsx'
@@ -72,6 +73,7 @@ export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
   const [currentUser, setCurrentUser] = useState(null)
   const [authError, setAuthError] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
   const [loadingUser, setLoadingUser] = useState(false)
 
   const [items, setItems] = useState([])
@@ -587,15 +589,24 @@ export default function App() {
               <button
                 type="button"
                 onClick={async () => {
+                  setAuthNotice('')
+                  setAuthError('')
                   try {
                     const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
                       method: 'POST',
-                      headers: { Authorization: `Bearer ${token}` }
+                      headers: { Authorization: `Bearer ${token}` },
                     })
-                    if (res.ok) alert("Verification email sent.")
-                    else alert("Failed to send verification email.")
+                    const data = await res.json().catch(() => ({}))
+                    if (res.ok) {
+                      setAuthNotice('Verification email sent. Check your inbox and spam folder.')
+                      return
+                    }
+                    const detail = typeof data.detail === 'string'
+                      ? data.detail
+                      : 'Failed to send verification email.'
+                    setAuthError(detail)
                   } catch (e) {
-                    alert("Error: " + e.message)
+                    setAuthError(e.message)
                   }
                 }}
                 className="underline hover:text-[#a04738] transition-colors"
@@ -682,6 +693,16 @@ export default function App() {
                     onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
                     loadingItems={loadingItems} itemsError={itemsError}
                     myRequests={myRequests} ownerRequests={ownerRequests}
+                  />
+                }
+              />
+              <Route
+                path="/check-email"
+                element={
+                  <CheckYourEmailPage
+                    apiBase={API_BASE}
+                    token={token}
+                    currentUser={currentUser}
                   />
                 }
               />
@@ -837,6 +858,10 @@ export default function App() {
               path="/signup"
               element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
             />
+            <Route
+              path="/verify-email"
+              element={<VerifyEmailPage currentUser={currentUser} onAuthSuccess={handleAuthSuccess} />}
+            />
             <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -844,11 +869,12 @@ export default function App() {
       )}
 
       {/* Global notification toast */}
-      {(loadingUser || authError || reviewMessage) ? (
+      {(loadingUser || authError || authNotice || reviewMessage) ? (
         <div className="fixed bottom-6 right-6 z-50 w-64">
           <Surface className="border-[#8b4cf6]/10 p-4 shadow-xl ring-1 ring-[#8b4cf6]/5">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">System Notification</h2>
             {loadingUser ? <p className="mt-1 text-xs text-[#68766d]">Verifying profile...</p> : null}
+            {authNotice ? <p className="mt-1 text-xs font-medium text-[#8b4cf6]">{authNotice}</p> : null}
             {authError ? <p className="mt-1 text-xs font-medium text-[#c65d4a]">{authError}</p> : null}
             {reviewMessage ? <p className="mt-1 text-xs font-medium text-[#8b4cf6]">{reviewMessage}</p> : null}
           </Surface>

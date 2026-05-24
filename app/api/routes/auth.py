@@ -15,11 +15,28 @@ from app.services.auth import (
     serialize_user,
     verify_password,
 )
-from app.services.email import send_verification_email
+from app.core.config import settings
+from app.services.email import EmailSendError, get_email_diagnostics, send_verification_email
 from app.services.notifications import notify_admins
 from app.api.deps.auth import get_current_user
 
 router = APIRouter()
+
+
+def _email_diagnostics_allowed() -> bool:
+    """Expose email config check only in dev or when explicitly enabled."""
+    if settings.ENABLE_EMAIL_DIAGNOSTICS:
+        return True
+    base = (settings.APP_BASE_URL or "").lower()
+    return base.startswith("http://localhost") or base.startswith("http://127.0.0.1")
+
+
+@router.get("/email-config-check")
+async def email_config_check():
+    """Safe Resend configuration snapshot — never exposes secrets."""
+    if not _email_diagnostics_allowed():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+    return get_email_diagnostics()
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -82,7 +99,13 @@ async def signup(payload: SignupRequest):
     user_response = serialize_user(created_user)
     token = create_access_token(user_response["id"], user_response["email"], user_response["role"])
 
-    send_verification_email(normalized_email, raw_token)
+    try:
+        send_verification_email(normalized_email, raw_token)
+    except EmailSendError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=exc.message,
+        )
 
     # Trigger admin notification
     import asyncio
@@ -216,5 +239,11 @@ async def resend_verification(current_user: dict = Depends(get_current_user)):
         }
     )
 
-    send_verification_email(current_user["email"], raw_token)
+    try:
+        send_verification_email(current_user["email"], raw_token)
+    except EmailSendError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=exc.message,
+        )
     return {"message": "Verification email sent."}

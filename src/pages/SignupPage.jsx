@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 
@@ -8,6 +8,7 @@ function formatApiError(errorData, fallbackMessage) {
 }
 
 export default function SignupPage({ apiBase, onSuccess, currentUser }) {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -63,6 +64,10 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
       }
 
       onSuccess(data)
+      navigate('/check-email', {
+        replace: true,
+        state: { email: formData.email.trim().toLowerCase() },
+      })
     } catch (submitError) {
       setError(submitError.message)
     } finally {

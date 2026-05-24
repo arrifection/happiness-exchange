@@ -48,8 +48,9 @@ class Settings(BaseSettings):
 
     # Email (Resend)
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "Happiness Exchange <verify@happyexchange.net>"
-    APP_BASE_URL: str = "http://127.0.0.1:5173"
+    EMAIL_FROM: str = "Happiness Exchange <verify@mail.happyexchange.net>"
+    APP_BASE_URL: str = "https://www.happyexchange.net"
+    ENABLE_EMAIL_DIAGNOSTICS: bool = False
 
     # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
     ALLOWED_ORIGINS: List[str] = [
@@ -99,6 +100,7 @@ class Settings(BaseSettings):
         logger.info("RESEND_API_KEY present: %s", bool(self.RESEND_API_KEY))
         logger.info("EMAIL_FROM: %s", self.EMAIL_FROM)
         logger.info("APP_BASE_URL: %s", self.APP_BASE_URL)
+        logger.info("ENABLE_EMAIL_DIAGNOSTICS: %s", self.ENABLE_EMAIL_DIAGNOSTICS)
         logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
 
