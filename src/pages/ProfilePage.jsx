@@ -4,6 +4,8 @@ import { Navigate } from 'react-router-dom'
 import { RatingStars } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
+import { useTheme } from '../components/ThemeContext.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
 
 function formatProfileDate(value) {
@@ -58,6 +60,7 @@ export default function ProfilePage({
   const [name, setName] = useState(currentUser?.name || '')
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const { isDark, toggleTheme } = useTheme()
 
   useEffect(() => {
     setName(currentUser?.name || '')
@@ -278,24 +281,20 @@ export default function ProfilePage({
 
         <div className="space-y-4 md:space-y-6">
           <Surface className="p-5">
-            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] md:text-base">App Preferences</h2>
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-[#1f1f1f] dark:text-[#f3f0ea] md:text-base">App Preferences</h2>
             <div className="mt-4 flex items-center justify-between py-2">
               <div>
-                <p className="text-xs font-bold text-[#1f1f1f]">Dark Theme</p>
-                <p className="mt-0.5 text-[10px] text-[#68766d]">Switch to a darker interface.</p>
+                <p className="text-xs font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">Dark Theme</p>
+                <p className="mt-0.5 text-[10px] text-[#68766d] dark:text-[#a8a29e]">Switch to a darker interface.</p>
               </div>
-              <div className="relative inline-flex h-5 w-9 cursor-not-allowed items-center rounded-full bg-[#efe8da] opacity-50">
-                <span className="inline-block h-3 w-3 translate-x-1 rounded-full bg-white transition" />
-              </div>
+              <ThemeToggle checked={isDark} onChange={() => toggleTheme()} label="Dark theme" />
             </div>
-            <div className="mt-1 flex items-center justify-between border-t border-[#efe8da]/40 py-2">
+            <div className="mt-1 flex items-center justify-between border-t border-[#efe8da]/40 py-2 dark:border-[#2e2e32]/60">
               <div>
-                <p className="text-xs font-bold text-[#1f1f1f]">Email Notifications</p>
-                <p className="mt-0.5 text-[10px] text-[#68766d]">Get alerted on new requests.</p>
+                <p className="text-xs font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">Email Notifications</p>
+                <p className="mt-0.5 text-[10px] text-[#68766d] dark:text-[#a8a29e]">Get alerted on new requests.</p>
               </div>
-              <div className="relative inline-flex h-5 w-9 cursor-not-allowed items-center rounded-full bg-[#8b4cf6] opacity-50">
-                <span className="inline-block h-3 w-3 translate-x-5 rounded-full bg-white transition" />
-              </div>
+              <ThemeToggle checked disabled label="Email notifications (coming soon)" />
             </div>
           </Surface>
 

@@ -18,8 +18,8 @@ export function Button({
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b4cf6]/20',
     'disabled:cursor-not-allowed disabled:opacity-60',
     variant === 'primary' && 'bg-[#8b4cf6] text-white shadow-sm hover:bg-[#7b40e6] hover:shadow-md transition-shadow',
-    variant === 'secondary' && 'border border-[#efe8da] bg-white text-[#1f1f1f] hover:bg-[#fffaf0]',
-    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-[#1f1f1f]',
+    variant === 'secondary' && 'border border-[#efe8da] bg-white text-[#1f1f1f] hover:bg-[#fffaf0] dark:border-[#2e2e32] dark:bg-[#1c1c1f] dark:text-[#f3f0ea] dark:hover:bg-[#252528]',
+    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-[#1f1f1f] dark:text-[#c4b5fd] dark:hover:bg-[#252528] dark:hover:text-[#f3f0ea]',
     variant === 'danger' && 'bg-[#c65d4a] text-white hover:bg-[#ae4e3d]',
     className,
   )
@@ -77,10 +77,10 @@ export function SectionHeading({
             {eyebrow}
           </p>
         ) : null}
-        <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f] sm:text-xl">
+        <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f] dark:text-[#f3f0ea] sm:text-xl">
           {title}
         </h2>
-        {description ? <p className="mt-1 text-xs leading-relaxed text-[#68766d]">{description}</p> : null}
+        {description ? <p className="mt-1 text-xs leading-relaxed text-[#68766d] dark:text-[#a8a29e]">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -89,16 +89,16 @@ export function SectionHeading({
 
 export function EmptyState({ title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-[20px] border border-[#efe8da]/60 bg-gradient-to-b from-[#faf7f1]/50 to-transparent p-6 md:p-8 text-center md:max-w-md md:mx-auto">
+    <div className="flex flex-col items-center justify-center rounded-[20px] border border-[#efe8da]/60 bg-gradient-to-b from-[#faf7f1]/50 to-transparent p-6 md:p-8 text-center md:max-w-md md:mx-auto dark:border-[#2e2e32] dark:from-[#1c1c1f]/50">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#efe7ff]/50 text-[#8b4cf6] shadow-sm">
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       </div>
-      <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold text-[#1f1f1f]">
+      <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">
         {title}
       </h3>
-      <p className="mx-auto mt-1.5 max-w-[280px] text-[13px] leading-relaxed text-[#68766d]">{description}</p>
+      <p className="mx-auto mt-1.5 max-w-[280px] text-[13px] leading-relaxed text-[#68766d] dark:text-[#a8a29e]">{description}</p>
       {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
     </div>
   )
@@ -107,7 +107,7 @@ export function EmptyState({ title, description, action }) {
 export function Surface({ className = '', children, ...props }) {
   return (
     <section className={classes(
-      'rounded-card border border-[#efe8da] bg-white shadow-[0_2px_8px_-2px_rgba(31,51,40,0.04)] transition-shadow duration-300 hover:shadow-[0_4px_12px_-2px_rgba(31,51,40,0.06)]',
+      'rounded-card border border-[#efe8da] bg-white shadow-[0_2px_8px_-2px_rgba(31,51,40,0.04)] transition-shadow duration-300 hover:shadow-[0_4px_12px_-2px_rgba(31,51,40,0.06)] dark:border-[#2e2e32] dark:bg-[#1c1c1f] dark:shadow-none dark:hover:shadow-none',
       className,
     )}
       {...props}
@@ -140,7 +140,7 @@ export function TextField({
         placeholder={placeholder}
         required={required}
         {...props}
-        className="min-h-10 rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+        className="min-h-10 rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10 dark:border-[#2e2e32] dark:bg-[#141416] dark:text-[#f3f0ea] dark:focus:border-[#8b4cf6]"
       />
     </label>
   )
@@ -167,7 +167,7 @@ export function TextAreaField({
         placeholder={placeholder}
         rows={rows}
         required={required}
-        className="rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 py-2.5 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+        className="rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 py-2.5 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10 dark:border-[#2e2e32] dark:bg-[#141416] dark:text-[#f3f0ea] dark:focus:border-[#8b4cf6]"
       />
     </label>
   )
@@ -193,7 +193,7 @@ export function SelectField({
           value={value}
           onChange={onChange}
           required={required}
-          className="h-10 w-full appearance-none rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 pr-10 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+          className="h-10 w-full appearance-none rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 pr-10 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10 dark:border-[#2e2e32] dark:bg-[#141416] dark:text-[#f3f0ea] dark:focus:border-[#8b4cf6]"
         >
           {placeholder && <option value="" disabled>{placeholder}</option>}
           {options.map((opt) => (

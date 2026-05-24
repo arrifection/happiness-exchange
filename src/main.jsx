@@ -4,14 +4,20 @@ import { BrowserRouter } from 'react-router-dom'
 
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { ThemeProvider } from './components/ThemeContext.jsx'
+import { applyTheme, getStoredTheme } from './lib/theme.js'
 import './index.css'
+
+applyTheme(getStoredTheme())
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ErrorBoundary>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ErrorBoundary>
+    </ThemeProvider>
   </React.StrictMode>,
 )

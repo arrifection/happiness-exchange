@@ -644,7 +644,7 @@ export default function App() {
 
   return (
     <NotificationProvider token={token}>
-      <div className="flex min-h-screen flex-1 flex-col bg-[#fffaf0]">
+      <div className="flex min-h-screen flex-1 flex-col bg-[#fffaf0] dark:bg-[#121214]">
         <SplashScreen visible={showSplash} />
 
         <div className="flex flex-1 flex-col">
@@ -704,7 +704,7 @@ export default function App() {
           ) : null}
 
           {showAppChrome ? (
-            <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md">
+            <header className="sticky top-0 z-50 border-b border-[#efe8da] bg-white/80 backdrop-blur-md dark:border-[#2e2e32] dark:bg-[#1c1c1f]/90">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
                 <div className="flex flex-1 items-center justify-start">
@@ -927,7 +927,7 @@ export default function App() {
           </main>
 
           {currentUser && !isMarketingHome ? (
-            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md">
+            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-[#efe8da] bg-white/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md dark:border-[#2e2e32] dark:bg-[#1c1c1f]/90 dark:shadow-[0_-2px_10px_rgba(0,0,0,0.25)]">
               {bottomTabItems.map((item) => (
                 <NavLink
                   key={item.to}

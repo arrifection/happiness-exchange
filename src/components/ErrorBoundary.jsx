@@ -18,10 +18,10 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-[#fffaf0] p-6">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[#fffaf0] p-6 dark:bg-[#121214]">
           <Surface className="w-full max-w-md space-y-4 p-8 text-center">
-            <h1 className="text-xl font-bold text-[#1f1f1f]">Something went wrong</h1>
-            <p className="text-sm text-[#68766d]">
+            <h1 className="text-xl font-bold text-[#1f1f1f] dark:text-[#f3f0ea]">Something went wrong</h1>
+            <p className="text-sm text-[#68766d] dark:text-[#a8a29e]">
               The page could not load. Please refresh or clear your session and try again.
             </p>
             {this.state.errorMessage ? (
