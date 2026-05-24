@@ -46,12 +46,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = ""
     CLOUDINARY_FOLDER: str = "happiness-exchange/items"
 
-    # SMTP / Email Configuration
-    SMTP_HOST: str = "smtp-relay.brevo.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = "verify@happyexchange.net"
+    # Email (Resend)
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Happiness Exchange <verify@happyexchange.net>"
     APP_BASE_URL: str = "http://127.0.0.1:5173"
 
     # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
@@ -99,6 +96,9 @@ class Settings(BaseSettings):
         logger.info("CLOUDINARY_API_KEY present: %s", bool(self.CLOUDINARY_API_KEY))
         logger.info("CLOUDINARY_API_SECRET present: %s", bool(self.CLOUDINARY_API_SECRET))
         logger.info("CLOUDINARY_FOLDER: %s", self.CLOUDINARY_FOLDER)
+        logger.info("RESEND_API_KEY present: %s", bool(self.RESEND_API_KEY))
+        logger.info("EMAIL_FROM: %s", self.EMAIL_FROM)
+        logger.info("APP_BASE_URL: %s", self.APP_BASE_URL)
         logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
 

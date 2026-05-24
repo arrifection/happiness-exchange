@@ -34,7 +34,7 @@
 
 ## 5. Systems Fully Implemented
 * **Authentication:** Registration, Login, JWT generation, and basic RBAC. Works fully.
-* **Email verification architecture:** Implemented with local-development fallback. Production Brevo/SMTP setup not finalized.
+* **Email verification:** Resend API in production; local dev prints verification link to server terminal when `RESEND_API_KEY` is unset. Works fully.
 * **Item listing flow:** Users can create, view, and manage items with Cloudinary image uploads. Works fully.
 * **Requests system:** Users can request items, owners can approve/reject. Works fully.
 * **Chat system:** Upgraded to a modern marketplace messaging experience with typing indicators, online status, image URLs, and unread counters. Works fully.
@@ -51,7 +51,7 @@
 
 ## 6. Systems Partially Implemented / Pending
 * **Courier coordination workflow & Anonymous delivery:** Core architecture and privacy model implemented; real courier operations require testing. Integration with a live logistics 3PL API is pending.
-* **Real Brevo production setup:** API scaffolding exists, but actual SMTP/Brevo calls are mocked/skipped for local dev speed.
+* **Production Resend setup:** Set `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` on the backend host (Hugging Face Spaces secrets).
 * **WebSocket migration:** Pending (currently using MVP HTTP polling).
 * **Advanced moderation:** Basic profanity filtering exists, but AI-driven content safety is pending.
 * **Push notifications:** Web Push API or mobile push is pending.
@@ -86,7 +86,7 @@
 * **Admin seeded account warning:** The `seed_admin.py` script now requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables to prevent accidental hardcoded credentials in production.
 * **Missing automated tests:** High reliance on manual UI testing; unit/integration tests are lacking.
 * **Incomplete courier implementation:** Core architecture exists, but relies entirely on trusted internal admins/couriers.
-* **Hardcoded/local-only values:** Missing secure production `ENCRYPTION_KEY` and Brevo API keys.
+* **Hardcoded/local-only values:** Missing secure production `ENCRYPTION_KEY` if not set in env.
 
 ## 9. Current Roles & Permissions
 * **user:** Normal platform user. Can list items, request items, chat, and review. CANNOT access any `/api/admin` routes.
@@ -121,13 +121,17 @@ ENCRYPTION_KEY=fernet_base64_encoded_key_placeholder
 # Media
 CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 
-# Email
-BREVO_API_KEY=brevo_key_placeholder
+# Email (Resend — backend only, never expose in frontend)
+RESEND_API_KEY=re_your_key_here
+EMAIL_FROM=Happiness Exchange <verify@happyexchange.net>
+APP_BASE_URL=https://happyexchange.net
 ```
 
 ## 12. Recent Backend Routes Added
 ### Auth
-* `POST /api/auth/register`, `POST /api/auth/login`
+* `POST /api/auth/signup`, `POST /api/auth/login`
+* `GET /api/auth/verify-email?token=...` — verify email (24h token expiry, SHA-256 hashed in DB)
+* `POST /api/auth/resend-verification` — resend verification email (requires auth)
 
 ### Admin
 * `GET /api/admin/users`, `POST /api/admin/users/{user_id}/trust-penalty`
@@ -159,7 +163,7 @@ BREVO_API_KEY=brevo_key_placeholder
 
 ## 13. Important Manual Testing Flows
 - [ ] **Signup/Login:** Register two users, verify JWT storage and redirection.
-- [ ] **Email Verification:** (When un-mocked) verify token generation and link redemption.
+- [ ] **Email Verification:** Sign up → check terminal (local) or inbox (production) → click link → banner disappears; unverified users can browse but cannot list/request/chat/review.
 - [ ] **Cross-account listing visibility:** User B should see User A's items, but User A should not see their own items in the feed.
 - [ ] **Request flow:** User B requests -> User A approves -> Item status updates.
 - [ ] **Chat unlock flow:** Verify chat is blocked until request is `approved`.
@@ -190,7 +194,7 @@ BREVO_API_KEY=brevo_key_placeholder
 
 ## 16. Important Warnings
 * **Cross-account authorization flows require full regression testing before production.**
-* **Brevo production setup is currently skipped/not finalized:** Email verifications and password resets will fail silently in production until configured.
+* **Brevo/SMTP removed:** Email verification now uses Resend. Without `RESEND_API_KEY`, links print to the backend terminal only.
 * **Trust score values may still need balancing:** Gamification exploits are possible until staging tests are completed.
 * **Seeded admin account must be removed before production:** Hardcoded admin credentials pose a severe security risk.
 * **Some systems are manually verified only:** Without automated E2E tests, UI updates risk breaking complex state flows like the Courier Address handoff.
