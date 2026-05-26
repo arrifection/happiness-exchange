@@ -225,7 +225,7 @@ export default function ItemCard({
         <div className="mt-2 flex flex-row items-center justify-between gap-2 border-t border-he-border/40 pt-2">
           <div className="min-w-0">
             <Link to={itemHref} className="flex flex-wrap items-center gap-1 rounded-lg transition hover:text-[#8b4cf6]">
-              <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location}</span>
+              <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.location_display || item.location}</span>
               <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/40">/</span>
               <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.condition}</span>
             </Link>

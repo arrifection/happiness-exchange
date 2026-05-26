@@ -72,7 +72,7 @@ export default function ItemDetailsPage({
             {item.condition}
           </span>
           <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
-            {item.location}
+            {item.location_display || item.location}
           </span>
         </div>
       </Surface>

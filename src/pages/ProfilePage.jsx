@@ -5,8 +5,10 @@ import { RatingStars } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
+import LocationSelector from '../components/LocationSelector.jsx'
 import { useTheme } from '../components/ThemeContext.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
+import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 
 function formatProfileDate(value) {
   if (!value) {
@@ -56,10 +58,12 @@ export default function ProfilePage({
   accountDeleteError,
   myItems,
   myRequests,
+  onLocationPrefsUpdated,
 }) {
   const [name, setName] = useState(currentUser?.name || '')
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
   const { isDark, toggleTheme } = useTheme()
 
   useEffect(() => {
@@ -295,6 +299,34 @@ export default function ProfilePage({
                 <p className="mt-0.5 text-[10px] text-he-muted">Get alerted on new requests.</p>
               </div>
               <ThemeToggle checked disabled label="Email notifications (coming soon)" />
+            </div>
+            <div className="mt-4 border-t border-he-border/40 pt-4">
+              <p className="text-xs font-bold text-he-ink">Default Browse Location</p>
+              <p className="mt-0.5 text-[10px] text-he-muted">Used when filtering listings on the Browse page.</p>
+              <div className="mt-3">
+                <LocationSelector
+                  country={locationPrefs.country}
+                  city={locationPrefs.city}
+                  area={locationPrefs.area}
+                  latitude={locationPrefs.latitude}
+                  longitude={locationPrefs.longitude}
+                  locationSource={locationPrefs.locationSource}
+                  showArea={false}
+                  onChange={(values) => {
+                    const next = {
+                      country: values.country,
+                      city: values.city,
+                      area: values.area || '',
+                      latitude: values.latitude ?? null,
+                      longitude: values.longitude ?? null,
+                      locationSource: values.locationSource || 'manual',
+                    }
+                    writeLocationPreferences(next)
+                    setLocationPrefs(next)
+                    onLocationPrefsUpdated?.(next)
+                  }}
+                />
+              </div>
             </div>
           </Surface>
 

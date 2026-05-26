@@ -30,6 +30,7 @@ import {
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
 import { resolveApiBase, asArray } from './lib/api.js'
+import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
 
 const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -60,6 +61,13 @@ const emptyItemForm = {
   category: '',
   condition: '',
   location: '',
+  country: DEFAULT_COUNTRY,
+  city: '',
+  area: '',
+  latitude: null,
+  longitude: null,
+  location_source: 'manual',
+  location_display: '',
   image_url: '',
   owner_name: '',
 }
@@ -147,7 +155,7 @@ export default function App() {
   const isMessagesRoute = location.pathname.startsWith('/messages')
   const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
 
-  useEffect(() => { loadItems() }, [])
+  useEffect(() => { loadItems(readLocationPreferences()) }, [])
 
   useEffect(() => {
     if (token) loadUserData()
@@ -231,10 +239,13 @@ export default function App() {
     }
   }
 
-  async function loadItems() {
+  async function loadItems(locationPrefs) {
     setLoadingItems(true); setItemsError('')
     try {
-      const res = await fetch(ITEMS_ENDPOINT)
+      const prefs = locationPrefs || readLocationPreferences()
+      const params = buildItemsQueryParams(prefs)
+      const url = params.toString() ? `${ITEMS_ENDPOINT}?${params.toString()}` : ITEMS_ENDPOINT
+      const res = await fetch(url)
       let data = null
       try {
         data = await res.json()
@@ -355,7 +366,11 @@ export default function App() {
 
   function handleItemChange(event) {
     const { name, value } = event.target
-    setItemForm((c) => ({ ...c, [name]: value }))
+    if (name === 'location_bundle') {
+      setItemForm((current) => ({ ...current, ...value }))
+      return
+    }
+    setItemForm((current) => ({ ...current, [name]: value }))
   }
 
   async function handleItemImageUpload(file) {
@@ -389,10 +404,17 @@ export default function App() {
     if (uploadingItemImage) { setItemError('Please wait for the image upload to finish before publishing.'); return null }
     setCreatingItem(true); setItemError(''); setItemMessage('')
     try {
+      const payload = {
+        ...itemForm,
+        location: itemForm.location?.trim()
+          || itemForm.location_display?.trim()
+          || itemForm.city
+          || 'Current location',
+      }
       const res = await fetch(ITEMS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(itemForm),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (res.ok) {
@@ -916,6 +938,7 @@ export default function App() {
                     onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
                     accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
                     myItems={myItems} myRequests={myRequests}
+                    onLocationPrefsUpdated={loadItems}
                   />
                 }
               />

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
+import LocationSelector from './LocationSelector.jsx'
+import { DEFAULT_COUNTRY } from '../lib/locations.js'
 
 const CATEGORIES = [
   'Furniture', 'Home', 'Kitchen', 'Electronics',
@@ -10,21 +12,12 @@ const CATEGORIES = [
 
 const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
 
-const LOCATIONS = [
-  'Lahore', 'Karachi', 'Islamabad', 'Rawalpindi',
-  'Faisalabad', 'Multan', 'Gujranwala', 'Sialkot',
-  'Peshawar', 'Quetta', 'Hyderabad', 'Bahawalpur',
-  'Sargodha', 'Mandi Bahauddin', 'Sukkur', 'Larkana',
-  'Sheikhupura', 'Jhang', 'Rahim Yar Khan', 'Kasur',
-]
-
 const fieldHelpText = {
-  owner_name: 'Your name as it will appear to neighbors.',
   title: 'Give your item a clear, concise name.',
   description: 'Describe condition, usage, and pickup details clearly.',
   category: 'Choose the best category for your item.',
   condition: 'Be honest about the current state.',
-  location: 'Select your city for pickup.',
+  location: 'Choose country and city, or use current location.',
   image_url: 'Upload a clear image from your device. Images only, up to 5 MB.',
 }
 
@@ -55,8 +48,21 @@ function validateItemForm(itemForm) {
     errors.condition = 'Please select the condition.'
   }
 
-  if (!itemForm.location) {
-    errors.location = 'Please select a location.'
+  if (!itemForm.country) {
+    errors.country = 'Please select a country.'
+  }
+
+  if (itemForm.location_source === 'current_location') {
+    if (itemForm.latitude == null || itemForm.longitude == null) {
+      errors.location = 'Please use current location or select a city manually.'
+    }
+  } else {
+    if (!itemForm.city) {
+      errors.city = 'Please select a city.'
+    }
+    if (!itemForm.location?.trim()) {
+      errors.location = 'Location is required.'
+    }
   }
 
   if (!itemForm.image_url?.trim()) {
@@ -71,7 +77,7 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
   const previewDescription = itemForm.description.trim() || 'Detailed description will appear here...'
   const previewCategory = itemForm.category || 'Category'
   const previewCondition = itemForm.condition || 'Condition'
-  const previewLocation = itemForm.location || 'Location'
+  const previewLocation = itemForm.location_display || itemForm.location || 'Location'
   const previewOwner = itemForm.owner_name?.trim() || 'Your Name'
 
   return (
@@ -271,19 +277,27 @@ export default function ItemForm({
               </p>
             </div>
 
-            <div>
-              <SelectField
-                id="item-location"
-                name="location"
-                label="Location"
-                value={itemForm.location}
-                onChange={handleFormChange}
-                options={LOCATIONS}
-                placeholder="City"
-                required
+            <div className="sm:col-span-2">
+              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">Pickup Location</p>
+              <LocationSelector
+                country={itemForm.country || DEFAULT_COUNTRY}
+                city={itemForm.city || ''}
+                area={itemForm.area || ''}
+                latitude={itemForm.latitude ?? null}
+                longitude={itemForm.longitude ?? null}
+                locationSource={itemForm.location_source || 'manual'}
+                onChange={(locationValues) => {
+                  onChange({
+                    target: {
+                      name: 'location_bundle',
+                      value: locationValues,
+                    },
+                  })
+                }}
+                disabled={disabled}
               />
-              <p className={`mt-1 text-[9px] ${fieldErrors.location ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
-                {fieldErrors.location || fieldHelpText.location}
+              <p className={`mt-1 text-[9px] ${fieldErrors.location || fieldErrors.city || fieldErrors.country ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
+                {fieldErrors.location || fieldErrors.city || fieldErrors.country || fieldHelpText.location}
               </p>
             </div>
           </div>

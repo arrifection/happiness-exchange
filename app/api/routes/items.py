@@ -2,7 +2,7 @@ import logging
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user, get_verified_user
@@ -24,6 +24,7 @@ from app.services.cloudinary import (
     upload_image_to_cloudinary,
 )
 from app.services.items import build_item_document, serialize_item
+from app.services.location import filter_and_sort_items, haversine_km
 from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
 from app.services.notifications import notify_moderators, create_notification
 from app.services.trust import award_completed_donation
@@ -66,8 +67,14 @@ async def create_item(
 
 
 @router.get("/items", response_model=list[ItemResponse])
-async def list_items():
-    """Return public item listings with their current status."""
+async def list_items(
+    country: str | None = Query(default=None, description="Filter by country"),
+    city: str | None = Query(default=None, description="Filter by city"),
+    near_lat: float | None = Query(default=None, ge=-90, le=90),
+    near_lng: float | None = Query(default=None, ge=-180, le=180),
+    radius_km: float | None = Query(default=None, gt=0, le=500),
+):
+    """Return public item listings with optional location filters."""
     items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
@@ -77,6 +84,14 @@ async def list_items():
 
     cursor = items_collection.find({}).sort("created_at", DESCENDING)
     items = await cursor.to_list(length=100)
+    items = filter_and_sort_items(
+        items,
+        country=country,
+        city=city,
+        near_lat=near_lat,
+        near_lng=near_lng,
+        radius_km=radius_km,
+    )
     owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
 
     owner_reputation_lookup: dict[str, dict] = {}
@@ -97,11 +112,18 @@ async def list_items():
     results = []
     for item in items:
         owner_id = str(item.get("owner_id", ""))
+        distance_km = None
+        if near_lat is not None and near_lng is not None and item.get("latitude") is not None and item.get("longitude") is not None:
+            distance_km = round(
+                haversine_km(near_lat, near_lng, float(item["latitude"]), float(item["longitude"])),
+                1,
+            )
         try:
             results.append(
                 serialize_item(
                     item,
                     owner_reputation=owner_reputation_lookup.get(owner_id),
+                    distance_km=distance_km,
                 )
             )
         except Exception:

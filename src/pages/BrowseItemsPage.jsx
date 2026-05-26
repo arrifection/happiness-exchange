@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
+import LocationSelector from '../components/LocationSelector.jsx'
 import { Button, EmptyState } from '../components/ui.jsx'
+import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 
 const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Other']
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
@@ -44,6 +46,21 @@ export default function BrowseItemsPage({
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('Available')
   const [sortBy, setSortBy] = useState('Newest first')
+  const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
+
+  function handleLocationChange(values) {
+    const next = {
+      country: values.country,
+      city: values.city,
+      area: values.area || '',
+      latitude: values.latitude ?? null,
+      longitude: values.longitude ?? null,
+      locationSource: values.locationSource || 'manual',
+    }
+    writeLocationPreferences(next)
+    setLocationPrefs(next)
+    onRefreshItems?.(next)
+  }
 
   const filteredItems = useMemo(() => {
     let result = [...items]
@@ -56,7 +73,10 @@ export default function BrowseItemsPage({
           item.title?.toLowerCase().includes(q) ||
           item.description?.toLowerCase().includes(q) ||
           item.category?.toLowerCase().includes(q) ||
-          item.location?.toLowerCase().includes(q),
+          item.location?.toLowerCase().includes(q) ||
+          item.location_display?.toLowerCase().includes(q) ||
+          item.city?.toLowerCase().includes(q) ||
+          item.country?.toLowerCase().includes(q),
       )
     }
 
@@ -87,6 +107,7 @@ export default function BrowseItemsPage({
   }, [items, search, categoryFilter, statusFilter, sortBy])
 
   const hasActiveFilters = search || categoryFilter !== 'All' || statusFilter !== 'All'
+    || locationPrefs.city || locationPrefs.locationSource === 'current_location'
 
   return (
     <div className="space-y-4">
@@ -111,6 +132,21 @@ export default function BrowseItemsPage({
 
         {/* Anonymous Trust Badge */}
         <AnonymousBadge />
+
+        {/* Location filters */}
+        <div className="rounded-2xl border border-he-border/60 bg-he-surface-soft/50 p-3 md:p-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-he-muted">Location</p>
+          <LocationSelector
+            country={locationPrefs.country}
+            city={locationPrefs.city}
+            area={locationPrefs.area}
+            latitude={locationPrefs.latitude}
+            longitude={locationPrefs.longitude}
+            locationSource={locationPrefs.locationSource}
+            onChange={handleLocationChange}
+            showArea={false}
+          />
+        </div>
 
         {/* Search Input Box */}
         <div className="relative">
@@ -200,6 +236,10 @@ export default function BrowseItemsPage({
                 setSearch('')
                 setCategoryFilter('All')
                 setStatusFilter('Available')
+                const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
+                writeLocationPreferences(resetPrefs)
+                setLocationPrefs(resetPrefs)
+                onRefreshItems?.(resetPrefs)
               }}
               className="text-[10px] md:text-[13px] font-bold text-[#c65d4a] hover:underline px-2"
             >
