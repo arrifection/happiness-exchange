@@ -467,9 +467,9 @@ export default function HomePage({ currentUser }) {
         </div>
 
         <div className="he-footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Use</a>
-          <a href="#">Contact Us</a>
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Use</Link>
+          <Link to="/contact">Contact Us</Link>
           <a href="mailto:hello@happinessexchange.pk">hello@happinessexchange.pk</a>
         </div>
 

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { showFlash } from '../lib/flash.js'
+import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
+import { RatingStars } from './reputation.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
 function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPending }) {
@@ -102,11 +104,17 @@ export default function ItemCard({
   ownerActionPending = false,
   compact = false,
 }) {
-  const [imageAvailable, setImageAvailable] = useState(Boolean(item.image_url))
+  const [imageAvailable, setImageAvailable] = useState(true)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const hasRealImage = itemHasCustomImage(item.image_url)
+  const displayImage = resolveItemImageUrl(item.image_url)
   const itemImages = normalizeItemImages(item)
   const isOwner = item.owner_id === currentUser?.id
   const itemHref = `/items/${item.id}`
+
+  useEffect(() => {
+    setImageAvailable(true)
+  }, [item.id, item.image_url])
 
   function renderAction() {
     if (isOwner) {
@@ -180,29 +188,42 @@ export default function ItemCard({
             <StatusBadge status={item.status} className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
           </div>
         ) : null}
-        {itemImages.length > 0 && imageAvailable ? (
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(true)}
-            className="block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-he-purple/40"
-            aria-label={`View larger photo of ${item.title}`}
-          >
+        {imageAvailable ? (
+          hasRealImage ? (
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-he-purple/40"
+              aria-label={`View larger photo of ${item.title}`}
+            >
+              <img
+                src={displayImage}
+                alt={item.title}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={() => setImageAvailable(false)}
+              />
+            </button>
+          ) : (
             <img
-              src={itemImages[0]}
-              alt={item.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={() => setImageAvailable(false)}
+              src={displayImage}
+              alt={`${item.title} — no photo provided`}
+              className="h-full w-full object-cover"
+              onError={(event) => {
+                event.currentTarget.src = ITEM_PLACEHOLDER_URL
+              }}
             />
-          </button>
+          )
         ) : (
-          <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">
-            No image
-          </div>
+          <img
+            src={ITEM_PLACEHOLDER_URL}
+            alt={`${item.title} — no photo provided`}
+            className="h-full w-full object-cover"
+          />
         )}
       </div>
 
       <ImagePreviewModal
-        open={previewOpen}
+        open={previewOpen && hasRealImage}
         images={itemImages}
         alt="Item photo"
         title={item.title}
@@ -243,7 +264,7 @@ export default function ItemCard({
               <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/40">/</span>
               <span className="text-[9px] font-bold uppercase tracking-tight text-[#8c755f]/70">{item.condition}</span>
             </Link>
-            {!isOwner && item.owner_review_count > 0 ? (
+            {!isOwner ? (
               <div className="mt-1">
                 <RatingStars
                   rating={item.owner_average_rating || 0}

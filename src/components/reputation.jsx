@@ -41,6 +41,10 @@ export function ReputationBadge({ label, compact = false }) {
 }
 
 export function RatingStars({ rating = 0, reviewCount = 0, showValue = true }) {
+  if (!reviewCount || reviewCount <= 0) {
+    return null
+  }
+
   const filledStars = Math.round(rating)
 
   return (
@@ -52,7 +56,7 @@ export function RatingStars({ rating = 0, reviewCount = 0, showValue = true }) {
       </div>
       {showValue ? (
         <span className="text-[10px] font-bold uppercase tracking-wide text-[#8c755f]">
-          {reviewCount > 0 ? `${rating.toFixed(1)} | ${reviewCount} review${reviewCount === 1 ? '' : 's'}` : 'No reviews yet'}
+          {`${rating.toFixed(1)} | ${reviewCount} review${reviewCount === 1 ? '' : 's'}`}
         </span>
       ) : null}
     </div>

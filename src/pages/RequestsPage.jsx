@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { asArray } from '../lib/api.js'
+import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { Button, EmptyState, StatusBadge, Surface } from '../components/ui.jsx'
 import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
@@ -26,17 +27,14 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
   return (
     <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface shadow-sm transition-all duration-300 hover:border-he-purple/30 hover:shadow-md">
       <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
-        {item?.image_url ? (
-          <img
-            src={item.image_url}
-            alt={request.item_title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-he-muted/60">
-            No image
-          </div>
-        )}
+        <img
+          src={resolveItemImageUrl(item?.image_url)}
+          alt={request.item_title}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(event) => {
+            event.currentTarget.src = ITEM_PLACEHOLDER_URL
+          }}
+        />
       </div>
 
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">

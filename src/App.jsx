@@ -1,6 +1,9 @@
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
+import PrivacyPage from './pages/PrivacyPage.jsx'
+import TermsPage from './pages/TermsPage.jsx'
+import ContactPage from './pages/ContactPage.jsx'
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
 import AuthenticatedHomePage from './pages/AuthenticatedHomePage.jsx'
 import ChatLayout from './pages/ChatLayout.jsx'
@@ -1094,6 +1097,9 @@ export default function App() {
                 element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
               />
               <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
