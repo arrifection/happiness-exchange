@@ -87,7 +87,7 @@
 * **Admin seeded account warning:** The `seed_admin.py` script now requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables to prevent accidental hardcoded credentials in production.
 * **Missing automated tests:** High reliance on manual UI testing; unit/integration tests are lacking.
 * **Incomplete courier implementation:** Core architecture exists, but relies entirely on trusted internal admins/couriers.
-* **Hardcoded/local-only values:** Missing secure production `ENCRYPTION_KEY` if not set in env.
+* **HF Space cold starts:** Mitigated by the keep-warm GitHub Actions workflow; first request after a long outage may still be slow until the Space rebuilds.
 
 ## 9. Current Roles & Permissions
 * **user:** Normal platform user. Can list items, request items, chat, and review. CANNOT access any `/api/admin` routes.
@@ -177,11 +177,13 @@ APP_BASE_URL=https://happyexchange.net
 - [ ] **Mobile responsiveness:** Test Chat UI and Admin Tables on a narrow viewport.
 
 ## 14. Deployment Notes
-* **Vercel setup:** The public frontend is optimized for Vercel deployment (`vite build`).
-* **Backend hosting:** The FastAPI app requires a Python environment (Render, Railway, or AWS ECS). 
-* **Domain/subdomain structure:** Recommended: `happyexchange.net` (Public), `admin.happyexchange.net` (Admin Panel), `api.happyexchange.net` (Backend).
-* **Admin panel deployment approach:** Deploy as a separate Vercel project with strict IP/Auth restrictions.
-* **Current production limitations:** Must migrate away from local disk storage (ensure Cloudinary is fully enforced) and replace mocked services.
+* **Public frontend (Vercel):** `https://www.happyexchange.net` — deploys from GitHub `main` via Vercel.
+* **Backend (Hugging Face Spaces):** `https://arrifection-happiness-exchange.hf.space` — deploys from GitHub remote `hf` (`git push hf main`).
+* **Health check:** `GET https://arrifection-happiness-exchange.hf.space/api/status/` returns `api_build` for deploy verification.
+* **Keep-warm workflow:** `.github/workflows/keep-backend-warm.yml` runs on GitHub Actions every 10 minutes and pings `/api/status/` with a public `curl` (no secrets). This reduces cold-start timeouts after idle periods. Can also be triggered manually via **Actions → Keep backend warm → Run workflow**.
+* **Admin panel:** Deploy as a separate Vite project (e.g. `admin.happyexchange.net`) with role-gated access.
+* **Domain structure:** `happyexchange.net` (public), optional `admin.*` (admin), HF Space URL (API).
+* **Production env:** Set MongoDB, JWT, Cloudinary, Resend, and `ENCRYPTION_KEY` in HF Space secrets — never commit `.env` files.
 
 ## 15. Future Scaling Roadmap
 * **WebSockets:** Replace MVP HTTP polling with Redis-backed WebSockets for true real-time chat and notifications.
