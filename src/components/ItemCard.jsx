@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { RatingStars, ReputationBadge } from './reputation.jsx'
+import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
 function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPending }) {
@@ -102,6 +103,8 @@ export default function ItemCard({
   compact = false,
 }) {
   const [imageAvailable, setImageAvailable] = useState(Boolean(item.image_url))
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const itemImages = normalizeItemImages(item)
   const isOwner = item.owner_id === currentUser?.id
   const itemHref = `/items/${item.id}`
 
@@ -171,29 +174,40 @@ export default function ItemCard({
 
   return (
     <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:border-he-purple/30">
-      <Link
-        to={itemHref}
-        className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26"
-        aria-label={`Open ${item.title}`}
-      >
+      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
             <StatusBadge status={item.status} className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
           </div>
         ) : null}
-        {item.image_url && imageAvailable ? (
-          <img
-            src={item.image_url}
-            alt={item.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={() => setImageAvailable(false)}
-          />
+        {itemImages.length > 0 && imageAvailable ? (
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="block h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-he-purple/40"
+            aria-label={`View larger photo of ${item.title}`}
+          >
+            <img
+              src={itemImages[0]}
+              alt={item.title}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={() => setImageAvailable(false)}
+            />
+          </button>
         ) : (
           <div className="flex h-full items-center justify-center text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/40">
             No image
           </div>
         )}
-      </Link>
+      </div>
+
+      <ImagePreviewModal
+        open={previewOpen}
+        images={itemImages}
+        alt="Item photo"
+        title={item.title}
+        onClose={() => setPreviewOpen(false)}
+      />
 
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
