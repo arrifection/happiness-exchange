@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from typing import Any, Literal
 
 LocationSource = Literal["manual", "current_location"]
@@ -186,6 +187,47 @@ def item_within_radius(
     if lat is None or lng is None:
         return False
     return haversine_km(near_lat, near_lng, float(lat), float(lng)) <= radius_km
+
+
+def build_items_list_query(
+    *,
+    country: str | None = None,
+    city: str | None = None,
+    status: str | None = "available",
+) -> dict[str, Any]:
+    """Build a MongoDB filter for public item browse queries."""
+    query: dict[str, Any] = {}
+    and_clauses: list[dict[str, Any]] = []
+
+    if status:
+        query["status"] = status
+
+    if country:
+        normalized = normalize_country(country)
+        if normalized == DEFAULT_COUNTRY:
+            and_clauses.append(
+                {
+                    "$or": [
+                        {"country": DEFAULT_COUNTRY},
+                        {"country": UNKNOWN_COUNTRY},
+                        {"country": None},
+                        {"country": {"$exists": False}},
+                    ]
+                }
+            )
+        elif normalized in SUPPORTED_COUNTRIES:
+            query["country"] = normalized
+
+    if city:
+        city_clean = city.strip()
+        if city_clean:
+            pattern = {"$regex": f"^{re.escape(city_clean)}$", "$options": "i"}
+            and_clauses.append({"$or": [{"city": pattern}, {"location": pattern}]})
+
+    if and_clauses:
+        query["$and"] = and_clauses
+
+    return query
 
 
 def filter_and_sort_items(

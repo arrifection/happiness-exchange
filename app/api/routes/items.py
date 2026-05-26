@@ -24,7 +24,7 @@ from app.services.cloudinary import (
     upload_image_to_cloudinary,
 )
 from app.services.items import build_item_document, serialize_item
-from app.services.location import filter_and_sort_items, haversine_km
+from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
 from app.services.notifications import notify_moderators, create_notification
 from app.services.trust import award_completed_donation
@@ -70,6 +70,10 @@ async def create_item(
 async def list_items(
     country: str | None = Query(default=None, description="Filter by country"),
     city: str | None = Query(default=None, description="Filter by city"),
+    status: str | None = Query(
+        default="available",
+        description="Filter by item status (default: available)",
+    ),
     near_lat: float | None = Query(default=None, ge=-90, le=90),
     near_lng: float | None = Query(default=None, ge=-180, le=180),
     radius_km: float | None = Query(default=None, gt=0, le=500),
@@ -82,7 +86,8 @@ async def list_items(
             detail="Database connection is not available.",
         )
 
-    cursor = items_collection.find({}).sort("created_at", DESCENDING)
+    mongo_query = build_items_list_query(country=country, city=city, status=status)
+    cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
     items = await cursor.to_list(length=100)
     items = filter_and_sort_items(
         items,

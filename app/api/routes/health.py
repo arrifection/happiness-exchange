@@ -5,7 +5,7 @@ from app.db.mongodb import get_db_async, get_last_connection_error
 router = APIRouter()
 
 # Bump when deploying backend fixes — visible at /api/status/
-API_BUILD = "2026-05-24-items-v2"
+API_BUILD = "2026-05-26-browse-filters-v1"
 
 
 @router.get("/", summary="Backend status check")

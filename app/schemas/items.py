@@ -67,9 +67,9 @@ class ItemResponse(BaseModel):
     owner_name: str
     owner_badge: str | None = None
     owner_average_rating: float | None = None
-    owner_review_count: int | None = None
+    owner_review_count: int = 0
     created_at: datetime
-    request_count: int | None = None
+    request_count: int = 0
     distance_km: float | None = None
     expiry_date: date | None = None
     sealed_packaging: bool | None = None

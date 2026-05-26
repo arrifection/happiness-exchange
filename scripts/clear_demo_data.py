@@ -40,9 +40,23 @@ DEMO_EMAIL_PATTERNS = [
 ]
 
 DEMO_TITLE_PATTERNS = [
-    re.compile(r"^(smoke test|demo |test item|sample )", re.I),
-    re.compile(r"\b(smoke test|demo listing|test listing)\b", re.I),
+    re.compile(r"^(smoke test|demo |test item|sample |atlas test)", re.I),
+    re.compile(r"\b(smoke test|demo listing|test listing|atlas test)\b", re.I),
 ]
+
+DEMO_DESCRIPTION_PATTERNS = [
+    re.compile(r"verifying mongodb atlas", re.I),
+    re.compile(r"\bgoooo+\b", re.I),
+]
+
+DEMO_OWNER_IDS = {
+    "6a0adee6101a1e956ff2c2a8",
+}
+
+DEMO_ITEM_IDS = {
+    "6a0adee7101a1e956ff2c2a9",
+    "6a1010d6d1bbcec3aefeb934",
+}
 
 
 def is_protected_user(doc: dict) -> bool:
@@ -70,8 +84,17 @@ def is_demo_user(doc: dict) -> bool:
 def is_demo_item(doc: dict) -> bool:
     if doc.get("is_demo") or doc.get("is_test"):
         return True
+    item_id = str(doc.get("_id", ""))
+    if item_id in DEMO_ITEM_IDS:
+        return True
+    owner_id = str(doc.get("owner_id", ""))
+    if owner_id in DEMO_OWNER_IDS:
+        return True
     title = doc.get("title") or doc.get("name") or ""
-    return any(p.search(title) for p in DEMO_TITLE_PATTERNS)
+    if any(p.search(title) for p in DEMO_TITLE_PATTERNS):
+        return True
+    description = doc.get("description") or ""
+    return any(p.search(description) for p in DEMO_DESCRIPTION_PATTERNS)
 
 
 def is_demo_doc(doc: dict) -> bool:

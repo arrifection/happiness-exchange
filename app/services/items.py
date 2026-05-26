@@ -32,6 +32,13 @@ def serialize_item(
     if image_url is not None:
         image_url = str(image_url)
 
+    review_count = 0
+    average_rating = None
+    if owner_reputation:
+        review_count = int(owner_reputation.get("review_count") or 0)
+        if review_count >= 1:
+            average_rating = owner_reputation.get("average_rating")
+
     return {
         "id": str(enriched["_id"]),
         "title": enriched.get("title") or "Untitled item",
@@ -51,10 +58,10 @@ def serialize_item(
         "owner_id": _owner_id_str(enriched),
         "owner_name": enriched.get("owner_name") or "Community Member",
         "owner_badge": owner_reputation.get("level") if owner_reputation else None,
-        "owner_average_rating": owner_reputation.get("average_rating") if owner_reputation else None,
-        "owner_review_count": owner_reputation.get("review_count") if owner_reputation else None,
+        "owner_average_rating": average_rating,
+        "owner_review_count": review_count if review_count >= 1 else 0,
         "created_at": created_at,
-        "request_count": request_count,
+        "request_count": 0 if request_count is None else request_count,
         "distance_km": distance_km,
         "expiry_date": enriched.get("expiry_date"),
         "sealed_packaging": enriched.get("sealed_packaging"),

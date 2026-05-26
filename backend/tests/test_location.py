@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
@@ -8,22 +9,49 @@ from fastapi.testclient import TestClient
 
 from app.api.routes import items as items_routes
 from app.services.location import (
+    build_items_list_query,
     enrich_item_location,
     filter_and_sort_items,
     item_matches_country,
 )
 
 
-def match_query(document, query):
+def _value_matches(actual, expected) -> bool:
+    if isinstance(expected, dict):
+        if "$exists" in expected:
+            exists = actual is not None
+            return exists if expected["$exists"] else not exists
+        if "$in" in expected:
+            return actual in expected["$in"]
+        if "$ne" in expected:
+            return actual != expected["$ne"]
+        if "$regex" in expected:
+            if actual is None:
+                return False
+            flags = re.I if expected.get("$options", "").find("i") >= 0 else 0
+            return re.search(expected["$regex"], str(actual), flags) is not None
+        return False
+    return actual == expected
+
+
+def document_matches(document: dict, query: dict) -> bool:
     for key, expected in query.items():
-        actual = document.get(key)
-        if isinstance(expected, dict):
-            if "$ne" in expected and actual == expected["$ne"]:
+        if key == "$and":
+            if not all(document_matches(document, clause) for clause in expected):
                 return False
             continue
-        if actual != expected:
+        if key == "$or":
+            if not any(document_matches(document, clause) for clause in expected):
+                return False
+            continue
+        actual = document.get(key)
+        if not _value_matches(actual, expected):
             return False
     return True
+
+
+def match_query(document, query):
+    return document_matches(document, query)
 
 
 class FakeCursor:
@@ -96,6 +124,21 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
         legacy = {"location": "Multan"}
         self.assertTrue(item_matches_country(legacy, "Pakistan"))
 
+    def test_build_items_list_query_saudi_city(self):
+        query = build_items_list_query(
+            country="Saudi Arabia",
+            city="Riyadh",
+            status="available",
+        )
+        self.assertEqual(query["status"], "available")
+        self.assertEqual(query["country"], "Saudi Arabia")
+        self.assertIn("$and", query)
+
+    def test_build_items_list_query_pakistan_legacy(self):
+        query = build_items_list_query(country="Pakistan", status="available")
+        self.assertEqual(query["status"], "available")
+        self.assertIn("$and", query)
+
 
 class LocationApiTests(IsolatedAsyncioTestCase):
     def setUp(self):
@@ -143,6 +186,22 @@ class LocationApiTests(IsolatedAsyncioTestCase):
                     "owner_name": self.owner_user["name"],
                     "created_at": self.now,
                 },
+                {
+                    "_id": ObjectId(),
+                    "title": "Completed Chair",
+                    "description": "Already completed and should not appear in browse.",
+                    "category": "Home",
+                    "condition": "Good",
+                    "location": "Lahore",
+                    "country": "Pakistan",
+                    "city": "Lahore",
+                    "location_source": "manual",
+                    "location_display": "Lahore, Pakistan",
+                    "status": "completed",
+                    "owner_id": self.owner_id,
+                    "owner_name": self.owner_user["name"],
+                    "created_at": self.now,
+                },
             ]
         )
 
@@ -177,3 +236,14 @@ class LocationApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["country"], "Saudi Arabia")
         self.assertEqual(data[0]["city"], "Riyadh")
+
+    def test_list_items_default_status_available_only(self):
+        response = self.client.get("/api/items", params={"country": "Pakistan"})
+        self.assertEqual(response.status_code, 200)
+        titles = [item["title"] for item in response.json()]
+        self.assertIn("Pakistan Lamp", titles)
+        self.assertNotIn("Completed Chair", titles)
+        for item in response.json():
+            self.assertEqual(item["status"], "available")
+            self.assertEqual(item["request_count"], 0)
+            self.assertIsNone(item["owner_average_rating"])
