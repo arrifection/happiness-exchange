@@ -79,7 +79,7 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
 
   return (
     <div className="he-card flex overflow-hidden">
-      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
+      <div className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24">
         {itemForm.image_url.trim() && imageAvailable ? (
           <img
             src={itemForm.image_url.trim()}

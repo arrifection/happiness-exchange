@@ -268,7 +268,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   const showChat = conversationId || window.innerWidth >= 768
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden border-t border-he-border bg-he-surface shadow-sm md:h-[calc(100vh-64px)] md:rounded-t-card md:border md:border-he-border dark:shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
+    <div className="flex h-[calc(100dvh-7rem-env(safe-area-inset-bottom,0px))] min-h-0 flex-col overflow-hidden border-t border-he-border bg-he-surface shadow-sm md:h-[calc(100dvh-4rem)] md:rounded-t-card md:border md:border-he-border dark:shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
       
       {/* Sidebar Inbox */}
       <div className={`flex w-full shrink-0 flex-col border-r border-he-border bg-he-surface-soft md:flex md:w-80 lg:w-96 ${showSidebar ? 'block' : 'hidden md:flex'}`}>
@@ -411,7 +411,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
                           }`}
                         >
                           {msg.message_type === 'image' && msg.image_url ? (
-                            <img src={msg.image_url} alt="Shared" className="w-full max-w-sm h-auto object-cover max-h-64 cursor-pointer hover:opacity-95" />
+                            <img src={msg.image_url} alt="Shared" className="h-auto max-h-64 w-full max-w-full object-cover cursor-pointer hover:opacity-95" />
                           ) : (
                             <div className="px-4 py-2.5 whitespace-pre-wrap">{msg.text}</div>
                           )}
@@ -434,7 +434,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="flex shrink-0 items-end gap-2 border-t border-he-border bg-he-surface px-4 py-3 pb-safe">
+            <form onSubmit={handleSend} className="flex shrink-0 items-end gap-2 border-t border-he-border bg-he-surface px-3 py-3 pb-safe md:px-4">
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageSelect} />
               
               <button 

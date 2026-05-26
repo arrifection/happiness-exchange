@@ -26,7 +26,7 @@ function AnonymousBadge() {
       </div>
       <div>
         <p className="text-[11px] font-bold text-he-purple">Completely Anonymous</p>
-        <p className="text-[9px] text-he-soft">Addresses remain private · Courier handled securely</p>
+        <p className="text-[10px] text-he-soft">Addresses remain private · Courier handled securely</p>
       </div>
     </div>
   )
@@ -183,7 +183,7 @@ export default function BrowseItemsPage({
         </div>
 
         {/* Categories */}
-        <div className="flex flex-wrap md:flex-nowrap md:justify-center gap-1.5 md:gap-2.5 pb-1 md:pb-0 overflow-x-auto md:overflow-x-visible no-scrollbar -mx-4 px-4 md:-mx-0 md:px-0 scroll-smooth">
+        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:justify-center md:gap-2.5 md:overflow-visible md:pb-0">
           {CATEGORIES.map((cat) => {
             const isActive = categoryFilter === cat
             return (

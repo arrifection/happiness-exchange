@@ -752,8 +752,8 @@ export default function App() {
       to: '/give',
       label: 'Give',
       icon: (
-        <div className="flex h-7.5 w-7.5 items-center justify-center rounded-full bg-[#8b4cf6] text-white shadow-xs transition-transform active:scale-90">
-          <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.8">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#8b4cf6] text-white shadow-xs transition-transform active:scale-90">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.8">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
         </div>
@@ -850,7 +850,7 @@ export default function App() {
           {showAppChrome ? (
             <>
             <header className="he-nav-shell">
-              <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
+              <div className="flex h-14 min-w-0 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
                 <div className="flex flex-1 items-center justify-start">
                   <NavLink to="/" className="flex items-center gap-2">
@@ -897,7 +897,7 @@ export default function App() {
                 </nav>
 
                 {/* Profile and Notifications */}
-                <div className="flex flex-1 items-center justify-end gap-3">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3">
                   <NotificationBell />
                   <NavLink
                     to="/profile"
@@ -920,10 +920,10 @@ export default function App() {
 
           <main className={
             isMarketingHome
-              ? 'flex-1'
+              ? 'flex-1 min-w-0 overflow-x-clip'
               : isMessagesRoute
-                ? 'app-shell flex-1 pb-20 md:pb-8'
-                : 'app-shell flex-1 pt-4 pb-20 md:pb-8'
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden md:pb-8'
+                : 'app-shell flex-1 min-w-0 overflow-x-clip pt-4 pb-20 md:pb-8'
           }>
             <Routes>
               <Route
@@ -1111,12 +1111,12 @@ export default function App() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) => [
-                    'flex flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[9px] font-bold tracking-wide transition-all duration-200',
+                    'flex min-w-0 flex-col items-center justify-center flex-1 py-1 gap-0.5 text-[10px] font-bold tracking-wide transition-all duration-200',
                     isActive ? 'text-he-purple' : 'text-he-soft hover:text-he-ink',
                   ].join(' ')}
                 >
                   {item.icon}
-                  <span className="scale-90">{item.label}</span>
+                  <span className="max-w-[4.25rem] truncate">{item.label === 'Messages' ? 'Msgs' : item.label}</span>
                 </NavLink>
               ))}
             </nav>
@@ -1125,7 +1125,7 @@ export default function App() {
 
       {/* Global notification toast */}
       {(loadingUser || authError || authNotice || reviewMessage) ? (
-        <div className="fixed bottom-6 right-6 z-50 w-64">
+        <div className="fixed bottom-20 right-4 z-50 w-[min(16rem,calc(100vw-2rem))] md:bottom-6 md:right-6">
           <Surface className="border-[#8b4cf6]/10 p-4 shadow-xl ring-1 ring-[#8b4cf6]/5">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">System Notification</h2>
             {loadingUser ? <p className="mt-1 text-xs text-[#68766d]">Verifying profile...</p> : null}

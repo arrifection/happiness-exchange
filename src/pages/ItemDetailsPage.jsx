@@ -63,32 +63,32 @@ export default function ItemDetailsPage({
 
       {/* Detail Block */}
       <Surface className="p-4.5">
-        <h2 className="text-[9px] font-bold uppercase tracking-widest text-he-soft">Description & Pickup Details</h2>
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Description & Pickup Details</h2>
         <p className="mt-2 text-xs leading-relaxed text-he-muted">{item.description}</p>
         <div className="mt-4 flex flex-wrap gap-1.5 border-t border-he-border/60 pt-3.5">
-          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
             {item.category}
           </span>
-          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
             {item.condition}
           </span>
-          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
             {item.location_display || item.location}
           </span>
           {item.category === 'Food' && (item.expiry_date || item.sealed_packaging != null || item.storage_condition) ? (
             <>
               {item.expiry_date ? (
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   Expires {item.expiry_date}
                 </span>
               ) : null}
               {item.sealed_packaging ? (
-                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
                   Sealed
                 </span>
               ) : null}
               {item.storage_condition ? (
-                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
                   {storageConditionLabel(item.storage_condition)}
                 </span>
               ) : null}

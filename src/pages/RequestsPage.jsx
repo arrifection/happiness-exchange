@@ -26,7 +26,7 @@ function formatRequestDate(value) {
 function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelivery, children }) {
   return (
     <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface shadow-sm transition-all duration-300 hover:border-he-purple/30 hover:shadow-md">
-      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
+      <div className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24">
         <img
           src={resolveItemImageUrl(item?.image_url)}
           alt={request.item_title}

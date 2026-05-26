@@ -43,10 +43,10 @@ export function ArrangeDeliveryModal({ request, token, onComplete, onCancel }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1f1f1f]/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-xl">
-        <h2 className="font-['Plus_Jakarta_Sans'] text-xl font-bold tracking-tight text-[#1f1f1f]">Arrange Courier Delivery</h2>
-        <p className="mt-1 text-xs text-[#68766d]">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-3 pb-safe backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[24px] border border-he-border bg-he-surface p-5 shadow-xl sm:rounded-[24px] sm:p-6">
+        <h2 className="font-['Plus_Jakarta_Sans'] text-xl font-bold tracking-tight text-he-ink">Arrange Courier Delivery</h2>
+        <p className="mt-1 text-xs text-he-muted">
           Your address is encrypted and only visible to authorized couriers. The receiver will never see it.
         </p>
 
@@ -147,10 +147,10 @@ export function AddDeliveryAddressModal({ delivery, token, onComplete, onCancel 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1f1f1f]/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[24px] bg-white p-6 shadow-xl">
-        <h2 className="font-['Plus_Jakarta_Sans'] text-xl font-bold tracking-tight text-[#1f1f1f]">Add Delivery Address</h2>
-        <p className="mt-1 text-xs text-[#68766d]">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-3 pb-safe backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-[24px] border border-he-border bg-he-surface p-5 shadow-xl sm:rounded-[24px] sm:p-6">
+        <h2 className="font-['Plus_Jakarta_Sans'] text-xl font-bold tracking-tight text-he-ink">Add Delivery Address</h2>
+        <p className="mt-1 text-xs text-he-muted">
           The giver has requested courier delivery. Your address is encrypted and only visible to authorized couriers.
         </p>
 

@@ -14,7 +14,7 @@ export function Button({
   ...props
 }) {
   const baseClassName = classes(
-    'inline-flex min-h-9 items-center justify-center rounded-btn px-4 py-2 text-[13px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-[0.98]',
+    'inline-flex min-h-9 items-center justify-center rounded-btn px-4 py-2 text-[13px] font-bold normal-case tracking-wide md:uppercase md:tracking-widest transition-all duration-200 active:scale-[0.98]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-he-purple/20',
     'disabled:cursor-not-allowed disabled:opacity-60',
     variant === 'primary' && 'bg-he-purple text-white shadow-sm hover:bg-he-purple-hover hover:shadow-md transition-shadow',
