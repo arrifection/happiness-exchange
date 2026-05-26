@@ -124,7 +124,7 @@ export default function ProfilePage({
         <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#efe7ff] shadow-sm">
           <span className="text-2xl font-bold text-[#8b4cf6]">{currentUser.name.charAt(0).toUpperCase()}</span>
           <div className="absolute inset-0 flex cursor-not-allowed items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
-            <span className="text-[9px] font-bold text-white">CHANGE</span>
+            <span className="text-[9px] font-bold text-white">Soon</span>
           </div>
         </div>
 
@@ -296,7 +296,7 @@ export default function ProfilePage({
                 <p className="text-xs font-bold text-he-ink">Email Notifications</p>
                 <p className="mt-0.5 text-[10px] text-he-muted">Get alerted on new requests.</p>
               </div>
-              <ThemeToggle checked disabled label="Email notifications (coming soon)" />
+              <ThemeToggle checked disabled label="Email notifications — coming soon" />
             </div>
             <div className="mt-4 border-t border-he-border/40 pt-4">
               <p className="text-xs font-bold text-he-ink">Default Browse Location</p>

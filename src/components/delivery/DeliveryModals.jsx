@@ -70,7 +70,7 @@ export function ArrangeDeliveryModal({ request, token, onComplete, onCancel }) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 px-4 py-2.5 text-sm transition focus:border-[#8b4cf6] focus:bg-white focus:outline-none"
-              placeholder="e.g. +1 555-0192"
+              placeholder="e.g. 0300 1234567"
             />
           </div>
           <div>
@@ -174,7 +174,7 @@ export function AddDeliveryAddressModal({ delivery, token, onComplete, onCancel 
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-xl border border-[#efe8da] bg-[#faf7f1]/50 px-4 py-2.5 text-sm transition focus:border-[#8b4cf6] focus:bg-white focus:outline-none"
-              placeholder="e.g. +1 555-0192"
+              placeholder="e.g. 0300 1234567"
             />
           </div>
           <div>

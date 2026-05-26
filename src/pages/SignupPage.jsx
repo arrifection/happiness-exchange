@@ -123,7 +123,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             type="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="name@example.com"
+            placeholder="you@email.com"
             autoComplete="email"
             required
             className={inputClass}

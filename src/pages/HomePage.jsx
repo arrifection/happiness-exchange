@@ -59,10 +59,10 @@ const deliveryCards = [
 ]
 
 const impactStats = [
-  ['30,000+', 'Items saved from landfill in Year 1'],
-  ['8,000+', 'Families directly benefited'],
-  ['500+', 'Active Happy Carriers across Pakistan'],
-  ['PKR 45M+', 'Value of goods redistributed to those in need'],
+  ['Free to claim', 'Every listed item is shared at no cost'],
+  ['Fully anonymous', 'Pickup and delivery protect both sides'],
+  ['Courier ready', 'Professional delivery across Pakistan'],
+  ['Community powered', 'Real people giving what they no longer need'],
 ]
 
 const cityPills = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', '+ coming everywhere']
@@ -271,7 +271,7 @@ export default function HomePage({ currentUser, items = [], loadingItems = false
                   <AppMark />
                   <span>Happiness Exchange</span>
                 </div>
-                <div className="he-app-pts">⭐ 142 pts</div>
+                <div className="he-app-pts">Trust pts</div>
               </div>
 
               <div className="he-app-toggle">
@@ -445,9 +445,9 @@ export default function HomePage({ currentUser, items = [], loadingItems = false
 
       <section className="he-impact-section" id="impact">
         <div className="he-sec-label">Our impact</div>
-        <h2>Real change, real numbers</h2>
+        <h2>Building community impact together</h2>
         <p className="he-sub">
-          Every item listed creates ripples. Here&apos;s what the Happiness Exchange community is building together.
+          Every item listed creates ripples of kindness. Here is what the Happiness Exchange community stands for.
         </p>
 
         <div className="he-impact-grid">

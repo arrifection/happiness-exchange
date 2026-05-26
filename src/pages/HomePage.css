@@ -1127,9 +1127,10 @@
 .he-impact-num {
   margin-bottom: 8px;
   color: var(--he-yellow);
-  font-size: 40px;
-  font-weight: 900;
-  letter-spacing: -1px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .he-impact-label {

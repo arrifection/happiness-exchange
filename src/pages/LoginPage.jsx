@@ -83,7 +83,7 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
             type="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="name@example.com"
+            placeholder="you@email.com"
             autoComplete="email"
             required
             className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"

@@ -221,7 +221,7 @@ export default function ItemForm({
                 label="Your Name"
                 value={itemForm.owner_name}
                 onChange={handleFormChange}
-                placeholder="Jane Doe"
+                placeholder="Your name"
                 required
               />
               <p className={`mt-1 text-[9px] ${fieldErrors.owner_name ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
