@@ -53,7 +53,7 @@ export default function GiverHomePage({
   const itemsSharedCount = myItems?.length || 0
   const itemsRequestedCount = myRequests?.length || 0
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
-  const trustPoints = (myReputation?.completed_shared_count || 0) * 10 + completedExchangesCount * 50
+  const trustPoints = myReputation?.trust_score || 0
 
   if (!currentUser) {
     return (
@@ -78,7 +78,11 @@ export default function GiverHomePage({
             Your unused things can become someone else&apos;s blessing. What will you share today?
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
+            <TrustBadge
+              level={myReputation?.level}
+              trustScore={myReputation?.trust_score}
+              nextLevelPoints={myReputation?.next_level_points}
+            />
           </div>
           <div className="mt-3">
             <RatingStars

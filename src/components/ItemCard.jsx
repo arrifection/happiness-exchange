@@ -5,6 +5,7 @@ import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { RatingStars } from './reputation.jsx'
+import TrustBadge from './TrustBadge.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
 function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, ownerActionPending }) {
@@ -182,7 +183,7 @@ export default function ItemCard({
 
   return (
     <article className="group he-card flex overflow-hidden transition-all duration-300 hover:border-he-purple/30 md:hover:-translate-y-1">
-      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
+      <div className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24">
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
             <StatusBadge status={item.status} className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
@@ -230,7 +231,7 @@ export default function ItemCard({
         onClose={() => setPreviewOpen(false)}
       />
 
-      <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
+      <div className="flex min-w-0 flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-2">
             <Link to={itemHref} className="min-w-0 transition hover:text-[#8b4cf6]">
@@ -248,7 +249,14 @@ export default function ItemCard({
             {!isOwner ? (
               <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]/80">
                 <span>By {item.owner_name}</span>
-                {item.owner_badge ? <ReputationBadge label={item.owner_badge} compact /> : null}
+                {item.owner_badge ? (
+                  <TrustBadge
+                    level={item.owner_badge}
+                    trustScore={item.owner_trust_score || 0}
+                    showPoints={false}
+                    size="sm"
+                  />
+                ) : null}
               </div>
             ) : null}
             <p className="line-clamp-2 text-[10px] leading-normal text-he-muted">

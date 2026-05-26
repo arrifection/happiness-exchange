@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
-import { RatingStars } from '../components/reputation.jsx'
+import { RatingStars, ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import ThemeToggle from '../components/ThemeToggle.jsx'
@@ -134,7 +134,7 @@ export default function ProfilePage({
           </h1>
           <p className="mt-0.5 text-[11px] text-[#68766d] md:text-xs">{currentUser.email}</p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-            <TrustBadge level={level} trustScore={trustScore} />
+            <TrustBadge level={level} trustScore={trustScore} nextLevelPoints={nextLevelPts} />
             {myReputation?.badges?.map(b => (
                <div key={b} className="inline-flex items-center gap-1.5 rounded-full border border-[#efe8da] bg-[#faf7f1] px-2 py-0.5 text-[10px] font-bold text-[#8c755f]">
                  🏅 {b}
@@ -142,14 +142,18 @@ export default function ProfilePage({
             ))}
           </div>
           <div className="mt-3 flex justify-center sm:justify-start">
-            <RatingStars rating={averageRating} reviewCount={reviewCount} />
+            {reviewCount > 0 ? (
+              <RatingStars rating={averageRating} reviewCount={reviewCount} />
+            ) : (
+              <p className="text-[11px] font-medium text-he-muted">No community reviews yet</p>
+            )}
           </div>
         </div>
 
-        <div className="flex min-w-[140px] max-w-[200px] shrink-0 flex-col justify-center rounded-xl border border-he-border/40 bg-he-surface/60 p-3">
+        <div className="flex min-w-0 w-full max-w-[200px] shrink-0 flex-col justify-center rounded-xl border border-he-border/40 bg-he-surface/60 p-3 sm:min-w-[140px]">
           <div className="flex items-end gap-2 justify-between">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/80">Trust Points</p>
-            <p className="text-lg font-bold text-[#8b4cf6] md:text-xl">{trustScore}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-he-soft/80">Trust Points</p>
+              <p className="text-lg font-bold text-he-purple md:text-xl">{trustScore}</p>
           </div>
           <LevelProgressBar currentLevel={level} trustScore={trustScore} nextLevelPts={nextLevelPts} className="mt-2" />
         </div>
@@ -171,12 +175,12 @@ export default function ProfilePage({
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Current Badge</p>
-              <p className="mt-1 text-[11px] font-bold text-[#1f1f1f]">{myReputation?.current_badge || 'New Member'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70">Current Level</p>
+              <p className="mt-1 text-[11px] font-bold text-he-ink">{level}</p>
             </div>
             <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Average Rating</p>
-              <p className="mt-1 text-xl font-bold text-[#1f1f1f]">{reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70">Average Rating</p>
+              <p className="mt-1 text-xl font-bold text-he-ink">{reviewCount > 0 ? averageRating.toFixed(1) : '—'}</p>
             </div>
             <div className="rounded-xl border border-he-border bg-he-surface-soft/50 p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Reviews</p>
@@ -242,21 +246,15 @@ export default function ProfilePage({
 
             <div className="grid gap-1">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Email Address</span>
-              <div className="min-h-10 cursor-not-allowed rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 py-2.5 text-[13px] text-[#68766d]">
+              <div className="min-h-10 cursor-not-allowed break-all rounded-input border border-he-border bg-he-surface-soft/80 px-3 py-2.5 text-[13px] text-he-muted">
                 {currentUser.email}
               </div>
             </div>
 
             <div className="grid gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Phone Number</span>
-              <div className="relative">
-                <input
-                  disabled
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  className="min-h-10 w-full cursor-not-allowed rounded-input border border-[#efe8da] bg-[#faf7f1]/40 px-3 text-[13px] text-[#68766d]"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold uppercase text-[#8c755f]/40">Coming Soon</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70">Phone Number</span>
+              <div className="min-h-10 rounded-input border border-he-border bg-he-surface-soft/80 px-3 py-2.5 text-[13px] text-he-muted">
+                Coming soon
               </div>
             </div>
 
@@ -410,9 +408,9 @@ export default function ProfilePage({
 
           {!loadingProfileReviews && !profileReviewsError && profileReviews.length === 0 ? (
             <div className="mt-4">
-              <EmptyState
-                title={`No reviews yet \u{1F331}`}
-                description="Complete a few exchanges and your community feedback will show here."
+              <ReviewEmptyState
+                title="No reviews yet"
+                description="Complete a few exchanges and kind words from the community will show here."
               />
             </div>
           ) : null}
@@ -432,8 +430,8 @@ export default function ProfilePage({
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <RatingStars rating={review.rating} reviewCount={0} showValue={false} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]">{review.rating}/5</span>
+                  <StarRatingDisplay rating={review.rating || 0} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-he-soft">{review.rating}/5</span>
                 </div>
                 <p className="mt-3 text-[12px] leading-relaxed text-[#68766d]">{review.comment}</p>
               </article>

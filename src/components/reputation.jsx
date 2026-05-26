@@ -2,23 +2,41 @@ import { useEffect, useState } from 'react'
 
 import { Button, Surface } from './ui.jsx'
 
-const BADGE_STYLES = {
-  'New Member': 'border-[#efe8da] bg-[#fffdfb] text-[#8c755f]',
-  'Kind Sharer': 'border-[#ffcc22]/30 bg-[#fff8de] text-[#9a7420]',
-  'Trusted Member': 'border-[#8b4cf6]/20 bg-[#f5efff] text-[#7340d2]',
-  'Community Hero': 'border-[#8b4cf6]/20 bg-gradient-to-r from-[#8b4cf6] to-[#7340d2] text-white',
-}
-
-function StarIcon({ filled }) {
+function StarIcon({ filled, className = 'h-4 w-4' }) {
   return (
     <svg
-      className={`h-4 w-4 ${filled ? 'text-[#ffcc22]' : 'text-[#e9dcc9]'}`}
+      className={`${className} ${filled ? 'text-he-yellow' : 'text-he-border'}`}
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"
     >
       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.539 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.783.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81H7.03a1 1 0 00.95-.69l1.07-3.292Z" />
     </svg>
+  )
+}
+
+export function StarRatingDisplay({ rating = 0, size = 'md' }) {
+  const filledStars = Math.round(rating)
+  const iconClass = size === 'lg' ? 'h-6 w-6' : 'h-4 w-4'
+
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <StarIcon key={star} filled={star <= filledStars} className={iconClass} />
+      ))}
+    </div>
+  )
+}
+
+export function ReviewEmptyState({ title = 'No reviews yet', description, className = '' }) {
+  return (
+    <div className={`rounded-2xl border border-dashed border-he-border bg-he-surface-soft px-4 py-6 text-center dark:bg-he-elevated/50 ${className}`}>
+      <div className="text-2xl" aria-hidden="true">💬</div>
+      <p className="mt-2 text-[13px] font-bold text-he-ink">{title}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-he-muted">
+        {description || 'Complete exchanges to start receiving community feedback.'}
+      </p>
+    </div>
   )
 }
 
@@ -30,9 +48,8 @@ export function ReputationBadge({ label, compact = false }) {
   return (
     <span
       className={[
-        'inline-flex items-center rounded-full border font-bold uppercase tracking-widest',
+        'inline-flex items-center rounded-full border border-he-border bg-he-surface-soft font-bold uppercase tracking-widest text-he-soft',
         compact ? 'px-2 py-1 text-[8px]' : 'px-3 py-1.5 text-[9px]',
-        BADGE_STYLES[label] || BADGE_STYLES['New Member'],
       ].join(' ')}
     >
       {label}
@@ -40,7 +57,7 @@ export function ReputationBadge({ label, compact = false }) {
   )
 }
 
-export function RatingStars({ rating = 0, reviewCount = 0, showValue = true }) {
+export function RatingStars({ rating = 0, reviewCount = 0, showValue = true, compact = false }) {
   if (!reviewCount || reviewCount <= 0) {
     return null
   }
@@ -48,15 +65,15 @@ export function RatingStars({ rating = 0, reviewCount = 0, showValue = true }) {
   const filledStars = Math.round(rating)
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${compact ? 'flex-wrap' : ''}`}>
       <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
-          <StarIcon key={star} filled={star <= filledStars} />
+          <StarIcon key={star} filled={star <= filledStars} className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
         ))}
       </div>
       {showValue ? (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-[#8c755f]">
-          {`${rating.toFixed(1)} | ${reviewCount} review${reviewCount === 1 ? '' : 's'}`}
+        <span className={`font-bold uppercase tracking-wide text-he-soft ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
+          {`${rating.toFixed(1)} · ${reviewCount} review${reviewCount === 1 ? '' : 's'}`}
         </span>
       ) : null}
     </div>
@@ -121,8 +138,8 @@ export function ReviewModal({ open, context, submitting, onClose, onSubmit }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-3 md:items-center md:p-5 dark:bg-black/70">
-      <Surface className="w-full max-w-md border-he-border p-5 shadow-2xl dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-3 pb-safe md:items-center md:p-5 dark:bg-black/70">
+      <Surface className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-[24px] border-he-border p-5 shadow-2xl md:rounded-card dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Leave Review</p>

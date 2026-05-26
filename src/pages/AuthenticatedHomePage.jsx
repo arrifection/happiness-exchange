@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
 import { asArray } from '../lib/api.js'
-import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, Surface } from '../components/ui.jsx'
 
@@ -99,7 +99,11 @@ export default function AuthenticatedHomePage({
             Welcome back, {displayName}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2 md:justify-center">
-            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
+            <TrustBadge
+              level={myReputation?.level}
+              trustScore={myReputation?.trust_score}
+              nextLevelPoints={myReputation?.next_level_points}
+            />
           </div>
 
           <div className="relative mt-4 flex h-16 w-full max-w-2xl items-center justify-center md:h-20">
@@ -137,14 +141,22 @@ export default function AuthenticatedHomePage({
           </div>
 
           <div className="mt-4 md:mt-5">
-            <RatingStars
-              rating={myReputation?.average_rating || 0}
-              reviewCount={myReputation?.review_count || 0}
-            />
+            {(myReputation?.review_count || 0) > 0 ? (
+              <RatingStars
+                rating={myReputation?.average_rating || 0}
+                reviewCount={myReputation?.review_count || 0}
+              />
+            ) : (
+              <ReviewEmptyState
+                title="No reviews yet"
+                description="Your community rating appears after your first completed exchange."
+                className="mx-auto max-w-md"
+              />
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-5 border-t border-he-border bg-he-surface-soft px-5 py-3 md:px-8">
+        <div className="flex flex-wrap items-center gap-4 border-t border-he-border bg-he-surface-soft px-4 py-3 md:gap-5 md:px-8">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
             <p className="text-xs font-bold text-he-ink">{items.length}</p>
@@ -166,7 +178,7 @@ export default function AuthenticatedHomePage({
         </div>
       </Surface>
 
-      <div className="grid grid-cols-3 gap-2 md:gap-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:gap-4">
         {STEPS.map((step, index) => (
           <HowItWorksStep
             key={step.number}

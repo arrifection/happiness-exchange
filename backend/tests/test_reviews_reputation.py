@@ -301,7 +301,8 @@ class ReviewsReputationApiTests(IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["current_badge"], "Trusted Member")
+        self.assertEqual(data["level"], "New Member")
+        self.assertEqual(data["trust_score"], 0)
         self.assertEqual(data["completed_shared_count"], 5)
         self.assertEqual(data["completed_exchange_count"], 5)
         self.assertEqual(data["review_count"], 2)

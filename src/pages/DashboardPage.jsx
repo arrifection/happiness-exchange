@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { asArray } from '../lib/api.js'
-import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
+import LevelProgressBar from '../components/LevelProgressBar.jsx'
+import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
+import TrustLevelLadder from '../components/TrustLevelLadder.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
 import { ArrangeDeliveryModal, AddDeliveryAddressModal } from '../components/delivery/DeliveryModals.jsx'
 
@@ -25,7 +27,7 @@ function StatCard({ label, value, onClick, highlight, to }) {
           : 'cursor-pointer hover:border-he-purple/40'
         }`}
     >
-      <p className={`mb-1 text-[9px] font-bold uppercase tracking-wider md:text-[10px] ${highlight ? 'text-white/90' : 'text-he-muted'}`}>
+      <p className={`mb-1 text-[10px] font-bold uppercase tracking-wider md:text-[11px] ${highlight ? 'text-white/90' : 'text-he-muted'}`}>
         {label}
       </p>
       <p className={`text-2xl font-bold md:text-3xl ${highlight ? 'text-white' : 'text-he-ink'}`}>
@@ -45,8 +47,8 @@ function RequestCard({ request, children }) {
   return (
     <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">{request.item_title}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="min-w-0 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">{request.item_title}</h3>
           <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-he-muted">
             {request.requester_name ? `Requester: ${request.requester_name.split(' ')[0]}` : 'Personal request'}
           </p>
@@ -91,7 +93,9 @@ export default function DashboardPage({
   const itemsSharedCount = myItems?.length || 0
   const itemsRequestedCount = requestList.length
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
-  const trustPoints = (myReputation?.completed_shared_count || 0) * 10 + completedExchangesCount * 50
+  const trustPoints = myReputation?.trust_score || 0
+  const reviewCount = myReputation?.review_count || 0
+  const trustLevel = myReputation?.level || 'New Member'
 
   if (!currentUser) {
     return (
@@ -119,12 +123,31 @@ export default function DashboardPage({
             Give, receive, and connect — anonymously and with trust at the heart of every exchange.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <TrustBadge level={myReputation?.level} trustScore={myReputation?.trust_score} />
+            <TrustBadge
+              level={trustLevel}
+              trustScore={trustPoints}
+              nextLevelPoints={myReputation?.next_level_points}
+            />
           </div>
           <div className="mt-3">
-            <RatingStars
-              rating={myReputation?.average_rating || 0}
-              reviewCount={myReputation?.review_count || 0}
+            {reviewCount > 0 ? (
+              <RatingStars
+                rating={myReputation?.average_rating || 0}
+                reviewCount={reviewCount}
+              />
+            ) : (
+              <ReviewEmptyState
+                title="No reviews yet"
+                description="Complete an exchange to start building your community rating."
+                className="max-w-md text-left"
+              />
+            )}
+          </div>
+          <div className="mt-4 max-w-md">
+            <LevelProgressBar
+              currentLevel={trustLevel}
+              trustScore={trustPoints}
+              nextLevelPts={myReputation?.next_level_points}
             />
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -165,6 +188,23 @@ export default function DashboardPage({
           />
         </div>
       </section>
+
+      <Surface className="p-4 md:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-he-ink md:text-base">Your trust journey</h2>
+            <p className="mt-1 text-[11px] leading-relaxed text-he-muted">
+              Earn points by donating, receiving, and getting positive reviews.
+            </p>
+          </div>
+          <Button as="link" to="/reputation" variant="ghost" className="h-8 min-h-0 shrink-0 px-3 text-[10px]">
+            View full reputation
+          </Button>
+        </div>
+        <div className="mt-4">
+          <TrustLevelLadder level={trustLevel} trustScore={trustPoints} compact />
+        </div>
+      </Surface>
 
       {/* Messages / Feedback */}
       {(loadingRequests || requestsMessage || requestsError) ? (

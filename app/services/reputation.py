@@ -10,21 +10,18 @@ logger = logging.getLogger(__name__)
 
 # Dynamic Levels
 LEVEL_NEW = "New Member"
-LEVEL_TRUSTED = "Trusted Sharer"
+LEVEL_TRUSTED = "Trusted Giver"
 LEVEL_HELPER = "Community Helper"
-LEVEL_CHAMPION = "Kindness Champion"
-LEVEL_ELITE = "Elite Donor"
+LEVEL_VERIFIED = "Verified Donor"
 
 def determine_level(trust_score: int) -> str:
-    if trust_score >= 500: return LEVEL_ELITE
-    if trust_score >= 250: return LEVEL_CHAMPION
+    if trust_score >= 250: return LEVEL_VERIFIED
     if trust_score >= 100: return LEVEL_HELPER
     if trust_score >= 20: return LEVEL_TRUSTED
     return LEVEL_NEW
 
 def get_next_level_points(trust_score: int) -> int | None:
-    if trust_score >= 500: return None
-    if trust_score >= 250: return 500
+    if trust_score >= 250: return None
     if trust_score >= 100: return 250
     if trust_score >= 20: return 100
     return 20

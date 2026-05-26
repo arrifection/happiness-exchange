@@ -1,60 +1,10 @@
 import { Link } from 'react-router-dom'
 
-const LEVEL_DATA = {
-  'New Member': { icon: '🌱', desc: 'Welcome to the community!', color: '#68766d', bg: '#f0fdf4', border: '#bbf7d0' },
-  'Trusted Sharer': { icon: '🤝', desc: "You've proven your kindness.", color: '#0369a1', bg: '#e0f2fe', border: '#7dd3fc' },
-  'Community Helper': { icon: '⭐', desc: 'The community loves you.', color: '#8b4cf6', bg: '#efe7ff', border: '#c084fc' },
-  'Kindness Champion': { icon: '🏆', desc: 'An outstanding contributor.', color: '#c65d4a', bg: '#fef2f2', border: '#fca5a5' },
-  'Elite Donor': { icon: '👑', desc: 'Community legend.', color: '#7c3aed', bg: '#f5f3ff', border: '#8b4cf6' },
-}
-
-function StarRating({ rating, size = 'md' }) {
-  const stars = [1, 2, 3, 4, 5]
-  const sz = size === 'lg' ? 'h-7 w-7' : 'h-5 w-5'
-  return (
-    <div className="flex items-center gap-1">
-      {stars.map((star) => (
-        <svg
-          key={star}
-          className={sz}
-          fill={star <= Math.round(rating) ? '#f59e0b' : 'none'}
-          viewBox="0 0 24 24"
-          stroke={star <= Math.round(rating) ? '#f59e0b' : '#d1d5db'}
-          strokeWidth="1.5"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.499z" />
-        </svg>
-      ))}
-    </div>
-  )
-}
-
-function BadgeCard({ badge, unlocked, isCurrent }) {
-  return (
-    <div
-      className={`relative flex flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all duration-300 ${
-        unlocked
-          ? 'shadow-sm hover:-translate-y-1 hover:shadow-md cursor-default'
-          : 'opacity-40 grayscale'
-      } ${
-        isCurrent
-          ? 'ring-2 ring-[#8b4cf6] ring-offset-2'
-          : ''
-      }`}
-      style={unlocked ? { background: badge.bg, borderColor: badge.border } : { background: '#f9f9f9', borderColor: '#e5e7eb' }}
-    >
-      {isCurrent && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#8b4cf6] px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-white shadow">
-          Current
-        </div>
-      )}
-      <div className="text-3xl">{badge.icon}</div>
-      <p className="text-[11px] font-bold" style={{ color: badge.color }}>{badge.label}</p>
-      <p className="text-[9px] text-[#68766d]">{badge.desc}</p>
-      <p className="text-[9px] font-bold text-[#8c755f]/60">{badge.minPoints}+ pts</p>
-    </div>
-  )
-}
+import { ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
+import TrustBadge from '../components/TrustBadge.jsx'
+import TrustLevelLadder from '../components/TrustLevelLadder.jsx'
+import { Surface } from '../components/ui.jsx'
+import { getLevelProgress, getTrustLevelMeta, normalizeTrustLevel } from '../lib/trustLevels.js'
 
 function ReviewCard({ review }) {
   const dateStr = review.created_at
@@ -62,29 +12,29 @@ function ReviewCard({ review }) {
     : ''
 
   return (
-    <div className="rounded-2xl border border-[#efe8da] bg-white p-4 shadow-xs">
+    <Surface className="p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[12px] font-bold text-[#1f1f1f]">{review.reviewer_name || 'Community Member'}</p>
-          <p className="text-[10px] text-[#8c755f]/70">{review.item_title || 'Exchange'}</p>
+        <div className="min-w-0">
+          <p className="truncate text-[12px] font-bold text-he-ink">{review.reviewer_name || 'Community Member'}</p>
+          <p className="text-[10px] text-he-muted">{review.item_title || 'Exchange'}</p>
         </div>
-        <span className="text-[10px] text-[#8c755f]/50">{dateStr}</span>
+        <span className="shrink-0 text-[10px] text-he-soft">{dateStr}</span>
       </div>
       <div className="mt-2">
-        <StarRating rating={review.rating || 0} />
+        <StarRatingDisplay rating={review.rating || 0} size="lg" />
       </div>
-      {review.comment && (
-        <p className="mt-2 text-[12px] leading-relaxed text-[#68766d] italic">"{review.comment}"</p>
-      )}
-    </div>
+      {review.comment ? (
+        <p className="mt-2 text-[12px] leading-relaxed text-he-muted italic">&ldquo;{review.comment}&rdquo;</p>
+      ) : null}
+    </Surface>
   )
 }
 
 export default function ReputationPage({ currentUser, myReputation, profileReviews }) {
   if (!currentUser) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-sm text-[#68766d]">Please log in to view your reputation.</p>
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <p className="text-sm text-he-muted">Please log in to view your reputation.</p>
       </div>
     )
   }
@@ -93,24 +43,20 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
   const sharedCount = myReputation?.completed_shared_count || 0
   const avgRating = myReputation?.average_rating || 0
   const reviewCount = myReputation?.review_count || 0
-  
   const trustScore = myReputation?.trust_score || 0
-  const currentLevel = myReputation?.level || 'New Member'
+  const currentLevel = normalizeTrustLevel(myReputation?.level)
   const nextLevelPts = myReputation?.next_level_points
   const badges = myReputation?.badges || []
   const trustEvents = myReputation?.trust_events || []
-  
-  const levelData = LEVEL_DATA[currentLevel] || LEVEL_DATA['New Member']
+  const levelMeta = getTrustLevelMeta(currentLevel)
+  const progress = getLevelProgress(trustScore, currentLevel)
   const displayName = currentUser?.name?.split(' ')[0] || 'Your'
 
-  const progressPct = nextLevelPts ? Math.min(100, Math.max(0, (trustScore / nextLevelPts) * 100)) : 100
-
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-10">
-      {/* Back */}
+    <div className="mx-auto max-w-3xl space-y-6 px-1 pb-10">
       <Link
         to="/dashboard"
-        className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#8c755f] hover:text-[#8b4cf6] transition-colors"
+        className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-he-soft transition-colors hover:text-he-purple"
       >
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -118,9 +64,7 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
         Dashboard
       </Link>
 
-      {/* Trust Score Hero */}
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#8b4cf6] via-[#7b40e6] to-[#4f2ab8] p-8 text-white shadow-xl">
-        {/* Decorative circles */}
+      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-he-purple via-[#7b40e6] to-[#4f2ab8] p-6 text-white shadow-xl md:p-8">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-white/5" />
 
@@ -128,150 +72,139 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
             Community Reputation
           </p>
-          <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-3xl font-bold md:text-4xl">
-            {displayName}'s Trust Score
+          <h1 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold md:text-4xl">
+            {displayName}&apos;s Trust Score
           </h1>
 
-          <div className="mt-6 flex items-end gap-6">
+          <div className="mt-6 flex flex-wrap items-end gap-4 md:gap-6">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Trust Points</p>
-              <p className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-5xl font-bold text-[#ffcc22] drop-shadow-[0_0_20px_rgba(255,204,34,0.5)]">
+              <p className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-4xl font-bold text-he-yellow drop-shadow-[0_0_20px_rgba(255,204,34,0.35)] md:text-5xl">
                 {trustScore}
               </p>
+              <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-white/70">{levelMeta.description}</p>
             </div>
-            <div className="mb-2">
-              <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
-                <span className="text-2xl">{levelData.icon}</span>
-                <span className="text-[12px] font-bold">{currentLevel}</span>
-              </div>
-            </div>
+            <TrustBadge
+              level={currentLevel}
+              trustScore={trustScore}
+              nextLevelPoints={nextLevelPts}
+              showPoints={false}
+              className="mb-1"
+            />
           </div>
 
-          {/* Progress to next badge */}
           {nextLevelPts ? (
-            <div className="mt-5">
-              <div className="flex justify-between text-[10px] font-bold text-white/70">
+            <div className="mt-5 max-w-xl">
+              <div className="flex justify-between gap-2 text-[10px] font-bold text-white/70">
                 <span>{currentLevel}</span>
-                <span>Next Level: {nextLevelPts} pts</span>
+                <span>{progress.pointsToNext} pts to {progress.nextLevel}</span>
               </div>
               <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/20">
                 <div
-                  className="h-full rounded-full bg-[#ffcc22] transition-all duration-700"
-                  style={{ width: `${progressPct}%` }}
+                  className="h-full rounded-full bg-he-yellow transition-all duration-700"
+                  style={{ width: `${progress.progressPct}%` }}
                 />
               </div>
-              <p className="mt-1 text-right text-[9px] text-white/50">
-                {nextLevelPts - trustScore} pts to next level
-              </p>
             </div>
           ) : (
-            <p className="mt-4 text-[11px] font-bold text-[#ffcc22]">🏆 You've reached the highest level!</p>
+            <p className="mt-4 text-[11px] font-bold text-he-yellow">You&apos;ve reached the highest level!</p>
           )}
         </div>
       </section>
 
-      {/* Stats Row */}
+      <section>
+        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-he-soft">Trust Progression</h2>
+        <TrustLevelLadder level={currentLevel} trustScore={trustScore} />
+      </section>
+
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: 'Items Shared', value: sharedCount, icon: '🎁' },
           { label: 'Completed', value: completedCount, icon: '✅' },
-          { label: 'Avg Rating', value: avgRating > 0 ? avgRating.toFixed(1) : '—', icon: '⭐' },
+          { label: 'Avg Rating', value: reviewCount > 0 ? avgRating.toFixed(1) : '—', icon: '⭐' },
           { label: 'Reviews', value: reviewCount, icon: '💬' },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            className="flex flex-col items-center rounded-2xl border border-[#efe8da] bg-white p-5 text-center shadow-xs"
-          >
+          <Surface key={stat.label} className="flex flex-col items-center p-4 text-center">
             <div className="text-2xl">{stat.icon}</div>
-            <p className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold text-[#1f1f1f]">
+            <p className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold text-he-ink">
               {stat.value}
             </p>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-[#8c755f]/70">{stat.label}</p>
-          </div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-he-soft">{stat.label}</p>
+          </Surface>
         ))}
       </section>
 
-      {/* Average Rating Visual */}
-      {reviewCount > 0 && (
-        <section className="rounded-2xl border border-[#efe8da] bg-white p-6 shadow-xs">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Community Rating</h2>
-          <div className="mt-3 flex items-center gap-4">
-            <p className="font-['Plus_Jakarta_Sans',sans-serif] text-4xl font-bold text-[#1f1f1f]">
+      {reviewCount > 0 ? (
+        <Surface className="p-5">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Community Rating</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <p className="font-['Plus_Jakarta_Sans',sans-serif] text-4xl font-bold text-he-ink">
               {avgRating.toFixed(1)}
             </p>
             <div>
-              <StarRating rating={avgRating} size="lg" />
-              <p className="mt-1 text-[11px] text-[#68766d]">Based on {reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
+              <StarRatingDisplay rating={avgRating} size="lg" />
+              <p className="mt-1 text-[11px] text-he-muted">
+                Based on {reviewCount} review{reviewCount !== 1 ? 's' : ''}
+              </p>
             </div>
           </div>
-        </section>
-      )}
+        </Surface>
+      ) : null}
 
-      {/* Trust Event History */}
       <section>
-        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Trust History</h2>
+        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-he-soft">Trust History</h2>
         {trustEvents.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#efe8da] bg-[#faf7f1] p-6 text-center">
-            <p className="text-[12px] font-bold text-[#1f1f1f]">No events yet</p>
-            <p className="mt-1 text-[11px] text-[#68766d]">Complete actions to earn trust points.</p>
-          </div>
+          <ReviewEmptyState
+            title="No trust events yet"
+            description="Donate items, complete exchanges, and earn positive reviews to grow your score."
+          />
         ) : (
-          <div className="rounded-2xl border border-[#efe8da] bg-white overflow-hidden shadow-sm">
-            <ul className="divide-y divide-[#efe8da]">
+          <Surface className="overflow-hidden p-0">
+            <ul className="divide-y divide-he-border">
               {trustEvents.map((evt, idx) => (
-                <li key={idx} className="flex items-center justify-between p-4 hover:bg-[#fcfbf9]">
-                  <div>
-                    <p className="text-[12px] font-bold text-[#1f1f1f] capitalize">{evt.event_type.replace('_', ' ')}</p>
-                    <p className="text-[10px] text-[#68766d]">{evt.description}</p>
-                    <p className="text-[9px] text-[#8c755f]/60 mt-1">{new Date(evt.created_at).toLocaleDateString()}</p>
+                <li key={idx} className="flex items-center justify-between gap-3 p-4 hover:bg-he-surface-soft">
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-bold capitalize text-he-ink">{evt.event_type.replace('_', ' ')}</p>
+                    <p className="text-[10px] text-he-muted">{evt.description}</p>
+                    <p className="mt-1 text-[9px] text-he-soft">{new Date(evt.created_at).toLocaleDateString()}</p>
                   </div>
-                  <div className={`font-bold ${evt.points_change > 0 ? 'text-[#8b4cf6]' : 'text-red-500'}`}>
+                  <div className={`shrink-0 font-bold ${evt.points_change > 0 ? 'text-he-purple' : 'text-he-danger'}`}>
                     {evt.points_change > 0 ? '+' : ''}{evt.points_change}
                   </div>
                 </li>
               ))}
             </ul>
-          </div>
+          </Surface>
         )}
       </section>
 
-      {/* Badges Earned */}
       <section>
-        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">Badges Earned</h2>
+        <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-he-soft">Badges Earned</h2>
         <div className="flex flex-wrap gap-2">
           {badges.length === 0 ? (
-            <p className="text-[11px] text-[#68766d] italic">No badges earned yet.</p>
+            <p className="text-[11px] italic text-he-muted">No donation badges yet — complete your first exchange.</p>
           ) : (
-            badges.map(b => (
-              <div key={b} className="rounded-full bg-[#fcfbf9] border border-[#efe8da] px-4 py-1.5 text-[11px] font-bold text-[#1f3328] flex items-center gap-2">
-                <span>🏅</span> {b}
+            badges.map((badge) => (
+              <div key={badge} className="flex items-center gap-2 rounded-full border border-he-border bg-he-surface-soft px-4 py-1.5 text-[11px] font-bold text-he-ink">
+                <span>🏅</span> {badge}
               </div>
             ))
           )}
         </div>
       </section>
 
-      {/* Reviews Received */}
       <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/70">
-            Reviews Received
-          </h2>
-          {profileReviews?.length > 0 && (
-            <span className="rounded-full bg-[#efe7ff] px-2.5 py-0.5 text-[10px] font-bold text-[#8b4cf6]">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Reviews Received</h2>
+          {profileReviews?.length > 0 ? (
+            <span className="rounded-full bg-he-purple/15 px-2.5 py-0.5 text-[10px] font-bold text-he-purple">
               {profileReviews.length}
             </span>
-          )}
+          ) : null}
         </div>
 
         {!profileReviews || profileReviews.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#efe8da] bg-[#faf7f1] p-8 text-center">
-            <p className="text-2xl">💬</p>
-            <p className="mt-2 text-[13px] font-bold text-[#1f1f1f]">No reviews yet</p>
-            <p className="mt-1 text-[11px] text-[#68766d]">
-              Complete exchanges to start receiving reviews from the community.
-            </p>
-          </div>
+          <ReviewEmptyState />
         ) : (
           <div className="grid gap-3">
             {profileReviews.map((review, i) => (
@@ -281,7 +214,11 @@ export default function ReputationPage({ currentUser, myReputation, profileRevie
         )}
       </section>
 
-      {/* Community Milestones removed in favor of badges/events */}
+      {progress.nextLevel ? (
+        <p className="text-center text-[11px] text-he-muted">
+          {progress.pointsToNext} points until <strong className="text-he-ink">{progress.nextLevel}</strong>
+        </p>
+      ) : null}
     </div>
   )
 }

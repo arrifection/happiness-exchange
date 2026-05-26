@@ -1,34 +1,46 @@
-import React from 'react'
+import { getLevelProgress, normalizeTrustLevel } from '../lib/trustLevels.js'
 
-export default function LevelProgressBar({ currentLevel, trustScore, nextLevelPts, className = '' }) {
-  if (!nextLevelPts) {
+export default function LevelProgressBar({
+  currentLevel,
+  trustScore = 0,
+  nextLevelPts,
+  className = '',
+}) {
+  const normalizedLevel = normalizeTrustLevel(currentLevel)
+  const progress = getLevelProgress(trustScore, normalizedLevel)
+  const targetPoints = nextLevelPts ?? progress.nextLevelPoints
+
+  if (!targetPoints) {
     return (
       <div className={`w-full ${className}`}>
-        <div className="flex justify-between text-[10px] font-bold text-[#8c755f]">
-          <span>{currentLevel}</span>
-          <span className="text-[#8b4cf6]">Max Level Reached! 🏆</span>
+        <div className="flex justify-between gap-2 text-[10px] font-bold text-he-soft">
+          <span className="truncate text-he-ink">{normalizedLevel}</span>
+          <span className="shrink-0 text-he-purple">Max level reached 🏆</span>
         </div>
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#efe8da]">
-          <div className="h-full rounded-full bg-[#8b4cf6] w-full" />
+        <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-he-border/70">
+          <div className="h-full w-full rounded-full bg-gradient-to-r from-he-purple to-[#7340d2]" />
         </div>
       </div>
     )
   }
 
-  const progressPct = Math.min(100, Math.max(0, (trustScore / nextLevelPts) * 100))
-
   return (
     <div className={`w-full ${className}`}>
-      <div className="flex justify-between text-[10px] font-bold text-[#8c755f]">
-        <span>{currentLevel}</span>
-        <span>Next: {nextLevelPts} pts</span>
+      <div className="flex justify-between gap-2 text-[10px] font-bold text-he-soft">
+        <span className="truncate text-he-ink">{normalizedLevel}</span>
+        <span className="shrink-0">
+          {progress.pointsToNext} pts to {progress.nextLevel}
+        </span>
       </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[#efe8da]">
+      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-he-border/70">
         <div
-          className="h-full rounded-full bg-[#ffcc22] transition-all duration-700"
-          style={{ width: `${progressPct}%` }}
+          className="h-full rounded-full bg-gradient-to-r from-he-yellow to-[#f59e0b] transition-all duration-700"
+          style={{ width: `${progress.progressPct}%` }}
         />
       </div>
+      <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-he-muted">
+        {trustScore} / {targetPoints} trust points
+      </p>
     </div>
   )
 }
