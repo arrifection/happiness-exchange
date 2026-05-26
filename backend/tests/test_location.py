@@ -95,6 +95,21 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
         self.assertEqual(enriched["country"], "Pakistan")
         self.assertEqual(enriched["city"], "Lahore")
         self.assertIn("Lahore", enriched["location_display"])
+        self.assertAlmostEqual(enriched["latitude"], 31.5497, places=3)
+        self.assertAlmostEqual(enriched["longitude"], 74.3436, places=3)
+
+    def test_missing_coordinates_backfilled_from_city(self):
+        enriched = enrich_item_location(
+            {
+                "country": "Pakistan",
+                "city": "Lahore",
+                "location": "Lahore",
+                "latitude": None,
+                "longitude": None,
+            }
+        )
+        self.assertAlmostEqual(enriched["latitude"], 31.5497, places=3)
+        self.assertAlmostEqual(enriched["longitude"], 74.3436, places=3)
 
     def test_saudi_city_inferred_from_legacy_location(self):
         enriched = enrich_item_location({"location": "Riyadh", "title": "Table"})

@@ -255,11 +255,16 @@ export default function App() {
     }
   }
 
-  async function loadItems(locationPrefs) {
+  async function loadItems(locationPrefs, options = {}) {
     setLoadingItems(true); setItemsError('')
     try {
       const prefs = locationPrefs || readLocationPreferences()
       const params = buildItemsQueryParams(prefs)
+      if (options.status === 'all') {
+        params.set('status', '')
+      } else if (options.status) {
+        params.set('status', String(options.status).toLowerCase())
+      }
       const url = params.toString() ? `${ITEMS_ENDPOINT}?${params.toString()}` : ITEMS_ENDPOINT
       const res = await fetch(url)
       let data = null

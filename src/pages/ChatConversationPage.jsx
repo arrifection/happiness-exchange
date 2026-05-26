@@ -135,7 +135,7 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-[#efe8da] bg-white/90 px-4 py-3 backdrop-blur-md">
+      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-he-border bg-he-surface px-4 py-3">
         <button
           onClick={() => navigate('/messages')}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-[#f5f0ff] transition-colors"
@@ -239,7 +239,7 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
       {/* Sticky input */}
       <form
         onSubmit={handleSend}
-        className="sticky bottom-0 flex items-end gap-2 border-t border-[#efe8da] bg-white/95 px-4 py-3 pb-safe backdrop-blur-md"
+        className="sticky bottom-0 flex items-end gap-2 border-t border-he-border bg-he-surface px-4 py-3 pb-safe"
       >
         <div className="flex flex-1 items-end rounded-2xl border border-[#efe8da] bg-[#faf7f1] px-4 py-2 focus-within:border-[#8b4cf6] focus-within:ring-2 focus-within:ring-[#8b4cf6]/10 transition-all">
           <textarea

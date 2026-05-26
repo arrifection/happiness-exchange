@@ -77,7 +77,8 @@ export function getItemMapPosition(item) {
   if (item?.latitude != null && item?.longitude != null) {
     return [Number(item.latitude), Number(item.longitude)]
   }
-  return null
+  const cityCoords = getCityCoordinates(item?.country, item?.city || item?.location)
+  return cityCoords ? [...cityCoords] : null
 }
 
 export function getPublicLocationLabel(item) {

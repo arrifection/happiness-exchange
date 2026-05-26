@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the full project
 COPY . .
 
+# Record git commit + build time for /api/status/ verification
+RUN python scripts/generate_build_info.py
+
 # Hugging Face Spaces requires port 7860
 EXPOSE 7860
 

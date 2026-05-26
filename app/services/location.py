@@ -154,6 +154,13 @@ def enrich_item_location(item: dict[str, Any]) -> dict[str, Any]:
     enriched["location"] = legacy_location or city or location_display
     enriched["location_source"] = location_source
     enriched["location_display"] = location_display
+
+    if enriched.get("latitude") is None or enriched.get("longitude") is None:
+        city_coords = get_city_coordinates(country, city)
+        if city_coords:
+            enriched["latitude"] = city_coords[0]
+            enriched["longitude"] = city_coords[1]
+
     return enriched
 
 

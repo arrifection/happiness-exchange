@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
 import ItemsBrowseMap from '../components/map/ItemsBrowseMap.jsx'
@@ -60,8 +60,17 @@ export default function BrowseItemsPage({
     }
     writeLocationPreferences(next)
     setLocationPrefs(next)
-    onRefreshItems?.(next)
+    onRefreshItems?.(next, buildStatusQuery(statusFilter))
   }
+
+  function buildStatusQuery(filter) {
+    if (filter === 'All') return { status: 'all' }
+    return { status: filter.toLowerCase() }
+  }
+
+  useEffect(() => {
+    onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))
+  }, [statusFilter])
 
   const filteredItems = useMemo(() => {
     let result = [...items]
@@ -81,7 +90,7 @@ export default function BrowseItemsPage({
       )
     }
 
-    // Category — handle mapped labels
+    // Category — client-side filter on the loaded page of items
     if (categoryFilter !== 'All') {
       const dbValues = CATEGORY_DB_MAP[categoryFilter]
       result = result.filter((item) => {
@@ -92,7 +101,7 @@ export default function BrowseItemsPage({
       })
     }
 
-    // Status
+    // Status — server fetch uses buildStatusQuery; keep client filter for mixed views
     if (statusFilter !== 'All') {
       result = result.filter((item) => item.status === statusFilter.toLowerCase())
     }
