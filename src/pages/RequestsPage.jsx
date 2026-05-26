@@ -139,6 +139,9 @@ export default function RequestsPage({
             </h1>
             <p className="text-[10px] text-he-muted md:text-xs">Review neighbors who are interested in your items.</p>
           </div>
+          <Button as="link" to="/needs" variant="secondary" className="h-8 min-h-0 px-3 text-[10px]">
+            Community Needs
+          </Button>
         </div>
 
         <div className="-mx-4 flex flex-wrap gap-1.5 overflow-x-auto px-4 pb-1 no-scrollbar scroll-smooth md:mx-0 md:flex-nowrap md:justify-center md:gap-3 md:overflow-x-visible md:px-0 md:pb-0">

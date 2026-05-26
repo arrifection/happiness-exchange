@@ -67,6 +67,11 @@ async def _ensure_indexes(database) -> None:
     await database.deliveries.create_index("receiver_id")
     await database.deliveries.create_index("status")
     await database.deliveries.create_index("created_at")
+    # Community need requests
+    await database.need_requests.create_index("status")
+    await database.need_requests.create_index("created_at")
+    await database.need_requests.create_index("created_by")
+    await database.need_requests.create_index([("country", 1), ("city", 1)])
     # Trust Events indexes
     await database.trust_events.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
     await database.trust_events.create_index(
@@ -212,6 +217,13 @@ async def get_deliveries_collection_async():
     if database is None:
         return None
     return database.deliveries
+
+
+async def get_need_requests_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.need_requests
 
 
 async def close_mongo_connection() -> None:

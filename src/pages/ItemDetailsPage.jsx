@@ -2,6 +2,7 @@ import { Navigate, useParams } from 'react-router-dom'
 
 import ItemCard from '../components/ItemCard.jsx'
 import { Button, EmptyState, Surface } from '../components/ui.jsx'
+import { storageConditionLabel } from '../lib/categories.js'
 
 export default function ItemDetailsPage({
   currentUser,
@@ -74,6 +75,25 @@ export default function ItemDetailsPage({
           <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
             {item.location_display || item.location}
           </span>
+          {item.category === 'Food' && (item.expiry_date || item.sealed_packaging != null || item.storage_condition) ? (
+            <>
+              {item.expiry_date ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                  Expires {item.expiry_date}
+                </span>
+              ) : null}
+              {item.sealed_packaging ? (
+                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+                  Sealed
+                </span>
+              ) : null}
+              {item.storage_condition ? (
+                <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-he-soft">
+                  {storageConditionLabel(item.storage_condition)}
+                </span>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </Surface>
     </div>

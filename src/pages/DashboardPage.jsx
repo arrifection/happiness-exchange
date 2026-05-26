@@ -134,6 +134,9 @@ export default function DashboardPage({
             <Button as="link" to="/give" variant="secondary" className="h-10 px-6 text-[12px] md:text-[13px]">
               List Item
             </Button>
+            <Button as="link" to="/needs" variant="ghost" className="h-10 px-6 text-[12px] md:text-[13px]">
+              Community Needs
+            </Button>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import ItemForm from '../components/ItemForm.jsx'
 import { Button, Surface } from '../components/ui.jsx'
@@ -15,8 +16,19 @@ export default function GiveItemPage({
   itemError,
   imageUploadMessage,
   imageUploadError,
+  onApplyGivePrefill,
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const prefillAppliedRef = useRef(false)
+
+  useEffect(() => {
+    if (prefillAppliedRef.current || !location.state?.prefill || !onApplyGivePrefill) {
+      return
+    }
+    prefillAppliedRef.current = true
+    onApplyGivePrefill(location.state.prefill)
+  }, [location.state, onApplyGivePrefill])
 
   async function handlePublishItem(event) {
     const createdItem = await onCreateItem(event)

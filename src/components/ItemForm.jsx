@@ -3,12 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
 import LocationSelector from './LocationSelector.jsx'
 import { DEFAULT_COUNTRY } from '../lib/locations.js'
+import { ITEM_CATEGORIES, STORAGE_CONDITIONS } from '../lib/categories.js'
 
-const CATEGORIES = [
-  'Furniture', 'Home', 'Kitchen', 'Electronics',
-  'Clothes', 'Kids', 'Books', 'Appliances',
-  'Study', 'Sports', 'Toys', 'Other',
-]
+const CATEGORIES = ITEM_CATEGORIES
 
 const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
 
@@ -158,8 +155,12 @@ export default function ItemForm({
   )
 
   function handleFormChange(event) {
-    const { name } = event.target
-    onChange(event)
+    const { name, type, checked, value } = event.target
+    if (type === 'checkbox') {
+      onChange({ target: { name, value: checked } })
+    } else {
+      onChange(event)
+    }
 
     if (fieldErrors[name]) {
       setFieldErrors((current) => {
@@ -301,6 +302,57 @@ export default function ItemForm({
               </p>
             </div>
           </div>
+
+          {itemForm.category === 'Food' ? (
+            <div className="space-y-3 rounded-2xl border border-amber-200/80 bg-amber-50/60 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+              <p className="text-[11px] font-bold text-amber-900 dark:text-amber-200">Food safety</p>
+              <p className="text-[10px] leading-relaxed text-amber-900/80 dark:text-amber-100/80">
+                Only share sealed, safe, non-expired food. Mention the expiry date in the description when applicable.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <TextField
+                  id="item-expiry-date"
+                  name="expiry_date"
+                  label="Expiry date (optional)"
+                  type="date"
+                  value={itemForm.expiry_date || ''}
+                  onChange={handleFormChange}
+                  disabled={disabled}
+                />
+                <div>
+                  <label className="grid gap-1.5" htmlFor="item-storage-condition">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">Storage (optional)</span>
+                    <div className="relative">
+                      <select
+                        id="item-storage-condition"
+                        name="storage_condition"
+                        value={itemForm.storage_condition || ''}
+                        onChange={handleFormChange}
+                        disabled={disabled}
+                        className="h-10 w-full appearance-none rounded-input border border-he-border bg-he-input px-3 pr-10 text-sm text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/10"
+                      >
+                        <option value="">Select storage</option>
+                        {STORAGE_CONDITIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </label>
+                </div>
+                <label className="flex items-center gap-2 self-end rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 py-2.5 text-xs font-medium text-[#1f1f1f] dark:border-he-border dark:bg-he-surface dark:text-he-ink">
+                  <input
+                    type="checkbox"
+                    name="sealed_packaging"
+                    checked={Boolean(itemForm.sealed_packaging)}
+                    onChange={handleFormChange}
+                    disabled={disabled}
+                    className="h-4 w-4 rounded border-[#efe8da] text-[#8b4cf6] focus:ring-[#8b4cf6]/20"
+                  />
+                  Sealed packaging
+                </label>
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <label className="grid gap-1" htmlFor="item-image_file">

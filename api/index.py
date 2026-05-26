@@ -15,6 +15,7 @@ from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
 from app.api.routes.leaderboard import router as leaderboard_router
 from app.api.routes.deliveries import router as deliveries_router
+from app.api.routes.need_requests import router as need_requests_router
 # ── Admin routes ──────────────────────────────────────────────────────────────
 from app.api.routes.admin.auth      import router as admin_auth_router
 from app.api.routes.admin.users     import router as admin_users_router
@@ -74,6 +75,7 @@ app.include_router(conversations_router, prefix="/api", tags=["Conversations"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["Leaderboard"])
 app.include_router(deliveries_router, prefix="/api", tags=["Deliveries"])
+app.include_router(need_requests_router, prefix="/api", tags=["Need Requests"])
 
 # ── Admin API ─────────────────────────────────────────────────────────────────
 app.include_router(admin_auth_router,      prefix="/api/admin/auth",      tags=["Admin · Auth"])

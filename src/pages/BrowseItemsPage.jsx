@@ -5,7 +5,7 @@ import LocationSelector from '../components/LocationSelector.jsx'
 import { Button, EmptyState } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 
-const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Other']
+const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Food', 'Other']
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
 const SORT_OPTIONS = ['Newest first', 'Oldest first']
 

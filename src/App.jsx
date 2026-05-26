@@ -7,6 +7,7 @@ import ChatLayout from './pages/ChatLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import DeliveryTrackingPage from './pages/DeliveryTrackingPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
+import NeedsBoardPage from './pages/NeedsBoardPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ItemDetailsPage from './pages/ItemDetailsPage.jsx'
 import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
@@ -43,6 +44,7 @@ const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const CONVERSATIONS_ENDPOINT = `${API_BASE}/api/conversations/my`
 const DELIVERIES_ENDPOINT = `${API_BASE}/api/deliveries/my`
+const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
 const TOKEN_KEY = 'happiness_exchange_token'
 const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
@@ -68,6 +70,9 @@ const emptyItemForm = {
   longitude: null,
   location_source: 'manual',
   location_display: '',
+  expiry_date: '',
+  sealed_packaging: false,
+  storage_condition: '',
   image_url: '',
   owner_name: '',
 }
@@ -150,12 +155,19 @@ export default function App() {
   // Deliveries state
   const [myDeliveries, setMyDeliveries] = useState([])
 
+  const [needRequests, setNeedRequests] = useState([])
+  const [loadingNeedRequests, setLoadingNeedRequests] = useState(false)
+  const [needRequestsError, setNeedRequestsError] = useState('')
+  const [needRequestsMessage, setNeedRequestsMessage] = useState('')
+  const [creatingNeedRequest, setCreatingNeedRequest] = useState(false)
+  const [needActionPendingId, setNeedActionPendingId] = useState('')
+
   const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
   const isMessagesRoute = location.pathname.startsWith('/messages')
   const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
 
-  useEffect(() => { loadItems(readLocationPreferences()) }, [])
+  useEffect(() => { loadItems(readLocationPreferences()); loadNeedRequests('open') }, [])
 
   useEffect(() => {
     if (token) loadUserData()
@@ -411,6 +423,15 @@ export default function App() {
           || itemForm.city
           || 'Current location',
       }
+      if (!payload.expiry_date) delete payload.expiry_date
+      if (!payload.storage_condition) delete payload.storage_condition
+      if (payload.category !== 'Food') {
+        delete payload.expiry_date
+        delete payload.sealed_packaging
+        delete payload.storage_condition
+      } else if (payload.sealed_packaging === false) {
+        payload.sealed_packaging = false
+      }
       const res = await fetch(ITEMS_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -426,6 +447,94 @@ export default function App() {
       throw new Error(formatApiError(data, 'Publishing failed.'))
     } catch (err) { setItemError(err.message); return null }
     finally { setCreatingItem(false) }
+  }
+
+  async function loadNeedRequests(statusFilter = 'open') {
+    setLoadingNeedRequests(true); setNeedRequestsError('')
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter) params.set('status', statusFilter)
+      const url = params.toString() ? `${NEED_REQUESTS_ENDPOINT}?${params.toString()}` : NEED_REQUESTS_ENDPOINT
+      const res = await fetch(url)
+      const data = await res.json()
+      if (res.ok) setNeedRequests(Array.isArray(data) ? data : [])
+      else setNeedRequestsError(formatApiError(data, 'Failed to load community needs.'))
+    } catch {
+      setNeedRequestsError('Unable to load community needs.')
+    } finally {
+      setLoadingNeedRequests(false)
+    }
+  }
+
+  async function handleCreateNeedRequest(payload) {
+    setCreatingNeedRequest(true); setNeedRequestsError(''); setNeedRequestsMessage('')
+    try {
+      const res = await fetch(NEED_REQUESTS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Could not post need request.'))
+      setNeedRequestsMessage('Need request posted!')
+      await loadNeedRequests('open')
+      return data
+    } catch (error) {
+      setNeedRequestsError(error.message)
+      return null
+    } finally {
+      setCreatingNeedRequest(false)
+    }
+  }
+
+  async function handleCloseNeedRequest(needId) {
+    setNeedActionPendingId(needId); setNeedRequestsError(''); setNeedRequestsMessage('')
+    try {
+      const res = await fetch(`${NEED_REQUESTS_ENDPOINT}/${needId}/close`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Could not close need request.'))
+      setNeedRequestsMessage('Need request closed.')
+      await loadNeedRequests('open')
+      return data
+    } catch (error) {
+      setNeedRequestsError(error.message)
+      return null
+    } finally {
+      setNeedActionPendingId('')
+    }
+  }
+
+  async function handleFulfillNeedRequest(needId) {
+    setNeedActionPendingId(needId); setNeedRequestsError(''); setNeedRequestsMessage('')
+    try {
+      const res = await fetch(`${NEED_REQUESTS_ENDPOINT}/${needId}/fulfilled`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Could not update need request.'))
+      setNeedRequestsMessage('Need request marked as fulfilled.')
+      await loadNeedRequests('open')
+      return data
+    } catch (error) {
+      setNeedRequestsError(error.message)
+      return null
+    } finally {
+      setNeedActionPendingId('')
+    }
+  }
+
+  function handleApplyGivePrefill(prefill) {
+    setItemForm((current) => ({
+      ...current,
+      ...prefill,
+      owner_name: current.owner_name || currentUser?.name || '',
+      location: prefill.city || current.location,
+      location_display: prefill.city && prefill.country ? `${prefill.city}, ${prefill.country}` : current.location_display,
+    }))
   }
 
   async function handleCreateRequest(itemId) {
@@ -741,6 +850,7 @@ export default function App() {
                   {[
                     { to: '/', label: 'Home' },
                     { to: '/browse', label: 'Browse' },
+                    { to: '/needs', label: 'Needs' },
                     { to: '/give', label: 'Give Item' },
                     { to: '/requests', label: 'Activity' },
                     { to: '/messages', label: 'Messages', badge: chatUnreadTotal },
@@ -850,6 +960,25 @@ export default function App() {
                 }
               />
               <Route
+                path="/needs"
+                element={
+                  <NeedsBoardPage
+                    currentUser={currentUser}
+                    needRequests={needRequests}
+                    loadingNeedRequests={loadingNeedRequests}
+                    needRequestsError={needRequestsError}
+                    needRequestsMessage={needRequestsMessage}
+                    onRefreshNeedRequests={loadNeedRequests}
+                    onCreateNeedRequest={handleCreateNeedRequest}
+                    onCloseNeedRequest={handleCloseNeedRequest}
+                    onFulfillNeedRequest={handleFulfillNeedRequest}
+                    creatingNeedRequest={creatingNeedRequest}
+                    needActionPendingId={needActionPendingId}
+                  />
+                }
+              />
+              <Route path="/requests-board" element={<Navigate to="/needs" replace />} />
+              <Route
                 path="/give"
                 element={
                   <GiveItemPage
@@ -858,6 +987,7 @@ export default function App() {
                     onCreateItem={handleCreateItem} creatingItem={creatingItem}
                     uploadingItemImage={uploadingItemImage} itemMessage={itemMessage} itemError={itemError}
                     imageUploadMessage={imageUploadMessage} imageUploadError={imageUploadError}
+                    onApplyGivePrefill={handleApplyGivePrefill}
                   />
                 }
               />

@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
@@ -8,6 +9,13 @@ from app.services.location import SUPPORTED_COUNTRIES, normalize_country
 
 ItemStatus = Literal["available", "reserved", "completed"]
 LocationSource = Literal["manual", "current_location"]
+StorageCondition = Literal["room_temp", "refrigerated", "frozen"]
+
+
+class ItemFoodFields(BaseModel):
+    expiry_date: date | None = None
+    sealed_packaging: bool | None = None
+    storage_condition: StorageCondition | None = None
 
 
 class ItemLocationFields(BaseModel):
@@ -30,7 +38,7 @@ class ItemLocationFields(BaseModel):
         return normalized
 
 
-class ItemCreateRequest(ItemLocationFields):
+class ItemCreateRequest(ItemLocationFields, ItemFoodFields):
     title: str = Field(min_length=3, max_length=120)
     description: str = Field(min_length=10, max_length=2000)
     category: str = Field(min_length=2, max_length=60)
@@ -63,6 +71,9 @@ class ItemResponse(BaseModel):
     created_at: datetime
     request_count: int | None = None
     distance_km: float | None = None
+    expiry_date: date | None = None
+    sealed_packaging: bool | None = None
+    storage_condition: StorageCondition | None = None
 
 
 class ItemImageUploadResponse(BaseModel):

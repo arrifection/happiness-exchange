@@ -56,6 +56,9 @@ def serialize_item(
         "created_at": created_at,
         "request_count": request_count,
         "distance_km": distance_km,
+        "expiry_date": enriched.get("expiry_date"),
+        "sealed_packaging": enriched.get("sealed_packaging"),
+        "storage_condition": enriched.get("storage_condition"),
     }
 
 
@@ -71,7 +74,7 @@ def build_item_document(payload: ItemCreateRequest, current_user: dict) -> dict:
         location_source=payload.location_source,
         location_display=payload.location_display,
     )
-    return {
+    document = {
         "title": payload.title.strip(),
         "description": payload.description.strip(),
         "category": payload.category.strip(),
@@ -82,3 +85,10 @@ def build_item_document(payload: ItemCreateRequest, current_user: dict) -> dict:
         "owner_id": current_user["id"],
         "owner_name": current_user["name"],
     }
+    if payload.expiry_date is not None:
+        document["expiry_date"] = payload.expiry_date.isoformat()
+    if payload.sealed_packaging is not None:
+        document["sealed_packaging"] = payload.sealed_packaging
+    if payload.storage_condition is not None:
+        document["storage_condition"] = payload.storage_condition
+    return document
