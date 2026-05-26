@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import StatCard from '../components/StatCard'
 import { LoadingSpinner, ErrorState } from '../components/States'
@@ -92,7 +93,7 @@ export default function DashboardPage() {
               <Package className="w-4 h-4 text-brand-600" />
               Recent Listings
             </h3>
-            <a href="/listings" className="text-xs text-brand-600 hover:text-brand-700 transition-colors">View all →</a>
+            <Link to="/listings" className="text-xs text-brand-600 hover:text-brand-700 transition-colors">View all →</Link>
           </div>
           {recent.length === 0 ? (
             <p className="text-surface-500 text-sm py-6 text-center">No listings yet.</p>

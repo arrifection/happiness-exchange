@@ -1,6 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Search } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { statusApi } from '../lib/api'
 import NotificationBell from './NotificationBell'
@@ -60,15 +59,6 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-500" />
-          <input
-            type="search"
-            placeholder="Quick search…"
-            className="form-input pl-8 py-1.5 w-52 text-xs rounded-lg bg-surface-100/50"
-          />
-        </div>
-
         <NotificationBell />
 
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold uppercase shadow-soft ring-2 ring-white">

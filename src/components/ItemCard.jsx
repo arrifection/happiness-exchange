@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { RatingStars, ReputationBadge } from './reputation.jsx'
+import { showFlash } from '../lib/flash.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
@@ -131,7 +131,7 @@ export default function ItemCard({
           className="h-7 min-h-0 border-[#8b4cf6]/20 px-2.5 text-[9px] text-[#8b4cf6] hover:bg-[#f5efff]"
           onClick={() => {
             if (!currentUser.is_verified) {
-              alert("Please verify your email to leave a review.")
+              showFlash('Please verify your email to leave a review.')
               return
             }
             onOpenReview(reviewContext)
@@ -161,7 +161,7 @@ export default function ItemCard({
         className="h-7 min-h-0 px-2.5 text-[9px]" 
         onClick={() => {
           if (!currentUser.is_verified) {
-            alert("Please verify your email to request an item.")
+            showFlash('Please verify your email to request an item.')
             return
           }
           onCreateRequest(item.id)

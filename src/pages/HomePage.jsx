@@ -173,10 +173,10 @@ export default function HomePage({ currentUser }) {
   return (
     <div className="he-home">
       <nav className="he-nav">
-        <a href="#" className="he-nav-logo" onClick={() => setMobileMenuOpen(false)}>
+        <Link to="/" className="he-nav-logo" onClick={() => setMobileMenuOpen(false)}>
           <BrandMark />
           <span className="he-nav-brand">Happiness Exchange</span>
-        </a>
+        </Link>
 
         <div className="he-nav-links">
           <a href="#how-it-works">How it works</a>

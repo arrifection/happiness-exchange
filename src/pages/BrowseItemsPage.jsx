@@ -124,7 +124,7 @@ export default function BrowseItemsPage({
           <button
             type="button"
             className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#8b4cf6] hover:underline"
-            onClick={onRefreshItems}
+            onClick={() => onRefreshItems?.(locationPrefs)}
             disabled={loadingItems}
           >
             {loadingItems ? 'Refreshing...' : 'Refresh'}

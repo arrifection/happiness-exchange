@@ -3,6 +3,8 @@ import logging
 import os
 from contextlib import suppress
 
+from pymongo import ASCENDING, DESCENDING
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 
 from app.core.config import settings

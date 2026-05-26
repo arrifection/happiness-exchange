@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
+import { showFlash } from '../lib/flash.js'
+
 function formatMsgTime(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -221,14 +223,14 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.ok) {
-        alert("User blocked.")
+        showFlash('User blocked.')
         navigate('/messages')
       } else {
         const data = await res.json()
-        alert(data.detail || 'Block failed.')
+        showFlash(data.detail || 'Block failed.')
       }
     } catch {
-      alert("Connection error.")
+      showFlash('Connection error.')
     }
   }
 
@@ -245,14 +247,14 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
         body: JSON.stringify({ reason: reportReason }),
       })
       if (res.ok) {
-        alert("Chat reported to admins.")
+        showFlash('Chat reported to admins.')
         setReportModalOpen(false)
         setShowOptions(false)
       } else {
-        alert("Failed to report.")
+        showFlash('Failed to report.')
       }
     } catch {
-      alert("Connection error.")
+      showFlash('Connection error.')
     }
   }
 

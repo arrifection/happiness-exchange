@@ -61,6 +61,7 @@ export default function DeliveryTrackingPage({ token, currentUser }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     loadDelivery()
@@ -88,6 +89,7 @@ export default function DeliveryTrackingPage({ token, currentUser }) {
 
   async function handleConfirmCompletion() {
     setConfirming(true)
+    setActionError('')
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/deliveries/${deliveryId}/confirm`, {
         method: 'POST',
@@ -97,10 +99,10 @@ export default function DeliveryTrackingPage({ token, currentUser }) {
       if (res.ok) {
         setDelivery(data)
       } else {
-        alert(data.detail || 'Could not confirm delivery.')
+        setActionError(typeof data.detail === 'string' ? data.detail : 'Could not confirm delivery.')
       }
-    } catch (err) {
-      alert('Error confirming delivery.')
+    } catch {
+      setActionError('Error confirming delivery. Please try again.')
     } finally {
       setConfirming(false)
     }
@@ -166,7 +168,10 @@ export default function DeliveryTrackingPage({ token, currentUser }) {
               <div className="rounded-xl bg-[#fffdfb] border border-[#efe8da] p-5 text-center shadow-xs">
                 <h3 className="text-sm font-bold text-[#1f1f1f]">Item Delivered!</h3>
                 <p className="mt-1 text-xs text-[#68766d]">Please confirm you are satisfied with this delivery.</p>
-                <Button 
+                {actionError ? (
+                  <p className="mt-3 text-[11px] font-medium text-[#c65d4a]">{actionError}</p>
+                ) : null}
+                <Button
                   onClick={handleConfirmCompletion} 
                   disabled={confirming}
                   className="mt-4 w-full bg-[#8b4cf6] text-white sm:w-auto"

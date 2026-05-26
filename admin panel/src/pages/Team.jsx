@@ -118,6 +118,11 @@ export default function TeamPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {members.length === 0 ? (
+          <div className="card md:col-span-2 xl:col-span-3 py-10 text-center text-surface-500">
+            No team members yet. Invite your first moderator or admin when ready.
+          </div>
+        ) : null}
         {members.map((m) => {
           const name = m.name || m.full_name || m.email
           const joined = m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—'

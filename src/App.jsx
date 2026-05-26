@@ -20,6 +20,7 @@ import SignupPage from './pages/SignupPage.jsx'
 import CheckYourEmailPage from './pages/CheckYourEmailPage.jsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
+import FlashBanner from './components/FlashBanner.jsx'
 import NotificationBell from './components/NotificationBell.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
@@ -186,7 +187,7 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) {
-      loadItems() // Also reload public items when user changes to get fresh state
+      loadItems(readLocationPreferences()) // Also reload public items when user changes to get fresh state
       loadMyItems()
       loadRequestData()
       loadMyReputation()
@@ -836,6 +837,7 @@ export default function App() {
           ) : null}
 
           {showAppChrome ? (
+            <>
             <header className="sticky top-0 z-50 border-b border-he-border bg-he-surface/95 backdrop-blur-md dark:bg-he-surface/98">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
@@ -901,6 +903,8 @@ export default function App() {
                 </div>
               </div>
             </header>
+            <FlashBanner />
+            </>
           ) : null}
 
           <main className={

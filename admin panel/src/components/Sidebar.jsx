@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, ROLES } from '../contexts/AuthContext'
 import { APP_NAME } from '../lib/env'
 import {
   LayoutDashboard,
@@ -13,7 +13,6 @@ import {
   BarChart3,
   LogOut,
   ChevronRight,
-  Settings,
   Shield,
 } from 'lucide-react'
 
@@ -21,36 +20,36 @@ const navItems = [
   {
     group: 'Overview',
     items: [
-      { label: 'Dashboard',   to: '/dashboard',  icon: LayoutDashboard },
-      { label: 'Analytics',   to: '/analytics',  icon: BarChart3 },
+      { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, minRole: ROLES.COURIER },
+      { label: 'Analytics', to: '/analytics', icon: BarChart3, minRole: ROLES.ADMIN },
     ],
   },
   {
     group: 'Content',
     items: [
-      { label: 'Listings',    to: '/listings',   icon: Package },
-      { label: 'Requests',    to: '/requests',   icon: FileText },
-      { label: 'Reviews',     to: '/reviews',    icon: Star },
+      { label: 'Listings', to: '/listings', icon: Package, minRole: ROLES.MODERATOR },
+      { label: 'Requests', to: '/requests', icon: FileText, minRole: ROLES.MODERATOR },
+      { label: 'Reviews', to: '/reviews', icon: Star, minRole: ROLES.MODERATOR },
     ],
   },
   {
     group: 'Moderation',
     items: [
-      { label: 'Reports & Flags', to: '/reports',  icon: Flag },
-      { label: 'Users',           to: '/users',    icon: Users },
+      { label: 'Reports & Flags', to: '/reports', icon: Flag, minRole: ROLES.MODERATOR },
+      { label: 'Users', to: '/users', icon: Users, minRole: ROLES.ADMIN },
     ],
   },
   {
     group: 'Operations',
     items: [
-      { label: 'Courier Coord.', to: '/courier',  icon: Truck },
-      { label: 'Team Members',   to: '/team',     icon: UsersRound },
+      { label: 'Courier Coord.', to: '/courier', icon: Truck, minRole: ROLES.COURIER },
+      { label: 'Team Members', to: '/team', icon: UsersRound, minRole: ROLES.SUPER_ADMIN },
     ],
   },
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, logout } = useAuth()
+  const { user, logout, hasRole } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -60,11 +59,18 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   const roleColors = {
     super_admin: 'text-purple-700',
-    admin:       'text-brand-700',
-    moderator:   'text-accent-700',
-    courier:     'text-emerald-700',
+    admin: 'text-brand-700',
+    moderator: 'text-accent-700',
+    courier: 'text-emerald-700',
   }
   const roleColor = roleColors[user?.role] || 'text-surface-500'
+
+  const visibleNavItems = navItems
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => hasRole(item.minRole)),
+    }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <aside
@@ -75,7 +81,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         ${collapsed ? 'w-16' : 'w-64'}
       `}
     >
-      {/* ── Logo ─────────────────────────────────────── */}
       <div className={`flex items-center h-16 border-b border-surface-300 px-4 flex-shrink-0 ${collapsed ? 'justify-center' : 'gap-3'}`}>
         <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-soft">
           <Shield className="w-4 h-4 text-white" />
@@ -88,9 +93,8 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
       </div>
 
-      {/* ── Nav ──────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-        {navItems.map((group) => (
+        {visibleNavItems.map((group) => (
           <div key={group.group} className="mb-4">
             {!collapsed && (
               <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-widest uppercase text-surface-500">
@@ -126,7 +130,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* ── User Footer ──────────────────────────────── */}
       <div className="flex-shrink-0 border-t border-surface-300 p-3 space-y-1">
         {!collapsed && user && (
           <div className="px-3 py-2.5 rounded-lg bg-white/70 border border-surface-300 mb-2">
@@ -140,15 +143,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
 
         <button
-          onClick={() => navigate('/settings')}
-          title="Settings"
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-surface-600 hover:text-surface-800 hover:bg-lavender-50 transition-all ${collapsed ? 'justify-center' : ''}`}
-        >
-          <Settings className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Settings</span>}
-        </button>
-
-        <button
           onClick={handleLogout}
           title="Sign out"
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-all ${collapsed ? 'justify-center' : ''}`}
@@ -158,7 +152,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         </button>
       </div>
 
-      {/* ── Collapse Toggle ───────────────────────────── */}
       <button
         onClick={onToggle}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

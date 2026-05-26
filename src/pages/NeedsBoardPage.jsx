@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import LocationSelector from '../components/LocationSelector.jsx'
 import { ITEM_CATEGORIES, NEED_URGENCIES, urgencyLabel } from '../lib/categories.js'
+import { showFlash } from '../lib/flash.js'
 import { DEFAULT_COUNTRY, readLocationPreferences } from '../lib/locations.js'
 import { Button, EmptyState, SelectField, Surface, TextAreaField, TextField } from '../components/ui.jsx'
 
@@ -181,10 +182,9 @@ export default function NeedsBoardPage({
 
   function handleHaveItem(need) {
     if (!currentUser?.is_verified) {
-      alert('Please verify your email before offering an item.')
+      showFlash('Please verify your email before offering an item.')
       return
     }
-    // TODO: notify requester when notification hook is wired
     navigate('/give', {
       state: {
         prefill: {
