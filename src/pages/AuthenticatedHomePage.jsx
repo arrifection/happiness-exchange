@@ -4,7 +4,7 @@ import ItemCard from '../components/ItemCard.jsx'
 import { asArray } from '../lib/api.js'
 import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
-import { Button, EmptyState, SectionHeading, Surface } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, InlineLoadingNotice, SectionHeading, Surface } from '../components/ui.jsx'
 
 const TAGLINES = [
   'Give what you can. Find what you need.',
@@ -67,6 +67,7 @@ export default function AuthenticatedHomePage({
   onOpenReview,
   loadingItems,
   itemsError,
+  onRefreshItems,
   myRequests,
   ownerRequests,
 }) {
@@ -197,11 +198,17 @@ export default function AuthenticatedHomePage({
           action={<Button as="link" to="/browse" variant="ghost" className="h-7 min-h-0 px-2 text-[9px]">See all</Button>}
         />
 
-        {loadingItems ? <p className="text-[11px] text-[#68766d]">Loading listings...</p> : null}
-        {itemsError ? <p className="text-[11px] font-medium text-[#c65d4a]">{itemsError}</p> : null}
-
-        {!loadingItems && !itemsError && recentItems.length === 0 ? (
+        {loadingItems ? (
+          <ItemCardSkeletonGrid count={2} />
+        ) : itemsError ? (
+          <ErrorState
+            title="Couldn't load recent items"
+            message={itemsError}
+            onRetry={() => onRefreshItems?.()}
+          />
+        ) : recentItems.length === 0 ? (
           <EmptyState
+            icon="items"
             title="No items yet"
             description="Be the first to share something with the community."
             action={<Button as="link" to="/give">List Item</Button>}

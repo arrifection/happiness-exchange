@@ -5,7 +5,7 @@ import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import TrustLevelLadder from '../components/TrustLevelLadder.jsx'
-import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, RequestCardSkeletonList, SectionHeading, StatusBadge, Surface, InlineLoadingNotice } from '../components/ui.jsx'
 import { ArrangeDeliveryModal, AddDeliveryAddressModal } from '../components/delivery/DeliveryModals.jsx'
 
 function StatCard({ label, value, onClick, highlight, to }) {
@@ -207,12 +207,16 @@ export default function DashboardPage({
       </Surface>
 
       {/* Messages / Feedback */}
-      {(loadingRequests || requestsMessage || requestsError) ? (
-        <div className="space-y-1.5 px-2">
-          {loadingRequests ? <p className="text-[10px] font-bold uppercase tracking-widest text-he-muted">Refreshing...</p> : null}
-          {requestsMessage ? <p className="text-[10px] font-bold uppercase tracking-widest text-he-purple">{requestsMessage}</p> : null}
-          {requestsError ? <p className="text-[10px] font-bold uppercase tracking-widest text-he-danger">{requestsError}</p> : null}
-        </div>
+      {requestsMessage ? (
+        <p className="px-2 text-[10px] font-bold uppercase tracking-widest text-he-purple">{requestsMessage}</p>
+      ) : null}
+      {requestsError ? (
+        <ErrorState
+          title="Couldn't load your activity"
+          message={requestsError}
+          onRetry={() => loadRequestData?.()}
+          className="mx-0"
+        />
       ) : null}
 
       {arrangeDeliveryRequest && (
@@ -247,13 +251,19 @@ export default function DashboardPage({
             description="Your active requests for community items."
           />
           <div className="grid grid-cols-1 gap-3 md:gap-5 sm:grid-cols-2">
-            {requestList.length === 0 ? (
+            {loadingRequests && requestList.length === 0 ? (
+              <RequestCardSkeletonList count={2} className="sm:col-span-2" />
+            ) : requestList.length === 0 ? (
               <EmptyState
+                icon="requests"
                 title="No active requests"
-                description="When you request an item, it will appear here."
+                description="When you request an item from Browse, it will appear here so you can track progress."
+                action={<Button as="link" to="/browse">Browse items</Button>}
               />
             ) : (
-              requestList.map((request) => {
+              <>
+                {loadingRequests ? <InlineLoadingNotice label="Updating requests…" className="sm:col-span-2" /> : null}
+                {requestList.map((request) => {
                 const reviewContext = getReviewContextForMyRequest?.(request)
                 const convId = getChatConversationForRequest?.(request.id)
                 return (
@@ -305,7 +315,8 @@ export default function DashboardPage({
                     </div>
                   </RequestCard>
                 )
-              })
+              })}
+              </>
             )}
           </div>
         </div>
@@ -318,13 +329,19 @@ export default function DashboardPage({
             action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
           />
           <div className="flex flex-col gap-3">
-            {incomingRequests.length === 0 ? (
+            {loadingRequests && incomingRequests.length === 0 ? (
+              <RequestCardSkeletonList count={2} className="grid-cols-1" />
+            ) : incomingRequests.length === 0 ? (
               <EmptyState
+                icon="requests"
                 title="No pending reviews"
-                description="Requests will appear here."
+                description="When someone requests one of your items, you can approve or decline it here."
+                action={<Button as="link" to="/give">View your listings</Button>}
               />
             ) : (
-              incomingRequests.slice(0, 5).map((request) => {
+              <>
+                {loadingRequests ? <InlineLoadingNotice label="Updating incoming requests…" /> : null}
+                {incomingRequests.slice(0, 5).map((request) => {
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
                 const convId = getChatConversationForRequest?.(request.id)
                 return (
@@ -385,7 +402,8 @@ export default function DashboardPage({
                     ) : null}
                   </RequestCard>
                 )
-              })
+              })}
+              </>
             )}
           </div>
         </div>

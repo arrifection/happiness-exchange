@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { showFlash } from '../lib/flash.js'
+import { EmptyState, ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 
 function formatMsgTime(dateStr) {
   if (!dateStr) return ''
@@ -41,6 +42,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
 
   const [conversations, setConversations] = useState([])
   const [loadingConv, setLoadingConv] = useState(true)
+  const [convError, setConvError] = useState('')
 
   const [messages, setMessages] = useState([])
   const [loadingMsgs, setLoadingMsgs] = useState(false)
@@ -109,24 +111,37 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   }, [messages])
 
   async function loadConversations() {
+    setConvError('')
     try {
       const res = await fetch(`${apiBase}/api/conversations/my`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (res.ok) setConversations(data)
-    } catch { /* silent */ }
-    finally { setLoadingConv(false) }
+      if (res.ok) {
+        setConversations(Array.isArray(data) ? data : [])
+      } else {
+        setConvError(data?.detail || 'Could not load conversations.')
+      }
+    } catch {
+      setConvError('Unable to reach the server. Check your connection and try again.')
+    } finally {
+      setLoadingConv(false)
+    }
   }
 
   async function loadMessages() {
+    setLoadingMsgs(true)
     try {
       const res = await fetch(`${apiBase}/api/conversations/${conversationId}/messages`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (res.ok) setMessages(data)
-    } catch { /* silent */ }
+      if (res.ok) setMessages(Array.isArray(data) ? data : [])
+    } catch {
+      setError('Could not load messages. Pull to refresh by reopening the chat.')
+    } finally {
+      setLoadingMsgs(false)
+    }
   }
 
   async function handleSend(e) {
@@ -278,12 +293,24 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
         
         <div className="flex-1 overflow-y-auto">
           {loadingConv ? (
-            <div className="flex justify-center p-8">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-he-purple border-t-transparent" />
+            <ConversationSkeletonList count={5} />
+          ) : convError ? (
+            <div className="p-4">
+              <ErrorState
+                title="Couldn't load messages"
+                message={convError}
+                onRetry={loadConversations}
+                className="mx-0 p-4"
+              />
             </div>
           ) : conversations.length === 0 ? (
-            <div className="p-8 text-center text-sm text-he-soft">
-              No conversations yet.
+            <div className="p-4">
+              <EmptyState
+                icon="messages"
+                title="No messages yet"
+                description="When a request is approved, a private chat opens here so you can coordinate pickup and delivery."
+                action={null}
+              />
             </div>
           ) : (
             <div className="divide-y divide-he-border">
@@ -389,7 +416,17 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
 
             {/* Messages Area */}
             <div className="flex-1 space-y-2 overflow-y-auto bg-he-page px-4 py-4">
-              {messages.map((msg, i) => {
+              {loadingMsgs ? (
+                <MessageSkeletonList count={5} />
+              ) : messages.length === 0 ? (
+                <EmptyState
+                  icon="messages"
+                  title="Start the conversation"
+                  description="Send a message to coordinate pickup or delivery. Keep details respectful and stay within the app."
+                  className="mx-auto border-0 bg-transparent shadow-none"
+                />
+              ) : (
+                messages.map((msg, i) => {
                 const isMe = msg.sender_id === currentUser?.id
                 const showSep = shouldShowDateSeparator(messages, i)
                 return (
@@ -428,7 +465,8 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
                     </div>
                   </div>
                 )
-              })}
+              })
+              )}
               {error && <p className="text-center text-[11px] font-medium text-[#c65d4a] my-2">{error}</p>}
               <div ref={bottomRef} className="h-2" />
             </div>

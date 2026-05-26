@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import ItemCard from '../components/ItemCard.jsx'
 import ItemsBrowseMap from '../components/map/ItemsBrowseMap.jsx'
 import LocationSelector from '../components/LocationSelector.jsx'
-import { Button, EmptyState } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, InlineLoadingNotice } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 
 const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Food', 'Other']
@@ -261,28 +261,65 @@ export default function BrowseItemsPage({
 
       {/* Results grid */}
       <div className="space-y-3 pt-1 md:pt-4">
-        {itemsError ? <p className="text-xs font-medium text-[#c65d4a]">{itemsError}</p> : null}
-
-        {!loadingItems && !itemsError && filteredItems.length === 0 ? (
+        {loadingItems && items.length === 0 ? (
+          <ItemCardSkeletonGrid count={4} />
+        ) : itemsError ? (
+          <ErrorState
+            title="Couldn't load items"
+            message={itemsError}
+            onRetry={() => onRefreshItems?.(locationPrefs)}
+          />
+        ) : !loadingItems && filteredItems.length === 0 ? (
           <EmptyState
+            icon={hasActiveFilters ? 'search' : 'items'}
             title={hasActiveFilters ? 'No items match your filters' : 'No items available yet'}
-            description="Try adjusting your search or filters to see more listings."
+            description={
+              hasActiveFilters
+                ? 'Try adjusting your search or filters to see more listings.'
+                : 'Check back soon — new items are added as community members list things to share.'
+            }
+            action={
+              hasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setSearch('')
+                    setCategoryFilter('All')
+                    setStatusFilter('Available')
+                    const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
+                    writeLocationPreferences(resetPrefs)
+                    setLocationPrefs(resetPrefs)
+                    onRefreshItems?.(resetPrefs)
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : (
+                <Button as="link" to={currentUser ? '/give' : '/signup'}>
+                  {currentUser ? 'List an item' : 'Join the community'}
+                </Button>
+              )
+            }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-6">
-            {filteredItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                currentUser={currentUser}
-                myRequest={getMyRequestForItem(item.id)}
-                reviewContext={getReviewContextForItem(item)}
-                onCreateRequest={onCreateRequest}
-                onOpenReview={onOpenReview}
-                compact
-              />
-            ))}
-          </div>
+          <>
+            {loadingItems ? <InlineLoadingNotice label="Updating listings…" /> : null}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-6">
+              {filteredItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  currentUser={currentUser}
+                  myRequest={getMyRequestForItem(item.id)}
+                  reviewContext={getReviewContextForItem(item)}
+                  onCreateRequest={onCreateRequest}
+                  onOpenReview={onOpenReview}
+                  compact
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

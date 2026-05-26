@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 
 import { asArray } from '../lib/api.js'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
-import { Button, EmptyState, StatusBadge, Surface } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, RequestCardSkeletonList, InlineLoadingNotice, Surface } from '../components/ui.jsx'
 import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
 const FILTERS = ['all', 'pending', 'approved', 'rejected']
@@ -162,12 +162,16 @@ export default function RequestsPage({
         </div>
       </div>
 
-      {(loadingRequests || requestsMessage || requestsError) ? (
-        <div className="space-y-1.5 pt-1">
-          {loadingRequests ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-muted">Refreshing...</p> : null}
-          {requestsMessage ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-purple">{requestsMessage}</p> : null}
-          {requestsError ? <p className="text-[9px] font-bold uppercase tracking-widest text-he-danger">{requestsError}</p> : null}
-        </div>
+      {requestsMessage ? (
+        <p className="pt-1 text-[10px] font-bold uppercase tracking-widest text-he-purple">{requestsMessage}</p>
+      ) : null}
+
+      {requestsError ? (
+        <ErrorState
+          title="Couldn't load requests"
+          message={requestsError}
+          onRetry={() => loadRequestData?.()}
+        />
       ) : null}
 
       {arrangeDeliveryRequest && (
@@ -183,9 +187,12 @@ export default function RequestsPage({
       )}
 
       <div className="space-y-3 pt-1 md:pt-4">
-        {!loadingRequests && visibleRequests.length === 0 ? (
+        {loadingRequests && visibleRequests.length === 0 ? (
+          <RequestCardSkeletonList count={4} />
+        ) : !loadingRequests && visibleRequests.length === 0 ? (
           <div className="flex w-full justify-center md:px-8">
             <EmptyState
+              icon="requests"
               title={
                 activeFilter === 'pending'
                   ? 'No pending requests yet'
@@ -195,11 +202,14 @@ export default function RequestsPage({
                       ? 'No rejected requests'
                       : 'No requests yet'
               }
-              description="Requests will appear here as neighbors respond to your items."
+              description="When neighbors request your listed items, they will appear here for you to review."
+              action={<Button as="link" to="/give">View your listings</Button>}
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-6">
+          <>
+            {loadingRequests ? <InlineLoadingNotice label="Updating requests…" /> : null}
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-6">
             {visibleRequests.map((request) => {
               const reviewContext = getReviewContextForOwnerRequest(request)
               return (
@@ -225,7 +235,8 @@ export default function RequestsPage({
                 </RequestCard>
               )
             })}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

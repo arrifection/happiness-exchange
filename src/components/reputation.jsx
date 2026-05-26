@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Button, Surface } from './ui.jsx'
+import { Button, Surface, EmptyState } from './ui.jsx'
 
 function StarIcon({ filled, className = 'h-4 w-4' }) {
   return (
@@ -28,15 +28,15 @@ export function StarRatingDisplay({ rating = 0, size = 'md' }) {
   )
 }
 
-export function ReviewEmptyState({ title = 'No reviews yet', description, className = '' }) {
+export function ReviewEmptyState({ title = 'No reviews yet', description, className = '', action }) {
   return (
-    <div className={`rounded-2xl border border-dashed border-he-border bg-he-surface-soft px-4 py-6 text-center dark:bg-he-elevated/50 ${className}`}>
-      <div className="text-2xl" aria-hidden="true">💬</div>
-      <p className="mt-2 text-[13px] font-bold text-he-ink">{title}</p>
-      <p className="mt-1 text-[11px] leading-relaxed text-he-muted">
-        {description || 'Complete exchanges to start receiving community feedback.'}
-      </p>
-    </div>
+    <EmptyState
+      icon="reviews"
+      title={title}
+      description={description || 'Complete exchanges to start receiving community feedback.'}
+      action={action}
+      className={className}
+    />
   )
 }
 

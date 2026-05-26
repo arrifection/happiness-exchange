@@ -1,13 +1,17 @@
 import { Navigate, useParams } from 'react-router-dom'
 
 import ItemCard from '../components/ItemCard.jsx'
-import { Button, EmptyState, Surface } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, ItemCardSkeleton, Surface } from '../components/ui.jsx'
 import { storageConditionLabel } from '../lib/categories.js'
+import { safeString } from '../lib/safeValues.js'
 
 export default function ItemDetailsPage({
   currentUser,
   items,
   myItems,
+  loadingItems = false,
+  itemsError = '',
+  onRefreshItems,
   getMyRequestForItem,
   getReviewContextForItem,
   onCreateRequest,
@@ -17,17 +21,42 @@ export default function ItemDetailsPage({
   ownerActionItemId,
 }) {
   const { itemId } = useParams()
-  const item = [...myItems, ...items].find((entry) => entry.id === itemId)
+  const item = [...(myItems || []), ...(items || [])].find((entry) => entry.id === itemId)
 
   if (!currentUser) {
     return <Navigate to="/login" replace />
   }
 
+  if (loadingItems && !item) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink">
+            Item Details
+          </h1>
+          <p className="text-[10px] text-he-muted">Loading listing…</p>
+        </div>
+        <ItemCardSkeleton />
+      </div>
+    )
+  }
+
+  if (itemsError && !item) {
+    return (
+      <ErrorState
+        title="Couldn't load this item"
+        message={itemsError}
+        onRetry={() => onRefreshItems?.()}
+      />
+    )
+  }
+
   if (!item) {
     return (
       <EmptyState
+        icon="items"
         title="Item not found"
-        description="This listing may have been removed or is no longer available."
+        description="This listing may have been removed, completed, or is no longer available in your area."
         action={<Button as="link" to="/browse">Back to Browse</Button>}
       />
     )
@@ -35,7 +64,6 @@ export default function ItemDetailsPage({
 
   return (
     <div className="space-y-4">
-      {/* Header and Back navigation */}
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink">
@@ -43,12 +71,11 @@ export default function ItemDetailsPage({
           </h1>
           <p className="text-[10px] text-he-muted">View the listing and make requests.</p>
         </div>
-        <Button as="link" to="/browse" variant="ghost" className="h-7 min-h-0 px-2.5 text-[10px] text-[#8b4cf6] hover:bg-[#8b4cf6]/5">
+        <Button as="link" to="/browse" variant="ghost" className="h-7 min-h-0 px-2.5 text-[10px] text-he-purple hover:bg-he-purple/5">
           ← Back
         </Button>
       </div>
 
-      {/* Main card */}
       <ItemCard
         item={item}
         currentUser={currentUser}
@@ -61,19 +88,20 @@ export default function ItemDetailsPage({
         ownerActionPending={ownerActionItemId === item.id}
       />
 
-      {/* Detail Block */}
       <Surface className="p-4.5">
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Description & Pickup Details</h2>
-        <p className="mt-2 text-xs leading-relaxed text-he-muted">{item.description}</p>
+        <p className="mt-2 text-xs leading-relaxed text-he-muted">
+          {safeString(item.description, 'No description provided.')}
+        </p>
         <div className="mt-4 flex flex-wrap gap-1.5 border-t border-he-border/60 pt-3.5">
           <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
-            {item.category}
+            {safeString(item.category, 'Uncategorized')}
           </span>
           <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
-            {item.condition}
+            {safeString(item.condition, 'Condition not listed')}
           </span>
           <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
-            {item.location_display || item.location}
+            {safeString(item.location_display || item.location, 'Location unavailable')}
           </span>
           {item.category === 'Food' && (item.expiry_date || item.sealed_packaging != null || item.storage_condition) ? (
             <>

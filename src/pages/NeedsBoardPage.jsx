@@ -5,7 +5,7 @@ import LocationSelector from '../components/LocationSelector.jsx'
 import { ITEM_CATEGORIES, NEED_URGENCIES, urgencyLabel } from '../lib/categories.js'
 import { showFlash } from '../lib/flash.js'
 import { DEFAULT_COUNTRY, readLocationPreferences } from '../lib/locations.js'
-import { Button, EmptyState, SelectField, Surface, TextAreaField, TextField } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, NeedCardSkeletonList, InlineLoadingNotice, SelectField, Surface, TextAreaField, TextField } from '../components/ui.jsx'
 
 const STATUS_FILTERS = [
   { value: 'open', label: 'Open' },
@@ -323,29 +323,49 @@ export default function NeedsBoardPage({
       {needRequestsMessage ? (
         <p className="text-xs font-medium text-he-success">{needRequestsMessage}</p>
       ) : null}
+
       {needRequestsError ? (
-        <p className="text-xs font-medium text-he-danger">{needRequestsError}</p>
+        <ErrorState
+          title="Couldn't load community needs"
+          message={needRequestsError}
+          onRetry={() => onRefreshNeedRequests(statusFilter)}
+        />
       ) : null}
 
-      {!loadingNeedRequests && filteredNeeds.length === 0 ? (
+      {loadingNeedRequests && filteredNeeds.length === 0 ? (
+        <NeedCardSkeletonList count={3} />
+      ) : !loadingNeedRequests && !needRequestsError && filteredNeeds.length === 0 ? (
         <EmptyState
+          icon="needs"
           title="No need requests yet"
-          description="Be the first to post what you are looking for, or check back later."
+          description="Be the first to post what you are looking for, or check back as the community grows."
+          action={
+            currentUser ? (
+              <Button type="button" onClick={() => setShowForm(true)}>
+                Post a need
+              </Button>
+            ) : (
+              <Button as="link" to="/signup">Join to post a need</Button>
+            )
+          }
         />
       ) : (
-        <div className="grid gap-3">
-          {filteredNeeds.map((need) => (
-            <NeedRequestCard
-              key={need.id}
-              need={need}
-              currentUser={currentUser}
-              onCloseNeed={onCloseNeedRequest}
-              onFulfillNeed={onFulfillNeedRequest}
-              onHaveItem={handleHaveItem}
-              actionPending={needActionPendingId === need.id}
-            />
-          ))}
-        </div>
+        <>
+          {loadingNeedRequests ? <InlineLoadingNotice label="Updating needs…" /> : null}
+          <div className="grid gap-3">
+            {filteredNeeds.map((need) => (
+              <NeedRequestCard
+                key={need.id}
+                need={need}
+                currentUser={currentUser}
+                onCloseNeed={onCloseNeedRequest}
+                onFulfillNeed={onFulfillNeedRequest}
+                onHaveItem={handleHaveItem}
+                actionPending={needActionPendingId === need.id}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

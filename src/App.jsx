@@ -110,7 +110,7 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState(false)
 
   const [items, setItems] = useState([])
-  const [loadingItems, setLoadingItems] = useState(false)
+  const [loadingItems, setLoadingItems] = useState(true)
   const [itemsError, setItemsError] = useState('')
 
   const [myItems, setMyItems] = useState([])
@@ -160,7 +160,7 @@ export default function App() {
   const [myDeliveries, setMyDeliveries] = useState([])
 
   const [needRequests, setNeedRequests] = useState([])
-  const [loadingNeedRequests, setLoadingNeedRequests] = useState(false)
+  const [loadingNeedRequests, setLoadingNeedRequests] = useState(true)
   const [needRequestsError, setNeedRequestsError] = useState('')
   const [needRequestsMessage, setNeedRequestsMessage] = useState('')
   const [creatingNeedRequest, setCreatingNeedRequest] = useState(false)
@@ -935,6 +935,7 @@ export default function App() {
                       getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                       onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
                       loadingItems={loadingItems} itemsError={itemsError}
+                      onRefreshItems={loadItems}
                       myRequests={myRequests} ownerRequests={ownerRequests}
                     />
                   ) : (
@@ -1011,6 +1012,8 @@ export default function App() {
                 element={
                   <ItemDetailsPage
                     currentUser={currentUser} items={items} myItems={myItems}
+                    loadingItems={loadingItems} itemsError={itemsError}
+                    onRefreshItems={loadItems}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
