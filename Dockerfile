@@ -18,8 +18,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the full project
 COPY . .
 
-# Record git commit + build time for /api/status/ verification
-RUN python scripts/generate_build_info.py
+# Git is required to record commit hash for /api/status/ (HF Spaces omits .git hooks without it)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && python scripts/generate_build_info.py \
+    && apt-get purge -y git \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Hugging Face Spaces requires port 7860
 EXPOSE 7860
