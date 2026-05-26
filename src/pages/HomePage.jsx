@@ -1,28 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+
+import { getFeaturedHomeItems } from '../lib/featuredItems.js'
+import { getPublicLocationLabel } from '../lib/locations.js'
+import { resolveItemImageUrl } from '../lib/itemImages.js'
 
 import './HomePage.css'
 
-const phoneItems = [
-  {
-    name: 'Kids winter jacket - age 6',
-    location: 'Gulshan, Karachi · 1.2 km',
-    icon: '👔',
-    tint: '#FFF3CD',
-  },
-  {
-    name: 'Class 7 textbook set',
-    location: 'Johar Town, Lahore · 2.8 km',
-    icon: '📚',
-    tint: '#E8F4FD',
-  },
-  {
-    name: 'Samsung Galaxy A32',
-    location: 'F-10, Islamabad · 3.5 km',
-    icon: '📱',
-    tint: '#F0FDF4',
-  },
-]
+const FEATURED_ITEM_LIMIT = 6
+const SKELETON_COUNT = 3
 
 const giveSteps = [
   'Photograph your item - clothes, books, electronics, kitchenware, toys. Takes under 2 minutes.',
@@ -135,9 +121,23 @@ function StepText({ text }) {
   )
 }
 
-export default function HomePage({ currentUser }) {
+function FeaturedItemSkeleton() {
+  return (
+    <div className="he-item-card he-item-skeleton" aria-hidden="true">
+      <div className="he-item-thumb he-skeleton-block" />
+      <div className="he-item-info">
+        <div className="he-skeleton-line he-skeleton-title" />
+        <div className="he-skeleton-line he-skeleton-loc" />
+      </div>
+      <div className="he-skeleton-tag" />
+    </div>
+  )
+}
+
+export default function HomePage({ currentUser, items = [], loadingItems = false }) {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const featuredItems = useMemo(() => getFeaturedHomeItems(items, FEATURED_ITEM_LIMIT), [items])
 
   const navCtaTo = currentUser ? '/browse' : '/login'
   const navCtaLabel = currentUser ? 'Open App' : 'Login'
@@ -284,18 +284,48 @@ export default function HomePage({ currentUser }) {
                 Browse items near you...
               </div>
 
-              {phoneItems.map((item) => (
-                <div key={item.name} className="he-item-card">
-                  <div className="he-item-thumb" style={{ background: item.tint }}>
-                    {item.icon}
+              <div className="he-phone-items" aria-live="polite">
+                {loadingItems ? (
+                  Array.from({ length: SKELETON_COUNT }, (_, index) => (
+                    <FeaturedItemSkeleton key={`featured-skeleton-${index}`} />
+                  ))
+                ) : featuredItems.length === 0 ? (
+                  <div className="he-item-empty">
+                    <div className="he-item-empty-icon" aria-hidden="true">
+                      🎁
+                    </div>
+                    <p className="he-item-empty-title">No listings yet</p>
+                    <p className="he-item-empty-desc">
+                      Be the first to list something in your area — it only takes a couple of minutes.
+                    </p>
+                    <Link to={giveRoute} className="he-item-empty-link">
+                      List an item →
+                    </Link>
                   </div>
-                  <div className="he-item-info">
-                    <div className="he-item-name">{item.name}</div>
-                    <div className="he-item-loc">{item.location}</div>
-                  </div>
-                  <div className="he-item-tag">FREE</div>
-                </div>
-              ))}
+                ) : (
+                  featuredItems.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/items/${item.id}`}
+                      className="he-item-card he-item-card-link"
+                    >
+                      <div className="he-item-thumb">
+                        <img
+                          src={resolveItemImageUrl(item.image_url)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                      <div className="he-item-info">
+                        <div className="he-item-name">{item.title}</div>
+                        <div className="he-item-loc">{getPublicLocationLabel(item)}</div>
+                      </div>
+                      <div className="he-item-tag">FREE</div>
+                    </Link>
+                  ))
+                )}
+              </div>
 
               <div className="he-app-list-btn">
                 <span>+ List your item - takes only 2 minutes</span>
