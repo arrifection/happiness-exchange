@@ -27,9 +27,10 @@ export default function LocationMapPicker({
   locationSource = 'manual',
   onPick,
   disabled = false,
+  defaultMapOpen = false,
 }) {
   const [mounted, setMounted] = useState(false)
-  const [mapOpen, setMapOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(defaultMapOpen)
 
   useEffect(() => {
     setMounted(true)

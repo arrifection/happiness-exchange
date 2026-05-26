@@ -10,8 +10,10 @@ from fastapi.testclient import TestClient
 from app.api.routes import items as items_routes
 from app.services.location import (
     build_items_list_query,
+    build_item_location_payload,
     enrich_item_location,
     filter_and_sort_items,
+    get_city_coordinates,
     item_matches_country,
 )
 
@@ -138,6 +140,31 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
         query = build_items_list_query(country="Pakistan", status="available")
         self.assertEqual(query["status"], "available")
         self.assertIn("$and", query)
+
+    def test_build_item_location_payload_uses_city_coordinates(self):
+        payload = build_item_location_payload(
+            location="Lahore",
+            country="Pakistan",
+            city="Lahore",
+        )
+        self.assertAlmostEqual(payload["latitude"], 31.5497, places=3)
+        self.assertAlmostEqual(payload["longitude"], 74.3436, places=3)
+
+    def test_build_item_location_payload_prefers_explicit_coordinates(self):
+        payload = build_item_location_payload(
+            location="Lahore",
+            country="Pakistan",
+            city="Lahore",
+            latitude=31.55,
+            longitude=74.34,
+        )
+        self.assertEqual(payload["latitude"], 31.55)
+        self.assertEqual(payload["longitude"], 74.34)
+
+    def test_get_city_coordinates_case_insensitive(self):
+        coords = get_city_coordinates("Pakistan", "lahore")
+        self.assertIsNotNone(coords)
+        self.assertAlmostEqual(coords[0], 31.5497, places=3)
 
 
 class LocationApiTests(IsolatedAsyncioTestCase):

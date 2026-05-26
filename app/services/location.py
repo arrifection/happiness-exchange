@@ -29,6 +29,58 @@ CITIES_BY_COUNTRY: dict[str, frozenset[str]] = {
     "Saudi Arabia": SAUDI_CITIES,
 }
 
+CITY_COORDINATES: dict[str, dict[str, tuple[float, float]]] = {
+    "Pakistan": {
+        "Lahore": (31.5497, 74.3436),
+        "Islamabad": (33.6844, 73.0479),
+        "Karachi": (24.8607, 67.0011),
+        "Rawalpindi": (33.5651, 73.0169),
+        "Faisalabad": (31.4504, 73.1350),
+        "Multan": (30.1575, 71.5249),
+        "Gujrat": (32.5742, 74.0754),
+        "Mandi Bahauddin": (32.5870, 73.4910),
+        "Gujranwala": (32.1877, 74.1945),
+        "Sialkot": (32.4945, 74.5229),
+        "Peshawar": (34.0151, 71.5249),
+        "Quetta": (30.1798, 66.9750),
+        "Hyderabad": (25.3960, 68.3578),
+        "Bahawalpur": (29.3956, 71.6833),
+        "Sargodha": (32.0836, 72.6711),
+        "Sukkur": (27.7052, 68.8574),
+        "Larkana": (27.5600, 68.2260),
+        "Sheikhupura": (31.7167, 73.9850),
+        "Jhang": (31.2682, 72.3181),
+        "Rahim Yar Khan": (28.4202, 70.2989),
+        "Kasur": (31.1156, 74.4508),
+    },
+    "Saudi Arabia": {
+        "Riyadh": (24.7136, 46.6753),
+        "Jeddah": (21.4858, 39.1925),
+        "Makkah": (21.3891, 39.8579),
+        "Madina": (24.5247, 39.5692),
+        "Madinah": (24.5247, 39.5692),
+        "Dammam": (26.3927, 49.9777),
+        "Khobar": (26.2172, 50.1971),
+        "Taif": (21.4373, 40.5127),
+    },
+}
+
+
+def get_city_coordinates(country: str | None, city: str | None) -> tuple[float, float] | None:
+    if not country or not city:
+        return None
+    normalized_country = normalize_country(country)
+    city_clean = normalize_city(city)
+    if not city_clean:
+        return None
+    coords = CITY_COORDINATES.get(normalized_country, {}).get(city_clean)
+    if coords:
+        return coords
+    for name, value in CITY_COORDINATES.get(normalized_country, {}).items():
+        if name.lower() == city_clean.lower():
+            return value
+    return None
+
 
 def normalize_country(value: str | None) -> str:
     if not value or not str(value).strip():
@@ -138,10 +190,14 @@ def build_item_location_payload(
         "location_source": resolved_source,
         "location_display": resolved_display,
     }
-    if latitude is not None:
+    if latitude is not None and longitude is not None:
         payload["latitude"] = float(latitude)
-    if longitude is not None:
         payload["longitude"] = float(longitude)
+    else:
+        city_coords = get_city_coordinates(resolved_country, resolved_city)
+        if city_coords:
+            payload["latitude"] = city_coords[0]
+            payload["longitude"] = city_coords[1]
     return payload
 
 

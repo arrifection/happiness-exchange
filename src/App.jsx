@@ -417,21 +417,29 @@ export default function App() {
     if (uploadingItemImage) { setItemError('Please wait for the image upload to finish before publishing.'); return null }
     setCreatingItem(true); setItemError(''); setItemMessage('')
     try {
+      const locationSource = itemForm.location_source || itemForm.locationSource || 'manual'
       const payload = {
-        ...itemForm,
+        title: itemForm.title.trim(),
+        description: itemForm.description.trim(),
+        category: itemForm.category,
+        condition: itemForm.condition,
         location: itemForm.location?.trim()
           || itemForm.location_display?.trim()
           || itemForm.city
           || 'Current location',
+        country: itemForm.country,
+        city: itemForm.city || null,
+        area: itemForm.area || null,
+        latitude: itemForm.latitude ?? null,
+        longitude: itemForm.longitude ?? null,
+        location_source: locationSource,
+        location_display: itemForm.location_display || null,
+        image_url: itemForm.image_url?.trim() || null,
       }
-      if (!payload.expiry_date) delete payload.expiry_date
-      if (!payload.storage_condition) delete payload.storage_condition
-      if (payload.category !== 'Food') {
-        delete payload.expiry_date
-        delete payload.sealed_packaging
-        delete payload.storage_condition
-      } else if (payload.sealed_packaging === false) {
-        payload.sealed_packaging = false
+      if (itemForm.category === 'Food') {
+        if (itemForm.expiry_date) payload.expiry_date = itemForm.expiry_date
+        if (itemForm.storage_condition) payload.storage_condition = itemForm.storage_condition
+        payload.sealed_packaging = Boolean(itemForm.sealed_packaging)
       }
       const res = await fetch(ITEMS_ENDPOINT, {
         method: 'POST',

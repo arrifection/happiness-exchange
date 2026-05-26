@@ -103,18 +103,21 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             "name": "Owner User",
             "email": "owner@example.com",
             "account_type": "giver",
+            "is_verified": True,
         }
         self.other_user = {
             "id": self.other_user_id,
             "name": "Other User",
             "email": "other@example.com",
             "account_type": "receiver",
+            "is_verified": True,
         }
         self.requester_user = {
             "id": self.requester_id,
             "name": "Requester User",
             "email": "requester@example.com",
             "account_type": "receiver",
+            "is_verified": True,
         }
 
         self.items_collection = FakeCollection(
@@ -166,6 +169,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
 
     def make_client(self, user):
         self.app.dependency_overrides[auth_deps.get_current_user] = lambda: user
+        self.app.dependency_overrides[auth_deps.get_verified_user] = lambda: user
         return TestClient(self.app)
 
     def test_owner_can_delete_own_item(self):
@@ -183,6 +187,8 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             "category": "Furniture",
             "condition": "Good",
             "location": "Lahore",
+            "country": "Pakistan",
+            "city": "Lahore",
             "image_url": "https://res.cloudinary.com/demo/image/upload/chair.png",
         }
 
@@ -192,9 +198,37 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 201)
         created_document = self.items_collection.documents[-1]
         self.assertEqual(created_document["image_url"], payload["image_url"])
+        self.assertAlmostEqual(created_document["latitude"], 31.5497, places=3)
+        self.assertAlmostEqual(created_document["longitude"], 74.3436, places=3)
         self.assertNotIn("image", created_document)
         self.assertNotIn("image_base64", created_document)
         self.assertNotIn("image_binary", created_document)
+
+    def test_create_item_stores_map_pin_coordinates(self):
+        payload = {
+            "title": "Pinned lamp",
+            "description": "A lamp pinned to a custom map location near the community center.",
+            "category": "Home",
+            "condition": "Good",
+            "location": "Lahore",
+            "country": "Pakistan",
+            "city": "Lahore",
+            "latitude": 31.56,
+            "longitude": 74.35,
+            "location_source": "manual",
+            "image_url": "https://res.cloudinary.com/demo/image/upload/lamp.png",
+        }
+
+        with self.make_client(self.owner_user) as client:
+            response = client.post("/api/items", json=payload)
+
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertEqual(body["latitude"], 31.56)
+        self.assertEqual(body["longitude"], 74.35)
+        created_document = self.items_collection.documents[-1]
+        self.assertEqual(created_document["latitude"], 31.56)
+        self.assertEqual(created_document["longitude"], 74.35)
 
     def test_non_owner_cannot_delete_item(self):
         with self.make_client(self.other_user) as client:

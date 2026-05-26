@@ -6,6 +6,7 @@ import {
   COUNTRIES,
   buildLocationDisplay,
   getCitiesForCountry,
+  getCityCoordinates,
 } from '../lib/locations.js'
 
 export default function LocationSelector({
@@ -19,6 +20,7 @@ export default function LocationSelector({
   showArea = false,
   showCurrentLocation = true,
   showMapPicker = false,
+  defaultMapOpen = false,
   disabled = false,
 }) {
   const [geoMessage, setGeoMessage] = useState('')
@@ -35,20 +37,35 @@ export default function LocationSelector({
         area,
         latitude,
         longitude,
-        locationSource,
+        location_source: locationSource,
         location: '',
         location_display: buildLocationDisplay({ country, city: '', area, locationSource }),
       })
     }
   }, [country])
 
+  function coordsForCity(nextCountry, nextCity) {
+    const coords = getCityCoordinates(nextCountry, nextCity)
+    if (!coords) {
+      return { latitude: null, longitude: null }
+    }
+    return { latitude: coords[0], longitude: coords[1] }
+  }
+
   function emit(next) {
     const resolvedCity = next.city ?? city
     const resolvedCountry = next.country ?? country
     const resolvedArea = next.area ?? area
-    const resolvedSource = next.locationSource ?? locationSource
-    const resolvedLat = next.latitude !== undefined ? next.latitude : latitude
-    const resolvedLng = next.longitude !== undefined ? next.longitude : longitude
+    const resolvedSource = next.location_source ?? locationSource
+    let resolvedLat = next.latitude !== undefined ? next.latitude : latitude
+    let resolvedLng = next.longitude !== undefined ? next.longitude : longitude
+
+    if (next.city !== undefined && next.latitude === undefined && next.longitude === undefined) {
+      const cityCoords = coordsForCity(resolvedCountry, resolvedCity)
+      resolvedLat = cityCoords.latitude
+      resolvedLng = cityCoords.longitude
+    }
+
     const locationDisplay = buildLocationDisplay({
       country: resolvedCountry,
       city: resolvedCity,
@@ -61,7 +78,7 @@ export default function LocationSelector({
       area: resolvedArea,
       latitude: resolvedLat,
       longitude: resolvedLng,
-      locationSource: resolvedSource,
+      location_source: resolvedSource,
       location: resolvedCity || locationDisplay,
       location_display: locationDisplay,
     })
@@ -82,13 +99,13 @@ export default function LocationSelector({
         emit({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          locationSource: 'current_location',
+          location_source: 'current_location',
         })
       },
       () => {
         setLocating(false)
-        setGeoError('Location permission denied. Please select country and city manually.')
-        emit({ locationSource: 'manual', latitude: null, longitude: null })
+        setGeoError('Location permission denied. Pick a city or tap the map to set an approximate pickup point.')
+        emit({ location_source: 'manual', latitude: null, longitude: null })
       },
       { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 },
     )
@@ -102,7 +119,7 @@ export default function LocationSelector({
           name="country"
           label="Country"
           value={country}
-          onChange={(event) => emit({ country: event.target.value, city: '', locationSource: 'manual', latitude: null, longitude: null })}
+          onChange={(event) => emit({ country: event.target.value, city: '', location_source: 'manual', latitude: null, longitude: null })}
           options={COUNTRIES}
           required
           disabled={disabled}
@@ -112,7 +129,7 @@ export default function LocationSelector({
           name="city"
           label="City"
           value={city}
-          onChange={(event) => emit({ city: event.target.value, locationSource: 'manual', latitude: null, longitude: null })}
+          onChange={(event) => emit({ city: event.target.value, location_source: 'manual' })}
           options={cities}
           placeholder="Select city"
           required
@@ -126,7 +143,7 @@ export default function LocationSelector({
           name="area"
           label="Area (optional)"
           value={area}
-          onChange={(event) => emit({ area: event.target.value, locationSource: 'manual', latitude: null, longitude: null })}
+          onChange={(event) => emit({ area: event.target.value, location_source: 'manual' })}
           placeholder="Neighborhood or area"
           disabled={disabled}
         />
@@ -161,10 +178,11 @@ export default function LocationSelector({
           userLongitude={longitude}
           locationSource={locationSource}
           disabled={disabled}
+          defaultMapOpen={defaultMapOpen}
           onPick={(picked) => emit({
             latitude: picked.latitude,
             longitude: picked.longitude,
-            locationSource: 'manual',
+            location_source: 'manual',
           })}
         />
       ) : null}
