@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { SelectField, TextField } from './ui.jsx'
+import LocationMapPicker from './map/LocationMapPicker.jsx'
 import {
   COUNTRIES,
   buildLocationDisplay,
@@ -17,6 +18,7 @@ export default function LocationSelector({
   onChange,
   showArea = false,
   showCurrentLocation = true,
+  showMapPicker = false,
   disabled = false,
 }) {
   const [geoMessage, setGeoMessage] = useState('')
@@ -146,6 +148,25 @@ export default function LocationSelector({
           {geoMessage ? <p className="text-[10px] font-medium text-he-success">{geoMessage}</p> : null}
           {geoError ? <p className="text-[10px] font-medium text-he-danger">{geoError}</p> : null}
         </div>
+      ) : null}
+
+      {showMapPicker ? (
+        <LocationMapPicker
+          country={country}
+          city={city}
+          latitude={latitude}
+          longitude={longitude}
+          showUserLocation={locationSource === 'current_location'}
+          userLatitude={latitude}
+          userLongitude={longitude}
+          locationSource={locationSource}
+          disabled={disabled}
+          onPick={(picked) => emit({
+            latitude: picked.latitude,
+            longitude: picked.longitude,
+            locationSource: 'manual',
+          })}
+        />
       ) : null}
     </div>
   )

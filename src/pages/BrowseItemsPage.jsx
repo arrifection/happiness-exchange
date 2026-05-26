@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import ItemCard from '../components/ItemCard.jsx'
+import ItemsBrowseMap from '../components/map/ItemsBrowseMap.jsx'
 import LocationSelector from '../components/LocationSelector.jsx'
 import { Button, EmptyState } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
@@ -147,6 +148,15 @@ export default function BrowseItemsPage({
             showArea={false}
           />
         </div>
+
+        <ItemsBrowseMap
+          items={filteredItems}
+          country={locationPrefs.country}
+          city={locationPrefs.city}
+          userLatitude={locationPrefs.latitude}
+          userLongitude={locationPrefs.longitude}
+          showUserLocation={locationPrefs.locationSource === 'current_location'}
+        />
 
         {/* Search Input Box */}
         <div className="relative">

@@ -26,6 +26,64 @@ export const CITIES_BY_COUNTRY = {
 
 export const DEFAULT_COUNTRY = 'Pakistan'
 
+export const COUNTRY_MAP_VIEW = {
+  Pakistan: { center: [30.3753, 69.3451], zoom: 5 },
+  'Saudi Arabia': { center: [23.8859, 45.0792], zoom: 5 },
+}
+
+export const CITY_COORDINATES = {
+  Pakistan: {
+    Lahore: [31.5497, 74.3436],
+    Islamabad: [33.6844, 73.0479],
+    Karachi: [24.8607, 67.0011],
+    Rawalpindi: [33.5651, 73.0169],
+    Faisalabad: [31.4504, 73.135],
+    Multan: [30.1575, 71.5249],
+    Gujrat: [32.5742, 74.0754],
+    'Mandi Bahauddin': [32.587, 73.491],
+  },
+  'Saudi Arabia': {
+    Riyadh: [24.7136, 46.6753],
+    Jeddah: [21.4858, 39.1925],
+    Makkah: [21.3891, 39.8579],
+    Madinah: [24.5247, 39.5692],
+    Dammam: [26.3927, 49.9777],
+    Khobar: [26.2172, 50.1971],
+    Taif: [21.4373, 40.5127],
+  },
+}
+
+export function getCountryMapView(country) {
+  return COUNTRY_MAP_VIEW[country] || COUNTRY_MAP_VIEW[DEFAULT_COUNTRY]
+}
+
+export function getCityCoordinates(country, city) {
+  if (!country || !city) return null
+  return CITY_COORDINATES[country]?.[city] || null
+}
+
+export function resolveMapCenter({ country, city, latitude, longitude }) {
+  if (latitude != null && longitude != null) {
+    return { center: [latitude, longitude], zoom: city ? 12 : 10 }
+  }
+  const cityCoords = getCityCoordinates(country, city)
+  if (cityCoords) {
+    return { center: cityCoords, zoom: 11 }
+  }
+  return getCountryMapView(country)
+}
+
+export function getItemMapPosition(item) {
+  if (item?.latitude != null && item?.longitude != null) {
+    return [Number(item.latitude), Number(item.longitude)]
+  }
+  return null
+}
+
+export function getPublicLocationLabel(item) {
+  return item?.location_display || item?.city || item?.location || 'Location unavailable'
+}
+
 export function getCitiesForCountry(country) {
   return CITIES_BY_COUNTRY[country] || []
 }

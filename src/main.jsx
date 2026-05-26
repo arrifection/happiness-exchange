@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { ThemeProvider } from './components/ThemeContext.jsx'
 import { applyTheme, getStoredTheme } from './lib/theme.js'
 import './index.css'
+import 'leaflet/dist/leaflet.css'
 
 applyTheme(getStoredTheme())
 

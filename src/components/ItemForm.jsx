@@ -296,6 +296,7 @@ export default function ItemForm({
                   })
                 }}
                 disabled={disabled}
+                showMapPicker
               />
               <p className={`mt-1 text-[9px] ${fieldErrors.location || fieldErrors.city || fieldErrors.country ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
                 {fieldErrors.location || fieldErrors.city || fieldErrors.country || fieldHelpText.location}
