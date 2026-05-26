@@ -121,15 +121,15 @@ export function ReviewModal({ open, context, submitting, onClose, onSubmit }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#1f1f1f]/35 p-3 md:items-center md:p-5">
-      <Surface className="w-full max-w-md p-5 shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-3 md:items-center md:p-5 dark:bg-black/70">
+      <Surface className="w-full max-w-md border-he-border p-5 shadow-2xl dark:shadow-[0_24px_64px_rgba(0,0,0,0.65)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">Leave Review</p>
-            <h2 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold text-[#1f1f1f]">
+            <h2 className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold text-he-ink">
               {context.reviewedUserName}
             </h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-[#68766d]">
+            <p className="mt-1 text-[11px] leading-relaxed text-he-muted">
               Share a quick review for <strong>{context.itemTitle}</strong>.
             </p>
           </div>
@@ -148,7 +148,7 @@ export function ReviewModal({ open, context, submitting, onClose, onSubmit }) {
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#8c755f]/80">Rating</p>
-            <div className="mt-2 flex items-center justify-between rounded-card border border-[#efe8da] bg-[#fffdfb] px-3 py-2">
+            <div className="mt-2 flex items-center justify-between rounded-card border border-he-border bg-he-surface-soft px-3 py-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <StarButton
                   key={star}
@@ -171,7 +171,7 @@ export function ReviewModal({ open, context, submitting, onClose, onSubmit }) {
               rows={4}
               maxLength={400}
               placeholder="Write a short, kind review..."
-              className="mt-2 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 py-2.5 text-sm text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+              className="mt-2 w-full rounded-input border border-he-border bg-he-input px-3 py-2.5 text-sm text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/20"
             />
             <p className="mt-1 text-[10px] text-[#8c755f]/70">{comment.length}/400</p>
           </div>

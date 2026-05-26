@@ -181,7 +181,7 @@ export default function ItemCard({
   }
 
   return (
-    <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface transition-all duration-300 hover:shadow-md md:hover:-translate-y-1 md:hover:border-he-purple/30">
+    <article className="group he-card flex overflow-hidden transition-all duration-300 hover:border-he-purple/30 md:hover:-translate-y-1">
       <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">

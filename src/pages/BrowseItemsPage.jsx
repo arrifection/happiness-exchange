@@ -18,14 +18,14 @@ const CATEGORY_DB_MAP = {
 
 function AnonymousBadge() {
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-he-purple/20 bg-gradient-to-r from-[#efe7ff]/60 to-[#fff9e6]/40 px-4 py-2.5 backdrop-blur-sm dark:from-[#2d2640]/80 dark:to-[#2a2820]/60">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6]/15">
-        <svg className="h-4 w-4 text-[#8b4cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+    <div className="he-info-banner">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-he-purple/15 dark:bg-he-purple/25">
+        <svg className="h-4 w-4 text-he-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
       </div>
       <div>
-        <p className="text-[11px] font-bold text-[#8b4cf6]">Completely Anonymous</p>
+        <p className="text-[11px] font-bold text-he-purple">Completely Anonymous</p>
         <p className="text-[9px] text-he-soft">Addresses remain private · Courier handled securely</p>
       </div>
     </div>
@@ -135,7 +135,7 @@ export default function BrowseItemsPage({
         <AnonymousBadge />
 
         {/* Location filters */}
-        <div className="rounded-2xl border border-he-border/60 bg-he-surface-soft/50 p-3 md:p-4">
+        <div className="he-filter-panel">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-he-muted">Location</p>
           <LocationSelector
             country={locationPrefs.country}

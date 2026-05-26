@@ -18,11 +18,11 @@ function StatCard({ label, value, onClick, highlight, to }) {
     <button
       type="button"
       onClick={handleClick}
-      className={`group he-stat-card flex w-full flex-col items-center justify-center rounded-card border p-4 text-center transition-all duration-200 md:p-5
-        hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(139,76,246,0.15)] active:scale-[0.97]
+      className={`group he-stat-card flex w-full flex-col items-center justify-center p-4 text-center md:p-5
+        hover:-translate-y-0.5 active:scale-[0.97]
         ${highlight
-          ? 'cursor-pointer border-transparent bg-gradient-to-br from-he-purple to-[#7340d2] shadow-md hover:from-he-purple hover:to-he-purple-hover'
-          : 'cursor-pointer border-he-border bg-he-surface hover:border-he-purple/40 hover:bg-he-surface-soft'
+          ? 'cursor-pointer border-transparent bg-gradient-to-br from-he-purple to-[#7340d2] shadow-md hover:from-he-purple hover:to-he-purple-hover dark:shadow-[0_8px_24px_-8px_rgba(139,92,246,0.45)]'
+          : 'cursor-pointer hover:border-he-purple/40'
         }`}
     >
       <p className={`mb-1 text-[9px] font-bold uppercase tracking-wider md:text-[10px] ${highlight ? 'text-white/90' : 'text-he-muted'}`}>
@@ -108,7 +108,7 @@ export default function DashboardPage({
     <div className="space-y-6 md:space-y-8 md:max-w-5xl md:mx-auto md:px-4">
       {/* Welcome Banner */}
       <section className="flex flex-col gap-4 md:flex-row md:gap-6">
-        <div className="flex flex-1 flex-col justify-center rounded-[24px] border border-he-border bg-he-surface p-5 shadow-sm md:p-8 dark:bg-gradient-to-br dark:from-he-purple/25 dark:via-he-surface dark:to-he-surface dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset,0_0_0_1px_rgba(139,76,246,0.12)]">
+        <div className="flex flex-1 flex-col justify-center he-hero-panel">
           <p className="text-[10px] font-bold uppercase tracking-widest text-he-soft md:text-xs">
             Community Member
           </p>

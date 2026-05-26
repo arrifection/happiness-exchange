@@ -24,7 +24,7 @@ export default function FlashBanner() {
 
   return (
     <div
-      className="sticky top-14 z-[60] border-b border-he-purple/20 bg-[#f5efff] px-4 py-2.5 text-center text-[12px] font-medium text-[#7340d2] dark:border-he-purple/30 dark:bg-[#2d2640] dark:text-[#ddd6fe]"
+      className="sticky top-14 z-[60] border-b border-he-purple/25 bg-[#f5efff] px-4 py-2.5 text-center text-[12px] font-medium text-[#7340d2] dark:border-he-purple/30 dark:bg-[#221c33] dark:text-[#ddd6fe]"
       role="status"
       aria-live="polite"
     >

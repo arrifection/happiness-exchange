@@ -19,7 +19,7 @@ export function Button({
     'disabled:cursor-not-allowed disabled:opacity-60',
     variant === 'primary' && 'bg-he-purple text-white shadow-sm hover:bg-he-purple-hover hover:shadow-md transition-shadow',
     variant === 'secondary' && 'border border-he-border bg-he-surface text-he-ink hover:bg-he-surface-soft dark:hover:border-he-border',
-    variant === 'ghost' && 'text-[#7a639d] hover:bg-[#fff3cc] hover:text-he-ink dark:text-[#c4b5fd] dark:hover:bg-he-elevated dark:hover:text-he-ink',
+    variant === 'ghost' && 'text-[#7a639d] hover:bg-he-surface-soft hover:text-he-ink dark:text-[#c4b5fd] dark:hover:bg-he-elevated dark:hover:text-he-ink',
     variant === 'danger' && 'bg-he-danger text-white hover:bg-[#dc2626]',
     className,
   )
@@ -107,7 +107,7 @@ export function EmptyState({ title, description, action }) {
 export function Surface({ className = '', children, ...props }) {
   return (
     <section className={classes(
-      'rounded-card border border-he-border bg-he-surface shadow-sm transition-shadow duration-300 hover:shadow-md dark:shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset,0_8px_24px_-8px_rgba(0,0,0,0.5)] dark:hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_12px_28px_-8px_rgba(0,0,0,0.55)]',
+      'he-card',
       className,
     )}
       {...props}

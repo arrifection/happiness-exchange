@@ -268,10 +268,10 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   const showChat = conversationId || window.innerWidth >= 768
 
   return (
-    <div className="flex h-[calc(100vh-56px)] overflow-hidden border-t border-he-border bg-he-surface shadow-sm md:h-[calc(100vh-64px)] md:rounded-t-card md:border md:border-he-border">
+    <div className="flex h-[calc(100vh-56px)] overflow-hidden border-t border-he-border bg-he-surface shadow-sm md:h-[calc(100vh-64px)] md:rounded-t-card md:border md:border-he-border dark:shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
       
       {/* Sidebar Inbox */}
-      <div className={`flex w-full shrink-0 flex-col border-r border-he-border bg-he-surface-soft/40 md:flex md:w-80 lg:w-96 ${showSidebar ? 'block' : 'hidden md:flex'}`}>
+      <div className={`flex w-full shrink-0 flex-col border-r border-he-border bg-he-surface-soft md:flex md:w-80 lg:w-96 ${showSidebar ? 'block' : 'hidden md:flex'}`}>
         <div className="sticky top-0 z-10 border-b border-he-border bg-he-surface p-4">
           <h2 className="font-['Plus_Jakarta_Sans'] text-xl font-bold text-he-ink">Messages</h2>
         </div>
@@ -295,7 +295,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
                   <button
                     key={c.id}
                     onClick={() => navigate(`/messages/${c.id}`)}
-                    className={`flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-he-surface/70 ${isActive ? 'border-l-2 border-l-he-purple bg-he-surface shadow-sm' : ''}`}
+                    className={`flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-he-elevated ${isActive ? 'border-l-2 border-l-he-purple bg-he-surface shadow-sm' : ''}`}
                   >
                     <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b4cf6] to-[#c084fc] text-sm font-bold text-white">
                       {getInitials(otherName)}
@@ -377,7 +377,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
             </div>
 
             {/* Item Preview Pinned Header */}
-            <div className="flex shrink-0 items-center gap-3 border-b border-he-border bg-he-surface-soft/50 px-4 py-2">
+            <div className="flex shrink-0 items-center gap-3 border-b border-he-border bg-he-surface-soft px-4 py-2">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-he-border">
                 <svg className="h-5 w-5 text-he-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>
               </div>

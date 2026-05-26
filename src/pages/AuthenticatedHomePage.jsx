@@ -37,8 +37,8 @@ function HowItWorksStep({ number, title, description, isActive }) {
       className={[
         'flex flex-col gap-1 rounded-card border p-3.5 md:p-5 transition-all duration-700 ease-in-out',
         isActive
-          ? 'z-10 scale-[1.02] border-he-purple/40 bg-he-surface shadow-[0_0_16px_rgba(139,76,246,0.12),0_0_12px_rgba(255,204,34,0.08)] md:scale-105'
-          : 'z-0 scale-100 border-he-border/60 bg-he-surface-soft shadow-none',
+          ? 'z-10 scale-[1.02] border-he-purple/40 bg-he-surface shadow-[0_0_16px_rgba(139,76,246,0.12),0_0_12px_rgba(255,204,34,0.08)] md:scale-105 dark:shadow-[0_0_0_1px_rgba(139,92,246,0.25),0_12px_32px_-12px_rgba(0,0,0,0.55)]'
+          : 'z-0 scale-100 border-he-border bg-he-surface-soft shadow-none dark:bg-he-elevated/60',
       ].join(' ')}
     >
       <div
@@ -94,7 +94,7 @@ export default function AuthenticatedHomePage({
   return (
     <div className="space-y-4 md:space-y-6">
       <Surface className="overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-he-purple/10 via-transparent to-he-yellow/5 p-5 dark:from-he-purple/20 dark:to-transparent md:flex md:flex-col md:items-center md:px-8 md:py-12 md:text-center">
+        <div className="bg-gradient-to-br from-he-purple/10 via-he-surface to-he-yellow/5 p-5 dark:from-he-purple/18 dark:via-he-surface dark:to-he-surface-soft md:flex md:flex-col md:items-center md:px-8 md:py-12 md:text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-he-soft md:text-xs">
             Welcome back, {displayName}
           </p>
@@ -144,7 +144,7 @@ export default function AuthenticatedHomePage({
           </div>
         </div>
 
-        <div className="flex items-center gap-5 border-t border-he-border bg-he-surface-soft/40 px-5 py-3 md:px-8">
+        <div className="flex items-center gap-5 border-t border-he-border bg-he-surface-soft px-5 py-3 md:px-8">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
             <p className="text-xs font-bold text-he-ink">{items.length}</p>

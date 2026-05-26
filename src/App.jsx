@@ -793,7 +793,7 @@ export default function App() {
 
         <div className="flex flex-1 flex-col">
           {currentUser && !currentUser.is_verified ? (
-            <div className="bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] border-b border-[#ffd7cf] flex items-center justify-center gap-4 flex-wrap dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900/40">
+            <div className="border-b border-he-danger/30 bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] flex items-center justify-center gap-4 flex-wrap dark:border-rose-900/50 dark:bg-[#3f1d1d] dark:text-rose-200">
               <span>Verify your email to list, request, chat, and review.</span>
               <button
                 type="button"
@@ -849,7 +849,7 @@ export default function App() {
 
           {showAppChrome ? (
             <>
-            <header className="sticky top-0 z-50 border-b border-he-border bg-he-surface/95 backdrop-blur-md dark:bg-he-surface/98">
+            <header className="he-nav-shell">
               <div className="flex h-14 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
                 {/* Logo */}
                 <div className="flex flex-1 items-center justify-start">
@@ -1105,7 +1105,7 @@ export default function App() {
           </main>
 
           {currentUser && !isMarketingHome ? (
-            <nav className="md:hidden fixed bottom-0 left-1/2 z-50 flex h-14 w-full max-w-[480px] -translate-x-1/2 items-center justify-around border-t border-he-border bg-he-surface/90 px-2 pb-safe shadow-[0_-2px_10px_rgba(0,0,0,0.03)] backdrop-blur-md dark:shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
+            <nav className="he-bottom-nav md:hidden">
               {bottomTabItems.map((item) => (
                 <NavLink
                   key={item.to}

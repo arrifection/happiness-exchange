@@ -78,8 +78,8 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
   const previewOwner = itemForm.owner_name?.trim() || 'Your Name'
 
   return (
-    <div className="flex overflow-hidden rounded-card border border-[#efe8da] bg-white shadow-xs transition-all duration-500">
-      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-[#faf7f1] sm:w-26">
+    <div className="he-card flex overflow-hidden">
+      <div className="relative aspect-square w-22 shrink-0 overflow-hidden bg-he-surface-soft sm:w-26">
         {itemForm.image_url.trim() && imageAvailable ? (
           <img
             src={itemForm.image_url.trim()}
@@ -89,10 +89,10 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center p-3 text-center">
-            <svg className="mb-1 h-5 w-5 text-[#8c755f]/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="mb-1 h-5 w-5 text-he-soft/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-[#8c755f]/40">Photo Preview</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-he-soft/50">Photo Preview</span>
           </div>
         )}
       </div>
@@ -100,8 +100,8 @@ function PreviewCard({ itemForm, imageAvailable, onImageError }) {
       <div className="flex flex-1 flex-col justify-between p-3">
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-[#1f1f1f] line-clamp-1">{previewTitle}</h3>
-            <span className="shrink-0 rounded-full bg-[#8b4cf6]/5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-[#8b4cf6]">
+            <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-he-ink line-clamp-1">{previewTitle}</h3>
+            <span className="shrink-0 rounded-full bg-he-purple/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-he-purple">
               {previewCategory}
             </span>
           </div>
