@@ -5,6 +5,7 @@ from time import time
 import httpx
 
 from app.core.config import settings
+from app.services.local_uploads import save_local_item_image, should_use_local_upload_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,15 @@ async def upload_image_to_cloudinary(
         or not settings.CLOUDINARY_API_KEY
         or not settings.CLOUDINARY_API_SECRET
     ):
+        if should_use_local_upload_fallback():
+            logger.warning(
+                "Cloudinary not configured — using local uploads folder for development."
+            )
+            return save_local_item_image(
+                file_name=file_name,
+                content_type=content_type,
+                file_bytes=file_bytes,
+            )
         raise CloudinaryConfigError(
             "Cloudinary credentials are not configured. Image uploads are disabled."
         )

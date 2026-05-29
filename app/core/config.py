@@ -1,8 +1,9 @@
 import logging
 import os
+import re
 from typing import List
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
     CLOUDINARY_FOLDER: str = "happiness-exchange/items"
+    PUBLIC_API_BASE_URL: str = ""
 
     # Email (Resend)
     RESEND_API_KEY: str = ""
@@ -77,6 +79,23 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
+
+    @model_validator(mode="after")
+    def hydrate_cloudinary_from_url(self):
+        if self.CLOUDINARY_CLOUD_NAME and self.CLOUDINARY_API_KEY and self.CLOUDINARY_API_SECRET:
+            return self
+        url = os.getenv("CLOUDINARY_URL", "").strip()
+        if not url:
+            return self
+        match = re.match(r"^cloudinary://([^:]+):([^@]+)@([^/?]+)", url)
+        if not match:
+            return self
+        api_key, api_secret, cloud_name = match.groups()
+        return self.model_copy(update={
+            "CLOUDINARY_API_KEY": api_key,
+            "CLOUDINARY_API_SECRET": api_secret,
+            "CLOUDINARY_CLOUD_NAME": cloud_name,
+        })
 
     model_config = {
         "env_file": ".env",

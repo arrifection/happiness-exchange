@@ -29,6 +29,7 @@ dist/
 *.log
 *.err
 *.pid
+uploads/
 app/core/_generated_build_info.json
 public/og-image.png
 

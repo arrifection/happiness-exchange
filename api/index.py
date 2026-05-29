@@ -1,9 +1,12 @@
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
@@ -140,3 +143,11 @@ async def debug_db():
 
 
 app.include_router(debug_router)
+
+uploads_items_dir = Path(__file__).resolve().parents[1] / "uploads" / "items"
+uploads_items_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/api/uploads/items",
+    StaticFiles(directory=str(uploads_items_dir)),
+    name="local-item-uploads",
+)
