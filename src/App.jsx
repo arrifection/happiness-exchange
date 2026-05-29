@@ -14,7 +14,6 @@ import NeedsBoardPage from './pages/NeedsBoardPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import ItemDetailsPage from './pages/ItemDetailsPage.jsx'
 import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
-import LeaderboardPage from './pages/LeaderboardPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import ReputationPage from './pages/ReputationPage.jsx'
@@ -134,6 +133,7 @@ export default function App() {
   const [loadingRequests, setLoadingRequests] = useState(false)
   const [requestsMessage, setRequestsMessage] = useState('')
   const [requestsError, setRequestsError] = useState('')
+  const [cancelPendingRequestId, setCancelPendingRequestId] = useState('')
 
   const [profileUpdating, setProfileUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
@@ -594,6 +594,40 @@ export default function App() {
     } catch (error) { setRequestsError(error.message); return null }
   }
 
+  async function handleCancelRequest(requestId) {
+    if (!window.confirm('Cancel this request? You can request the item again later if it is still available.')) {
+      return false
+    }
+
+    setRequestsError('')
+    setRequestsMessage('')
+    setCancelPendingRequestId(requestId)
+
+    try {
+      const res = await fetch(`${API_BASE}/api/requests/${requestId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        let errorData = null
+        try { errorData = await res.json() } catch { errorData = null }
+        throw new Error(formatApiError(errorData, 'Unable to cancel this request.'))
+      }
+
+      setMyRequests((current) => current.filter((request) => request.id !== requestId))
+      setRequestsMessage('Request cancelled.')
+      await loadItems()
+      await loadRequestData()
+      return true
+    } catch (error) {
+      setRequestsError(error.message)
+      return false
+    } finally {
+      setCancelPendingRequestId('')
+    }
+  }
+
   async function handleDeleteItem(item) {
     if (!window.confirm(`Delete "${item.title}"? This action cannot be undone.`)) return false
     setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
@@ -871,7 +905,7 @@ export default function App() {
                 </div>
 
                 {/* Desktop Nav */}
-                <nav className="hidden md:flex items-center justify-center gap-1">
+                <nav className="hidden md:flex items-center justify-center gap-1.5">
                   {[
                     { to: '/', label: 'Home' },
                     { to: '/browse', label: 'Browse' },
@@ -885,7 +919,7 @@ export default function App() {
                       key={nav.to}
                       to={nav.to}
                       className={({ isActive }) => [
-                        'relative px-3 py-2 rounded-full text-[13px] font-bold tracking-wide transition-all duration-300',
+                        'relative px-3.5 py-2 rounded-full text-[13px] font-bold tracking-wide transition-all duration-300',
                         isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : 'text-he-soft hover:text-he-purple hover:bg-he-surface-soft',
                       ].join(' ')}
                     >
@@ -897,15 +931,6 @@ export default function App() {
                       )}
                     </NavLink>
                   ))}
-                  <NavLink
-                    to="/leaderboard"
-                    className={({ isActive }) => [
-                      'text-sm font-bold uppercase tracking-widest transition-colors duration-200',
-                      isActive ? 'text-he-purple' : 'text-he-ink hover:text-he-purple',
-                    ].join(' ')}
-                  >
-                    Top Donors
-                  </NavLink>
                 </nav>
 
                 {/* Profile and Notifications */}
@@ -1056,12 +1081,24 @@ export default function App() {
                 path="/requests"
                 element={
                   <RequestsPage
-                    currentUser={currentUser} ownerRequests={ownerRequests} myItems={myItems}
+                    currentUser={currentUser}
+                    items={items}
+                    myRequests={myRequests}
+                    ownerRequests={ownerRequests}
+                    myItems={myItems}
                     onOpenReview={openReviewModal}
+                    getReviewContextForMyRequest={getReviewContextForMyRequest}
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
-                    loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
+                    getChatConversationForRequest={getChatConversationForRequest}
+                    loadingRequests={loadingRequests}
+                    requestsMessage={requestsMessage}
+                    requestsError={requestsError}
                     onRequestAction={handleRequestAction}
-                    myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
+                    onCancelRequest={handleCancelRequest}
+                    cancelPendingRequestId={cancelPendingRequestId}
+                    myDeliveries={myDeliveries}
+                    loadRequestData={loadRequestData}
+                    token={token}
                   />
                 }
               />
@@ -1111,7 +1148,6 @@ export default function App() {
                 path="/signup"
                 element={<SignupPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
               />
-              <Route path="/leaderboard" element={<LeaderboardPage apiBase={API_BASE} />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/contact" element={<ContactPage />} />

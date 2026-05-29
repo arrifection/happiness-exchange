@@ -1,21 +1,30 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { asArray } from '../lib/api.js'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
-import { Button, EmptyState, ErrorState, RequestCardSkeletonList, InlineLoadingNotice, Surface } from '../components/ui.jsx'
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  RequestCardSkeletonList,
+  InlineLoadingNotice,
+  StatusBadge,
+  Surface,
+} from '../components/ui.jsx'
 import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
 const FILTERS = ['all', 'pending', 'approved', 'rejected']
+const VIEW_TABS = [
+  { id: 'mine', label: 'My Requests' },
+  { id: 'incoming', label: 'Incoming' },
+]
 
 function formatRequestDate(value) {
-  if (!value) {
-    return 'Recently'
-  }
+  if (!value) return 'Recently'
 
   const parsedDate = new Date(value)
-  if (Number.isNaN(parsedDate.getTime())) {
-    return 'Recently'
-  }
+  if (Number.isNaN(parsedDate.getTime())) return 'Recently'
 
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
@@ -23,10 +32,19 @@ function formatRequestDate(value) {
   }).format(parsedDate)
 }
 
-function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelivery, children }) {
+function filterByStatus(requests, activeFilter) {
+  if (activeFilter === 'all') return requests
+  return requests.filter((request) => request.status === activeFilter)
+}
+
+function RequestCardShell({ request, item, children }) {
   return (
     <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface shadow-sm transition-all duration-300 hover:border-he-purple/30 hover:shadow-md">
-      <div className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24">
+      <Link
+        to={`/items/${request.item_id}`}
+        className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24"
+        aria-label={`View ${request.item_title}`}
+      >
         <img
           src={resolveItemImageUrl(item?.image_url)}
           alt={request.item_title}
@@ -35,52 +53,24 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
             event.currentTarget.src = ITEM_PLACEHOLDER_URL
           }}
         />
-      </div>
+      </Link>
 
       <div className="flex flex-1 flex-col justify-between p-2.5 sm:p-3">
         <div className="space-y-0.5">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-he-ink">
+            <Link
+              to={`/items/${request.item_id}`}
+              className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold leading-tight text-he-ink hover:text-he-purple"
+            >
               {request.item_title}
-            </h3>
+            </Link>
             <div className="origin-top-right shrink-0 scale-90">
               <StatusBadge status={request.status} />
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
-            <span>By {request.requester_name.split(' ')[0]}</span>
-            <span className="opacity-40">/</span>
-            <span>{formatRequestDate(request.created_at)}</span>
-          </div>
+          {children.meta}
         </div>
-
-        {request.status === 'pending' ? (
-          <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
-            <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>Approve</Button>
-            <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>Decline</Button>
-          </div>
-        ) : request.status === 'approved' ? (
-          <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
-            {!delivery ? (
-              <Button
-                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
-                onClick={() => onArrangeDelivery(request)}
-              >
-                📦 Arrange Delivery
-              </Button>
-            ) : (
-              <Button
-                as="link"
-                to={`/deliveries/${delivery.id}`}
-                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
-              >
-                🚚 Track Delivery
-              </Button>
-            )}
-          </div>
-        ) : null}
-
-        {children}
+        {children.actions}
       </div>
     </article>
   )
@@ -88,40 +78,53 @@ function RequestCard({ request, item, delivery, onRequestAction, onArrangeDelive
 
 export default function RequestsPage({
   currentUser,
+  items,
+  myRequests,
   ownerRequests,
   myItems,
   onOpenReview,
+  getReviewContextForMyRequest,
   getReviewContextForOwnerRequest,
+  getChatConversationForRequest,
   loadingRequests,
   requestsMessage,
   requestsError,
   onRequestAction,
+  onCancelRequest,
+  cancelPendingRequestId,
   myDeliveries,
   loadRequestData,
-  token
+  token,
 }) {
+  const [activeView, setActiveView] = useState('mine')
   const [activeFilter, setActiveFilter] = useState('all')
   const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
 
-  const safeMyItems = asArray(myItems)
+  const safeMyRequests = asArray(myRequests)
   const safeOwnerRequests = asArray(ownerRequests)
+  const safeMyItems = asArray(myItems)
+  const safeBrowseItems = asArray(items)
   const safeDeliveries = asArray(myDeliveries)
 
   const itemLookup = useMemo(
-    () => Object.fromEntries(safeMyItems.map((item) => [item.id, item])),
-    [safeMyItems],
+    () => Object.fromEntries(
+      [...safeMyItems, ...safeBrowseItems].map((item) => [item.id, item]),
+    ),
+    [safeMyItems, safeBrowseItems],
   )
 
-  const visibleRequests = activeFilter === 'all'
-    ? safeOwnerRequests
-    : safeOwnerRequests.filter((request) => request.status === activeFilter)
+  const sourceRequests = activeView === 'mine' ? safeMyRequests : safeOwnerRequests
+  const visibleRequests = filterByStatus(sourceRequests, activeFilter)
+
+  const pendingMineCount = safeMyRequests.filter((request) => request.status === 'pending').length
+  const pendingIncomingCount = safeOwnerRequests.filter((request) => request.status === 'pending').length
 
   if (!currentUser) {
     return (
       <Surface className="p-5">
         <h1 className="text-lg font-bold tracking-tight text-he-ink">Please log in</h1>
         <p className="mt-2 text-xs leading-relaxed text-he-muted">
-          Sign in to review requests for your listings.
+          Sign in to track your requests and review incoming interest on your listings.
         </p>
       </Surface>
     )
@@ -130,19 +133,41 @@ export default function RequestsPage({
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink md:text-xl">
-              Incoming Requests
-            </h1>
-            <p className="text-[10px] text-he-muted md:text-xs">Review neighbors who are interested in your items.</p>
-          </div>
-          <Button as="link" to="/needs" variant="secondary" className="h-8 min-h-0 px-3 text-[10px]">
-            Community Needs
-          </Button>
+        <div>
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-he-ink md:text-xl">
+            Activity
+          </h1>
+          <p className="text-[10px] text-he-muted md:text-xs">
+            Track items you requested and review interest on your listings.
+          </p>
         </div>
 
-        <div className="-mx-4 flex flex-wrap gap-1.5 overflow-x-auto px-4 pb-1 no-scrollbar scroll-smooth md:mx-0 md:flex-nowrap md:justify-center md:gap-3 md:overflow-x-visible md:px-0 md:pb-0">
+        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 no-scrollbar scroll-smooth md:mx-0 md:px-0">
+          {VIEW_TABS.map((tab) => {
+            const isActive = activeView === tab.id
+            const badgeCount = tab.id === 'mine' ? pendingMineCount : pendingIncomingCount
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveView(tab.id)}
+                className={[
+                  'relative shrink-0 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 md:text-[11px]',
+                  isActive ? 'he-chip-active' : 'he-chip',
+                ].join(' ')}
+              >
+                {tab.label}
+                {badgeCount > 0 ? (
+                  <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-he-purple px-1 text-[8px] font-bold text-white">
+                    {badgeCount > 9 ? '9+' : badgeCount}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="-mx-4 flex flex-wrap gap-1.5 overflow-x-auto px-4 pb-1 no-scrollbar scroll-smooth md:mx-0 md:flex-nowrap md:justify-start md:overflow-x-visible md:px-0 md:pb-0">
           {FILTERS.map((filter) => {
             const isActive = activeFilter === filter
             return (
@@ -168,7 +193,7 @@ export default function RequestsPage({
 
       {requestsError ? (
         <ErrorState
-          title="Couldn't load requests"
+          title="Couldn't load activity"
           message={requestsError}
           onRetry={() => loadRequestData?.()}
         />
@@ -194,47 +219,164 @@ export default function RequestsPage({
             <EmptyState
               icon="requests"
               title={
-                activeFilter === 'pending'
-                  ? 'No pending requests yet'
-                  : activeFilter === 'approved'
-                    ? 'No approved requests'
-                    : activeFilter === 'rejected'
-                      ? 'No rejected requests'
-                      : 'No requests yet'
+                activeView === 'mine'
+                  ? activeFilter === 'pending'
+                    ? 'No pending requests'
+                    : activeFilter === 'approved'
+                      ? 'No approved requests'
+                      : activeFilter === 'rejected'
+                        ? 'No declined requests'
+                        : 'You have not requested any items yet'
+                  : activeFilter === 'pending'
+                    ? 'No pending incoming requests'
+                    : activeFilter === 'approved'
+                      ? 'No approved incoming requests'
+                      : activeFilter === 'rejected'
+                        ? 'No declined incoming requests'
+                        : 'No incoming requests yet'
               }
-              description="When neighbors request your listed items, they will appear here for you to review."
-              action={<Button as="link" to="/give">View your listings</Button>}
+              description={
+                activeView === 'mine'
+                  ? 'When you request an item from Browse, it will appear here so you can track or cancel it.'
+                  : 'When neighbors request your listed items, they will appear here for you to review.'
+              }
+              action={
+                activeView === 'mine'
+                  ? <Button as="link" to="/browse">Browse items</Button>
+                  : <Button as="link" to="/give">View your listings</Button>
+              }
             />
           </div>
         ) : (
           <>
-            {loadingRequests ? <InlineLoadingNotice label="Updating requests…" /> : null}
+            {loadingRequests ? <InlineLoadingNotice label="Updating activity…" /> : null}
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-6">
-            {visibleRequests.map((request) => {
-              const reviewContext = getReviewContextForOwnerRequest(request)
-              return (
-                <RequestCard
-                  key={request.id}
-                  request={request}
-                  item={itemLookup[request.item_id]}
-                  delivery={safeDeliveries.find((d) => d.request_id === request.id)}
-                  onRequestAction={onRequestAction}
-                  onArrangeDelivery={setArrangeDeliveryRequest}
-                >
-                  {reviewContext ? (
-                    <div className="mt-2 flex gap-1.5 border-t border-he-border/60 pt-2">
-                      <Button
-                        className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
-                        variant="secondary"
-                        onClick={() => onOpenReview(reviewContext)}
-                      >
-                        Leave Review
-                      </Button>
-                    </div>
-                  ) : null}
-                </RequestCard>
-              )
-            })}
+              {visibleRequests.map((request) => {
+                if (activeView === 'mine') {
+                  const reviewContext = getReviewContextForMyRequest?.(request)
+                  const convId = getChatConversationForRequest?.(request.id)
+                  const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
+
+                  return (
+                    <RequestCardShell
+                      key={request.id}
+                      request={request}
+                      item={itemLookup[request.item_id]}
+                    >
+                      {{
+                        meta: (
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
+                            <span>Requested {formatRequestDate(request.created_at)}</span>
+                          </div>
+                        ),
+                        actions: (
+                          <div className="mt-2 space-y-1.5 border-t border-he-border/60 pt-2">
+                            {request.status === 'pending' ? (
+                              <Button
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                                variant="danger"
+                                disabled={cancelPendingRequestId === request.id}
+                                onClick={() => onCancelRequest?.(request.id)}
+                              >
+                                {cancelPendingRequestId === request.id ? 'Cancelling…' : 'Cancel Request'}
+                              </Button>
+                            ) : null}
+                            {request.status === 'approved' && delivery ? (
+                              <Button
+                                as="link"
+                                to={`/deliveries/${delivery.id}`}
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
+                              >
+                                Track Delivery
+                              </Button>
+                            ) : null}
+                            {request.status === 'approved' && convId ? (
+                              <Button
+                                as="link"
+                                to={`/messages/${convId}`}
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
+                              >
+                                Open Chat
+                              </Button>
+                            ) : null}
+                            {reviewContext ? (
+                              <Button
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                                variant="secondary"
+                                onClick={() => onOpenReview(reviewContext)}
+                              >
+                                Leave Review
+                              </Button>
+                            ) : null}
+                          </div>
+                        ),
+                      }}
+                    </RequestCardShell>
+                  )
+                }
+
+                const reviewContext = getReviewContextForOwnerRequest?.(request)
+                const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
+
+                return (
+                  <RequestCardShell
+                    key={request.id}
+                    request={request}
+                    item={itemLookup[request.item_id]}
+                  >
+                    {{
+                      meta: (
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
+                          <span>By {request.requester_name.split(' ')[0]}</span>
+                          <span className="opacity-40">/</span>
+                          <span>{formatRequestDate(request.created_at)}</span>
+                        </div>
+                      ),
+                      actions: (
+                        <div className="mt-2 space-y-1.5 border-t border-he-border/60 pt-2">
+                          {request.status === 'pending' ? (
+                            <div className="flex gap-1.5">
+                              <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction(request.id, 'approve')}>
+                                Approve
+                              </Button>
+                              <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction(request.id, 'reject')}>
+                                Decline
+                              </Button>
+                            </div>
+                          ) : null}
+                          {request.status === 'approved' ? (
+                            !delivery ? (
+                              <Button
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#1f1f1f] text-white"
+                                onClick={() => setArrangeDeliveryRequest(request)}
+                              >
+                                Arrange Delivery
+                              </Button>
+                            ) : (
+                              <Button
+                                as="link"
+                                to={`/deliveries/${delivery.id}`}
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
+                              >
+                                Track Delivery
+                              </Button>
+                            )
+                          ) : null}
+                          {reviewContext ? (
+                            <Button
+                              className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                              variant="secondary"
+                              onClick={() => onOpenReview(reviewContext)}
+                            >
+                              Leave Review
+                            </Button>
+                          ) : null}
+                        </div>
+                      ),
+                    }}
+                  </RequestCardShell>
+                )
+              })}
             </div>
           </>
         )}

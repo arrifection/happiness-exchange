@@ -17,6 +17,7 @@ from app.api.routes.reviews import router as reviews_router
 from app.api.routes.requests import router as requests_router
 from app.api.routes.users import router as users_router
 from app.api.routes.leaderboard import router as leaderboard_router
+from app.api.routes.community import router as community_router
 from app.api.routes.deliveries import router as deliveries_router
 from app.api.routes.need_requests import router as need_requests_router
 # ── Admin routes ──────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ app.include_router(reviews_router, prefix="/api", tags=["Reviews"])
 app.include_router(conversations_router, prefix="/api", tags=["Conversations"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["Leaderboard"])
+app.include_router(community_router, prefix="/api/community", tags=["Community"])
 app.include_router(deliveries_router, prefix="/api", tags=["Deliveries"])
 app.include_router(need_requests_router, prefix="/api", tags=["Need Requests"])
 

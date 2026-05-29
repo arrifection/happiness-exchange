@@ -291,6 +291,49 @@ async def update_request_status(
     return serialize_request(updated_request)
 
 
+@router.delete("/requests/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_request(
+    request_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Allow the requester to withdraw a pending request."""
+    requests_collection = await get_requests_collection_async()
+    if requests_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    request_object_id = parse_object_id(request_id)
+    if request_object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid request id.",
+        )
+
+    request = await requests_collection.find_one({"_id": request_object_id})
+    if request is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found.",
+        )
+
+    if request["requester_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the requester can cancel this request.",
+        )
+
+    if request["status"] != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only pending requests can be cancelled.",
+        )
+
+    await requests_collection.delete_one({"_id": request_object_id})
+
+
+
 @router.patch("/requests/{request_id}/reject", response_model=RequestResponse)
 async def reject_request(
     request_id: str,
@@ -349,3 +392,4 @@ async def reject_request(
     
     updated_request = await requests_collection.find_one({"_id": request_object_id})
     return serialize_request(updated_request)
+
