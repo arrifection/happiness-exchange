@@ -22,6 +22,7 @@ export default function LocationSelector({
   showMapPicker = false,
   defaultMapOpen = false,
   disabled = false,
+  locationRequired = true,
 }) {
   const [geoMessage, setGeoMessage] = useState('')
   const [geoError, setGeoError] = useState('')
@@ -121,7 +122,7 @@ export default function LocationSelector({
           value={country}
           onChange={(event) => emit({ country: event.target.value, city: '', location_source: 'manual', latitude: null, longitude: null })}
           options={COUNTRIES}
-          required
+          required={locationRequired}
           disabled={disabled}
         />
         <SelectField
@@ -132,7 +133,7 @@ export default function LocationSelector({
           onChange={(event) => emit({ city: event.target.value, location_source: 'manual' })}
           options={cities}
           placeholder="Select city"
-          required
+          required={locationRequired}
           disabled={disabled || !country}
         />
       </div>

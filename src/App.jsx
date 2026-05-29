@@ -426,22 +426,29 @@ export default function App() {
     setCreatingItem(true); setItemError(''); setItemMessage('')
     try {
       const locationSource = itemForm.location_source || itemForm.locationSource || 'manual'
+      const hasLocation = Boolean(
+        itemForm.city?.trim()
+        || itemForm.location?.trim()
+        || itemForm.location_display?.trim()
+        || (itemForm.latitude != null && itemForm.longitude != null),
+      )
       const payload = {
         title: itemForm.title.trim(),
         description: itemForm.description.trim(),
         category: itemForm.category,
         condition: itemForm.condition,
-        location: itemForm.location?.trim()
-          || itemForm.location_display?.trim()
-          || itemForm.city
-          || 'Current location',
-        country: itemForm.country,
+        location: hasLocation
+          ? (itemForm.location?.trim() || itemForm.location_display?.trim() || itemForm.city)
+          : 'Pickup to be arranged',
+        country: itemForm.country || null,
         city: itemForm.city || null,
         area: itemForm.area || null,
         latitude: itemForm.latitude ?? null,
         longitude: itemForm.longitude ?? null,
-        location_source: locationSource,
-        location_display: itemForm.location_display || null,
+        location_source: hasLocation ? locationSource : 'manual',
+        location_display: hasLocation
+          ? (itemForm.location_display || itemForm.location?.trim() || itemForm.city || 'Pickup to be arranged')
+          : 'Pickup to be arranged',
         image_url: itemForm.image_url?.trim() || null,
       }
       if (itemForm.category === 'Food') {

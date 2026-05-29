@@ -28,6 +28,7 @@ export default function LocationMapPicker({
   onPick,
   disabled = false,
   defaultMapOpen = false,
+  embedded = false,
 }) {
   const [mounted, setMounted] = useState(false)
   const [mapOpen, setMapOpen] = useState(defaultMapOpen)
@@ -89,7 +90,7 @@ export default function LocationMapPicker({
     </div>
   )
 
-  return (
+  return embedded ? mapPanel : (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-he-muted">Map picker (optional)</p>

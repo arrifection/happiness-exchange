@@ -40,7 +40,7 @@ class ItemLocationFields(BaseModel):
 
 class ItemCreateRequest(ItemLocationFields, ItemFoodFields):
     title: str = Field(min_length=3, max_length=120)
-    description: str = Field(min_length=10, max_length=2000)
+    description: str = Field(min_length=3, max_length=2000)
     category: str = Field(min_length=2, max_length=60)
     condition: str = Field(min_length=2, max_length=60)
     location: str = Field(min_length=2, max_length=120)

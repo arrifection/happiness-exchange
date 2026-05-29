@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
+import GiveItemLocationModal, { hasGiveItemLocation } from './GiveItemLocationModal.jsx'
+import ImagePreviewModal from './ImagePreviewModal.jsx'
 import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
-import LocationSelector from './LocationSelector.jsx'
-import { DEFAULT_COUNTRY } from '../lib/locations.js'
 import { ITEM_CATEGORIES, STORAGE_CONDITIONS } from '../lib/categories.js'
 
 const CATEGORIES = ITEM_CATEGORIES
@@ -11,10 +11,9 @@ const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
 
 const fieldHelpText = {
   title: 'Give your item a clear, concise name.',
-  description: 'Describe condition, usage, and pickup details clearly.',
+  description: 'A few words about condition and pickup is enough.',
   category: 'Choose the best category for your item.',
   condition: 'Be honest about the current state.',
-  location: 'Choose country and city, or use current location.',
   image_url: 'Upload a clear image from your device. Images only, up to 5 MB.',
 }
 
@@ -32,9 +31,9 @@ function validateItemForm(itemForm) {
   }
 
   if (!itemForm.description?.trim()) {
-    errors.description = 'Description is required.'
-  } else if (itemForm.description.trim().length < 30) {
-    errors.description = 'Please provide at least 30 characters.'
+    errors.description = 'Please add a short description.'
+  } else if (itemForm.description.trim().length < 3) {
+    errors.description = 'Please add a short description.'
   }
 
   if (!itemForm.category) {
@@ -45,23 +44,6 @@ function validateItemForm(itemForm) {
     errors.condition = 'Please select the condition.'
   }
 
-  if (!itemForm.country) {
-    errors.country = 'Please select a country.'
-  }
-
-  if (itemForm.location_source === 'current_location') {
-    if (itemForm.latitude == null || itemForm.longitude == null) {
-      errors.location = 'Please use current location or select a city manually.'
-    }
-  } else {
-    if (!itemForm.city) {
-      errors.city = 'Please select a city.'
-    }
-    if (!itemForm.location?.trim()) {
-      errors.location = 'Location is required.'
-    }
-  }
-
   if (!itemForm.image_url?.trim()) {
     errors.image_url = 'An item image is required.'
   }
@@ -69,12 +51,67 @@ function validateItemForm(itemForm) {
   return errors
 }
 
+function PinIcon({ className = '' }) {
+  return (
+    <svg
+      className={`h-5 w-5 shrink-0 ${className}`.trim()}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s7-4.5 7-10a7 7 0 1 0-14 0c0 5.5 7 10 7 10Z" />
+      <circle cx="12" cy="11" r="2.5" />
+    </svg>
+  )
+}
+
+function GiveItemLocationPill({ itemForm, onOpenSetup }) {
+  const hasLocation = hasGiveItemLocation(itemForm)
+  const summary = itemForm.location_display || itemForm.location || itemForm.city
+
+  return (
+    <div className="flex min-h-[4.5rem] w-full max-w-full items-center gap-3 rounded-input border border-he-border bg-he-surface-soft px-3 py-2.5 sm:gap-3.5 sm:px-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-he-purple/10">
+        <PinIcon className="text-he-purple" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {hasLocation ? (
+          <>
+            <p className="text-xs font-bold leading-tight text-he-ink">Pickup location added</p>
+            {summary ? (
+              <p className="mt-0.5 truncate text-[10px] leading-snug text-he-muted">{summary}</p>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-bold leading-tight text-he-ink">Add pickup location</p>
+            <p className="mt-0.5 text-[10px] leading-snug text-he-muted">
+              Optional — exact address stays private.
+            </p>
+          </>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenSetup}
+        className="shrink-0 rounded-full border border-he-purple/25 bg-he-purple/8 px-3 py-1.5 text-[10px] font-bold text-he-purple transition hover:border-he-purple/40 hover:bg-he-purple/12 sm:px-3.5 sm:py-2 sm:text-[11px]"
+      >
+        {hasLocation ? 'Change' : 'Set location'}
+      </button>
+    </div>
+  )
+}
+
 function PreviewCard({ itemForm, imageAvailable, onImageError }) {
   const previewTitle = itemForm.title.trim() || 'Item Preview'
-  const previewDescription = itemForm.description.trim() || 'Detailed description will appear here...'
+  const previewDescription = itemForm.description.trim() || 'Description will appear here…'
   const previewCategory = itemForm.category || 'Category'
   const previewCondition = itemForm.condition || 'Condition'
-  const previewLocation = itemForm.location_display || itemForm.location || 'Location'
+  const previewLocation = itemForm.location_display || itemForm.location || 'Location optional'
   const previewOwner = itemForm.owner_name?.trim() || 'Your Name'
 
   return (
@@ -140,6 +177,9 @@ export default function ItemForm({
 }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [imageAvailable, setImageAvailable] = useState(false)
+  const [locationModalOpen, setLocationModalOpen] = useState(false)
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (itemForm.image_url?.trim()) {
@@ -152,6 +192,11 @@ export default function ItemForm({
   const hasValidationErrors = useMemo(
     () => Object.keys(fieldErrors).length > 0,
     [fieldErrors],
+  )
+
+  const previewImages = useMemo(
+    () => (itemForm.image_url?.trim() && imageAvailable ? [itemForm.image_url.trim()] : []),
+    [itemForm.image_url, imageAvailable],
   )
 
   function handleFormChange(event) {
@@ -171,6 +216,15 @@ export default function ItemForm({
     }
   }
 
+  function handleLocationSave(values) {
+    onChange({
+      target: {
+        name: 'location_bundle',
+        value: values,
+      },
+    })
+  }
+
   async function handleImageChange(event) {
     const [file] = event.target.files || []
 
@@ -184,6 +238,11 @@ export default function ItemForm({
 
     await onImageUpload(file)
     event.target.value = ''
+  }
+
+  function openFilePicker() {
+    if (uploadingItemImage) return
+    fileInputRef.current?.click()
   }
 
   async function handleFormSubmit(event) {
@@ -200,8 +259,8 @@ export default function ItemForm({
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-      <form className="flex-1 flex flex-col gap-4.5" onSubmit={handleFormSubmit} noValidate>
+    <div className="flex flex-col gap-6 md:flex-row md:gap-10">
+      <form className="flex flex-1 flex-col gap-4" onSubmit={handleFormSubmit} noValidate>
         <div className="space-y-0.5">
           <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8b4cf6]">List an Item</p>
           <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold tracking-tight text-[#1f1f1f]">
@@ -212,8 +271,8 @@ export default function ItemForm({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3.5">
-          <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-2">
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <TextField
                 id="item-owner_name"
@@ -245,7 +304,7 @@ export default function ItemForm({
             </div>
           </div>
 
-          <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <SelectField
                 id="item-category"
@@ -277,32 +336,13 @@ export default function ItemForm({
                 {fieldErrors.condition || fieldHelpText.condition}
               </p>
             </div>
+          </div>
 
-            <div className="sm:col-span-2">
-              <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#a07d22] dark:text-he-yellow">Pickup Location</p>
-              <LocationSelector
-                country={itemForm.country || DEFAULT_COUNTRY}
-                city={itemForm.city || ''}
-                area={itemForm.area || ''}
-                latitude={itemForm.latitude ?? null}
-                longitude={itemForm.longitude ?? null}
-                locationSource={itemForm.location_source || 'manual'}
-                onChange={(locationValues) => {
-                  onChange({
-                    target: {
-                      name: 'location_bundle',
-                      value: locationValues,
-                    },
-                  })
-                }}
-                disabled={disabled}
-                showMapPicker
-                defaultMapOpen
-              />
-              <p className={`mt-1 text-[9px] ${fieldErrors.location || fieldErrors.city || fieldErrors.country ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
-                {fieldErrors.location || fieldErrors.city || fieldErrors.country || fieldHelpText.location}
-              </p>
-            </div>
+          <div>
+            <GiveItemLocationPill
+              itemForm={itemForm}
+              onOpenSetup={() => setLocationModalOpen(true)}
+            />
           </div>
 
           {itemForm.category === 'Food' ? (
@@ -357,24 +397,65 @@ export default function ItemForm({
           ) : null}
 
           <div>
-            <label className="grid gap-1" htmlFor="item-image_file">
+            <div className="grid gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">Item Image</span>
-              <div className="rounded-input border border-dashed border-[#efe8da] bg-[#fffdfb] p-3">
-                <input
-                  id="item-image_file"
-                  name="image_file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  disabled={uploadingItemImage}
-                  required
-                  className="block w-full cursor-pointer text-xs text-[#1f1f1f] file:mr-3 file:rounded-btn file:border-0 file:bg-[#efe7ff] file:px-3 file:py-1.5 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:text-[#7340d2] hover:file:bg-[#e4d8ff] disabled:cursor-not-allowed disabled:opacity-60"
-                />
-                <p className="mt-2 text-[10px] leading-relaxed text-[#68766d]">
-                  Select a JPG, PNG, or WEBP image (max 5 MB).
-                </p>
-              </div>
-            </label>
+
+              <input
+                ref={fileInputRef}
+                id="item-image_file"
+                name="image_file"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={uploadingItemImage}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+
+              {itemForm.image_url?.trim() && imageAvailable ? (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setImagePreviewOpen(true)}
+                    className="group relative w-full overflow-hidden rounded-xl border border-he-border bg-he-surface-soft"
+                    aria-label="View uploaded image larger"
+                  >
+                    <img
+                      src={itemForm.image_url.trim()}
+                      alt={itemForm.title?.trim() || 'Uploaded item photo'}
+                      className="aspect-[4/3] w-full object-cover"
+                      onError={() => setImageAvailable(false)}
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-3 py-2 text-left text-[10px] font-bold text-white opacity-0 transition group-hover:opacity-100">
+                      Tap to view larger
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    disabled={uploadingItemImage}
+                    className="text-[10px] font-bold text-he-purple hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Replace image
+                  </button>
+                </div>
+              ) : (
+                <div className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-input border border-dashed border-[#efe8da] bg-[#fffdfb] px-3 py-4 text-center">
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    disabled={uploadingItemImage}
+                    className="inline-flex min-h-9 items-center justify-center rounded-btn border-0 bg-[#efe7ff] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-[#7340d2] transition hover:bg-[#e4d8ff] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {uploadingItemImage ? 'Uploading…' : 'Choose image'}
+                  </button>
+                  <p className="text-[10px] leading-relaxed text-[#68766d]">
+                    JPG, PNG, or WEBP · max 5 MB
+                  </p>
+                </div>
+              )}
+            </div>
             <p
               className={`mt-1 text-[9px] ${
                 fieldErrors.image_url || imageUploadError
@@ -399,8 +480,8 @@ export default function ItemForm({
               label="Description"
               value={itemForm.description}
               onChange={handleFormChange}
-              placeholder="Describe condition, usage, and pickup details clearly."
-              rows={4}
+              placeholder="Describe condition, usage, or pickup notes."
+              rows={3}
               required
             />
             <p className={`mt-1 text-[9px] ${fieldErrors.description ? 'font-bold text-[#c65d4a]' : 'text-[#8c755f]/60'}`}>
@@ -409,37 +490,36 @@ export default function ItemForm({
           </div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           {disabled && (
-             <div className="mb-4 text-center text-[12px] font-bold text-[#c65d4a] bg-[#fff3f0] p-2 rounded">
+             <div className="mb-4 rounded bg-[#fff3f0] p-2 text-center text-[12px] font-bold text-[#c65d4a]">
                Please verify your email to publish items.
              </div>
           )}
           <Button
             type="submit"
             disabled={disabled || creatingItem || uploadingItemImage || hasValidationErrors || !itemForm.image_url?.trim()}
-            className="h-10 w-full text-xs shadow-xs md:text-[13px] md:h-11"
+            className="h-10 w-full text-xs shadow-xs md:h-11 md:text-[13px]"
           >
             {uploadingItemImage ? 'Uploading Image...' : creatingItem ? 'Publishing Listing...' : 'Publish to Community'}
           </Button>
 
-          {itemMessage && (
+          {itemMessage ? (
             <div className="mt-3 rounded-xl bg-[#8b4cf6]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">
               {itemMessage}
             </div>
-          )}
-          {itemError && (
+          ) : null}
+          {itemError ? (
             <div className="mt-3 rounded-xl bg-[#c65d4a]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#c65d4a]">
               {itemError}
             </div>
-          )}
+          ) : null}
         </div>
       </form>
 
       <hr className="border-[#efe8da] md:hidden" />
 
-      {/* Right Sidebar: Preview & Tips */}
-      <div className="space-y-4 shrink-0 md:w-72 lg:w-80">
+      <div className="shrink-0 space-y-4 md:w-72 lg:w-80">
         <div className="space-y-0.5 md:hidden">
           <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8c755f]">Live Preview</p>
           <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-xs font-bold text-[#1f1f1f]">Check your listing</h3>
@@ -449,13 +529,28 @@ export default function ItemForm({
           imageAvailable={imageAvailable}
           onImageError={() => setImageAvailable(false)}
         />
-        <div className="rounded-card bg-[#faf7f1] border border-[#efe8da]/60 p-3.5 md:p-5">
-          <h4 className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#1f1f1f]">Why details matter</h4>
-          <p className="mt-1 text-[10px] md:text-xs md:leading-relaxed leading-relaxed text-[#68766d]">
-            Items with clear photos and detailed descriptions are 3x more likely to find a new home quickly. Be sure to mention if there's minor wear or specific pickup times.
+        <div className="rounded-card border border-[#efe8da]/60 bg-[#faf7f1] p-3.5 md:p-5">
+          <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#1f1f1f] md:text-xs">Why details matter</h4>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#68766d] md:text-xs md:leading-relaxed">
+            Clear photos and honest descriptions help your item find a new home faster.
           </p>
         </div>
       </div>
+
+      <GiveItemLocationModal
+        open={locationModalOpen}
+        initialValues={itemForm}
+        onSave={handleLocationSave}
+        onClose={() => setLocationModalOpen(false)}
+      />
+
+      <ImagePreviewModal
+        open={imagePreviewOpen}
+        images={previewImages}
+        title={itemForm.title?.trim() || 'Item photo'}
+        alt="Uploaded item photo"
+        onClose={() => setImagePreviewOpen(false)}
+      />
     </div>
   )
 }
