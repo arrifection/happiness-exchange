@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import ItemCard from '../components/ItemCard.jsx'
 import { asArray } from '../lib/api.js'
-import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
-import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, InlineLoadingNotice, SectionHeading, Surface } from '../components/ui.jsx'
+import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, SectionHeading, Surface } from '../components/ui.jsx'
+
+import './AuthenticatedHomePage.css'
 
 const TAGLINES = [
   'Give what you can. Find what you need.',
   'Share with kindness. Receive with dignity.',
-  'Your extra can become someone else\'s blessing.',
+  'Something you no longer need can bring comfort to someone else.',
+  'What feels extra to you may mean everything to someone in need.',
   'A simple way to help your community.',
 ]
+
+const TAGLINE_FADE_MS = 1000
+const TAGLINE_HOLD_MS = 6500
+const TAGLINE_PAUSE_MS = 400
 
 const STEPS = [
   {
@@ -69,22 +76,46 @@ export default function AuthenticatedHomePage({
   itemsError,
   onRefreshItems,
   myRequests,
-  ownerRequests,
 }) {
   const [taglineIndex, setTaglineIndex] = useState(0)
+  const [taglineVisible, setTaglineVisible] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
 
   useEffect(() => {
-    const taglineInterval = window.setInterval(() => {
-      setTaglineIndex((index) => (index + 1) % TAGLINES.length)
-    }, 5500)
+    let fadeTimeout
+    let swapTimeout
+    let holdTimeout
 
-    const stepsInterval = window.setInterval(() => {
-      setStepIndex((index) => (index + 1) % STEPS.length)
-    }, 2500)
+    const scheduleNext = () => {
+      holdTimeout = window.setTimeout(() => {
+        setTaglineVisible(false)
+
+        fadeTimeout = window.setTimeout(() => {
+          setTaglineIndex((index) => (index + 1) % TAGLINES.length)
+
+          swapTimeout = window.setTimeout(() => {
+            setTaglineVisible(true)
+            scheduleNext()
+          }, TAGLINE_PAUSE_MS)
+        }, TAGLINE_FADE_MS)
+      }, TAGLINE_HOLD_MS)
+    }
+
+    scheduleNext()
 
     return () => {
-      window.clearInterval(taglineInterval)
+      window.clearTimeout(holdTimeout)
+      window.clearTimeout(fadeTimeout)
+      window.clearTimeout(swapTimeout)
+    }
+  }, [])
+
+  useEffect(() => {
+    const stepsInterval = window.setInterval(() => {
+      setStepIndex((index) => (index + 1) % STEPS.length)
+    }, 3500)
+
+    return () => {
       window.clearInterval(stepsInterval)
     }
   }, [])
@@ -94,88 +125,51 @@ export default function AuthenticatedHomePage({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <Surface className="overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-he-purple/10 via-he-surface to-he-yellow/5 p-5 dark:from-he-purple/18 dark:via-he-surface dark:to-he-surface-soft md:flex md:flex-col md:items-center md:px-8 md:py-12 md:text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-he-soft md:text-xs">
-            Welcome back, {displayName}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2 md:justify-center">
-            <TrustBadge
-              level={myReputation?.level}
-              trustScore={myReputation?.trust_score}
-              nextLevelPoints={myReputation?.next_level_points}
-            />
-          </div>
+      <Surface className="overflow-hidden p-0 shadow-none">
+        <div className="he-auth-hero">
+          <div className="he-auth-hero-inner md:flex md:flex-col md:items-center md:text-center">
+            <span className="he-auth-hero-eyebrow">Welcome back, {displayName}</span>
 
-          <div className="relative mt-4 flex h-16 w-full max-w-2xl items-center justify-center md:h-20">
-            {TAGLINES.map((tagline, index) => (
+            <div className="mt-3 flex flex-wrap items-center gap-2 md:justify-center">
+              <TrustBadge
+                level={myReputation?.level}
+                trustScore={myReputation?.trust_score}
+                nextLevelPoints={myReputation?.next_level_points}
+              />
+            </div>
+
+            <div className="he-auth-tagline-wrap" aria-live="polite" aria-atomic="true">
               <h1
-                key={tagline}
                 className={[
-                  "absolute flex w-full items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-2xl font-bold leading-snug tracking-tight text-he-ink transition-all duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] md:text-3xl lg:text-[32px]",
-                  index === taglineIndex
-                    ? 'translate-y-0 scale-100 opacity-100'
-                    : 'translate-y-3 scale-[0.98] opacity-0',
+                  'he-auth-tagline',
+                  taglineVisible ? 'is-visible' : 'is-fading',
                 ].join(' ')}
               >
-                {tagline}
+                {TAGLINES[taglineIndex]}
               </h1>
-            ))}
+            </div>
+
+            <div className="he-auth-cta-row">
+              <Link to="/browse" className="he-auth-cta-primary">
+                Browse Items
+              </Link>
+              <Link to="/give" className="he-auth-cta-secondary">
+                List Item
+              </Link>
+            </div>
           </div>
 
-          <div className="mt-6 flex w-full flex-col gap-4 sm:flex-row md:mx-auto md:mt-8 md:max-w-[420px] md:justify-center">
-            <Button
-              as="link"
-              to="/browse"
-              className="min-h-12 flex-1 px-6 py-3 text-[13px] font-bold transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(139,76,246,0.2)] md:text-[15px]"
-            >
-              Browse Items
-            </Button>
-            <Button
-              as="link"
-              to="/give"
-              variant="secondary"
-              className="min-h-12 flex-1 px-6 py-3 text-[13px] font-bold transition-all duration-300 hover:-translate-y-1 hover:border-[#ffcc22]/40 hover:shadow-[0_8px_20px_rgba(255,204,34,0.15)] md:text-[15px]"
-            >
-              List Item
-            </Button>
+          <div className="he-auth-stats">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
+              <p className="text-xs font-bold text-he-ink">{items.length}</p>
+            </div>
+            <div className="hidden h-3 w-px bg-he-border sm:block" />
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Total Requests</p>
+              <p className="text-xs font-bold text-he-ink">{asArray(myRequests).length}</p>
+            </div>
           </div>
-
-          <div className="mt-4 md:mt-5">
-            {(myReputation?.review_count || 0) > 0 ? (
-              <RatingStars
-                rating={myReputation?.average_rating || 0}
-                reviewCount={myReputation?.review_count || 0}
-              />
-            ) : (
-              <ReviewEmptyState
-                title="No reviews yet"
-                description="Your community rating appears after your first completed exchange."
-                className="mx-auto max-w-md"
-              />
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 border-t border-he-border bg-he-surface-soft px-4 py-3 md:gap-5 md:px-8">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
-            <p className="text-xs font-bold text-he-ink">{items.length}</p>
-          </div>
-          <div className="h-3 w-px bg-he-border" />
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Total Requests</p>
-            <p className="text-xs font-bold text-he-ink">{asArray(myRequests).length}</p>
-          </div>
-          {asArray(ownerRequests).length > 0 ? (
-            <>
-              <div className="h-3 w-px bg-he-border" />
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">To Review</p>
-                <p className="text-xs font-bold text-[#8b4cf6]">{asArray(ownerRequests).length}</p>
-              </div>
-            </>
-          ) : null}
         </div>
       </Surface>
 
