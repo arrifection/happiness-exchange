@@ -120,6 +120,39 @@ html.dark {
     color: #fafafa;
   }
 
+  html.he-auth-page {
+    overflow: hidden;
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  html.he-auth-page body {
+    overflow: hidden;
+    height: 100%;
+    overscroll-behavior: none;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+
+  html.he-auth-page #root {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .he-app.he-app-auth {
+    height: 100%;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .he-auth-main {
+    overflow: hidden;
+  }
+
   /* Legacy hardcoded light colors inside the authenticated app shell */
   html.dark .he-app [class*="text-[#1f1f1f]"]:not([class*="text-white"]),
   html.dark .he-app [class*="text-[#1f3328]"],

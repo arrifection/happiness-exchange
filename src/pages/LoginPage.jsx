@@ -72,7 +72,7 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
-      <form className="grid gap-4" onSubmit={handleSubmit}>
+      <form className="grid gap-3" onSubmit={handleSubmit}>
         <div className="grid gap-1">
           <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="login-email">
             Email Address
@@ -86,7 +86,7 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
             placeholder="you@email.com"
             autoComplete="email"
             required
-            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+            className="min-h-9 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
           />
         </div>
 
@@ -103,14 +103,14 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
             placeholder="••••••••"
             autoComplete="current-password"
             required
-            className="min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
+            className="min-h-9 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10"
           />
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="relative mt-1 flex min-h-10 w-full items-center justify-center overflow-hidden rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
+          className="relative mt-0.5 flex min-h-9 w-full items-center justify-center overflow-hidden rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
         >
           {submitting ? 'Signing in...' : 'Sign In'}
         </button>

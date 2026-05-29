@@ -50,7 +50,12 @@ const DELIVERIES_ENDPOINT = `${API_BASE}/api/deliveries/my`
 const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
 const TOKEN_KEY = 'happiness_exchange_token'
 const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
+const AUTH_PAGE_PATTERN = /^\/(login|signup)\/?$/
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
+
+function isAuthPagePath(pathname) {
+  return AUTH_PAGE_PATTERN.test(pathname)
+}
 
 function readStoredToken() {
   try {
@@ -166,10 +171,20 @@ export default function App() {
   const [creatingNeedRequest, setCreatingNeedRequest] = useState(false)
   const [needActionPendingId, setNeedActionPendingId] = useState('')
 
-  const isLoginSignupRoute = location.pathname === '/login' || location.pathname === '/signup'
+  const isAuthPage = isAuthPagePath(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
   const isMessagesRoute = location.pathname.startsWith('/messages')
-  const showAppChrome = !isLoginSignupRoute && (Boolean(currentUser) || location.pathname !== '/')
+  const showAppChrome = !isAuthPage && (Boolean(currentUser) || location.pathname !== '/')
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (isAuthPage) {
+      root.classList.add('he-auth-page')
+    } else {
+      root.classList.remove('he-auth-page')
+    }
+    return () => root.classList.remove('he-auth-page')
+  }, [isAuthPage])
 
   useEffect(() => { loadItems(readLocationPreferences()); loadNeedRequests('open') }, [])
 
@@ -833,12 +848,12 @@ export default function App() {
   ]
 
   return (
-    <NotificationProvider token={currentUser && token ? token : ''}>
-      <div className="he-app flex min-h-screen flex-1 flex-col bg-he-page">
+    <NotificationProvider token={currentUser && token && !isAuthPage ? token : ''}>
+      <div className={['he-app flex flex-1 flex-col bg-he-page', isAuthPage ? 'he-app-auth' : 'min-h-screen'].join(' ')}>
         <SplashScreen visible={showSplash} />
 
         <div className="flex flex-1 flex-col">
-          {currentUser && !currentUser.is_verified ? (
+          {currentUser && !currentUser.is_verified && !isAuthPage ? (
             <div className="border-b border-he-danger/30 bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] flex items-center justify-center gap-4 flex-wrap dark:border-rose-900/50 dark:bg-[#3f1d1d] dark:text-rose-200">
               <span>Verify your email to list, request, chat, and review.</span>
               <button
@@ -893,7 +908,7 @@ export default function App() {
             </div>
           ) : null}
 
-          {showAppChrome ? (
+          {showAppChrome && !isAuthPage ? (
             <>
             <header className="he-nav-shell">
               <div className="flex h-14 min-w-0 items-center px-4 mx-auto w-full max-w-[1280px] md:px-6">
@@ -933,9 +948,9 @@ export default function App() {
                   ))}
                 </nav>
 
-                {/* Profile and Notifications */}
+                {/* Profile and Notifications — never on auth pages */}
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3">
-                  {currentUser ? (
+                  {currentUser && !isAuthPage ? (
                     <>
                       <NotificationBell />
                       <NavLink
@@ -960,8 +975,8 @@ export default function App() {
           ) : null}
 
           <main className={
-            isLoginSignupRoute
-              ? 'flex min-h-0 flex-1 flex-col overflow-x-clip'
+            isAuthPage
+              ? 'he-auth-main flex min-h-0 flex-1 flex-col overflow-hidden'
               : isMarketingHome
               ? 'flex-1 min-w-0 overflow-x-clip'
               : isMessagesRoute
@@ -1161,7 +1176,7 @@ export default function App() {
             </Routes>
           </main>
 
-          {currentUser && !isMarketingHome ? (
+          {currentUser && !isMarketingHome && !isAuthPage ? (
             <nav className="he-bottom-nav md:hidden">
               {bottomTabItems.map((item) => (
                 <NavLink
@@ -1181,7 +1196,7 @@ export default function App() {
         </div>
 
       {/* Global notification toast */}
-      {(loadingUser || authError || authNotice || reviewMessage) ? (
+      {!isAuthPage && (loadingUser || authError || authNotice || reviewMessage) ? (
         <div className="fixed bottom-20 right-4 z-50 w-[min(16rem,calc(100vw-2rem))] md:bottom-6 md:right-6">
           <Surface className="border-[#8b4cf6]/10 p-4 shadow-xl ring-1 ring-[#8b4cf6]/5">
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-[#8b4cf6]">System Notification</h2>
