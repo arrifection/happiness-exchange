@@ -27,7 +27,7 @@ from app.services.items import build_item_document, serialize_item
 from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
 from app.services.notifications import notify_moderators, create_notification
-from app.services.trust import award_completed_donation
+from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ async def create_item(
     current_user: dict = Depends(get_verified_user),
 ):
     """Create a new item listing for the logged-in user."""
+    check_user_rate_limit(current_user["id"], "create_item", max_calls=30, window_seconds=3600)
     items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
@@ -181,6 +182,7 @@ async def upload_item_image(
     current_user: dict = Depends(get_current_user),
 ):
     """Upload an item image to Cloudinary and return its secure URL."""
+    check_user_rate_limit(current_user["id"], "upload_image", max_calls=40, window_seconds=3600)
     del current_user
 
     if not file.content_type or not file.content_type.startswith("image/"):

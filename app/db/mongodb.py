@@ -37,12 +37,23 @@ async def _ensure_indexes(database) -> None:
     await database.users.create_index("name_normalized", unique=True)
     await database.items.create_index("status")
     await database.items.create_index("created_at")
+    await database.items.create_index("owner_id")
+    await database.items.create_index("category")
+    await database.items.create_index("country")
+    await database.items.create_index("city")
+    await database.items.create_index([("status", ASCENDING), ("created_at", DESCENDING)])
+    await database.items.create_index([("country", ASCENDING), ("city", ASCENDING), ("status", ASCENDING)])
+    await database.items.create_index([("owner_id", ASCENDING), ("status", ASCENDING)])
     await database.requests.create_index(
         [("item_id", 1), ("requester_id", 1)],
         unique=True,
     )
+    await database.requests.create_index("item_id")
     await database.requests.create_index("owner_id")
     await database.requests.create_index("requester_id")
+    await database.requests.create_index("status")
+    await database.requests.create_index([("owner_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)])
+    await database.requests.create_index([("requester_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)])
     await database.reviews.create_index(
         [("item_id", 1), ("reviewer_id", 1)],
         unique=True,
@@ -50,19 +61,26 @@ async def _ensure_indexes(database) -> None:
     await database.reviews.create_index("reviewed_user_id")
     await database.reviews.create_index("reviewer_id")
     await database.reviews.create_index("created_at")
+    await database.reviews.create_index([("reviewed_user_id", ASCENDING), ("created_at", DESCENDING)])
     # Chat indexes
     await database.conversations.create_index("request_id", unique=True)
+    await database.conversations.create_index("item_id")
     await database.conversations.create_index("giver_id")
     await database.conversations.create_index("receiver_id")
     await database.conversations.create_index("last_message_at")
+    await database.conversations.create_index([("giver_id", ASCENDING), ("last_message_at", DESCENDING)])
+    await database.conversations.create_index([("receiver_id", ASCENDING), ("last_message_at", DESCENDING)])
     await database.messages.create_index("conversation_id")
     await database.messages.create_index("created_at")
-    await database.messages.create_index([("conversation_id", 1), ("created_at", 1)])
+    await database.messages.create_index([("conversation_id", ASCENDING), ("created_at", ASCENDING)])
+    await database.messages.create_index([("sender_id", ASCENDING), ("created_at", DESCENDING)])
     # Notifications indexes
     await database.notifications.create_index("user_id")
     await database.notifications.create_index("created_at")
     await database.notifications.create_index("read")
-    await database.notifications.create_index([("user_id", 1), ("created_at", -1)])
+    await database.notifications.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await database.notifications.create_index([("user_id", ASCENDING), ("read", ASCENDING)])
+    await database.notifications.create_index([("user_id", ASCENDING), ("read", ASCENDING), ("created_at", DESCENDING)])
     # Deliveries indexes
     await database.deliveries.create_index("request_id", unique=True)
     await database.deliveries.create_index("giver_id")

@@ -6,7 +6,7 @@ from app.db.mongodb import get_db_async, get_last_connection_error
 router = APIRouter()
 
 # Human-readable deploy label — bump on meaningful backend releases
-API_BUILD = "2026-05-26-prod-audit-v2"
+API_BUILD = "2026-05-29-launch-readiness-v1"
 
 
 @router.get("/", summary="Backend status check")

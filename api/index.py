@@ -30,6 +30,8 @@ from app.api.routes.admin.analytics import router as admin_analytics_router
 from app.api.routes.admin.team      import router as admin_team_router
 from app.api.routes.admin.deliveries import router as admin_deliveries_router
 from app.core.config import settings
+from app.core.middleware import RequestLoggingMiddleware
+from app.core.startup_checks import log_production_warnings
 from app.db.mongodb import (
     close_mongo_connection,
     connect_to_mongo,
@@ -44,6 +46,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown events."""
     settings.log_startup_info()
+    log_production_warnings()
     await connect_to_mongo()
     yield
     await close_mongo_connection()
@@ -68,6 +71,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestLoggingMiddleware)
 
 app.include_router(health_router, prefix="/api/status", tags=["Status"])
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])

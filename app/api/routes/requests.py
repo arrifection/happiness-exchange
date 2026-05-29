@@ -14,6 +14,7 @@ from app.schemas.requests import RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
 from app.services.notifications import create_notification
+from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
 
@@ -24,6 +25,7 @@ async def create_request(
     current_user: dict = Depends(get_verified_user),
 ):
     """Create an interest request for an item."""
+    check_user_rate_limit(current_user["id"], "create_request", max_calls=60, window_seconds=3600)
     items_collection = await get_items_collection_async()
     requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
