@@ -1,12 +1,22 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+
+import { filterNotificationsForUser } from '../lib/notificationFilters.js'
+import { resolveApiBase } from '../lib/api.js'
 
 const NotificationContext = createContext(null)
 
-import { resolveApiBase } from '../lib/api.js'
-
 export function NotificationProvider({ token, children }) {
-  const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [rawNotifications, setRawNotifications] = useState([])
+
+  const notifications = useMemo(
+    () => filterNotificationsForUser(rawNotifications),
+    [rawNotifications],
+  )
+
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications],
+  )
 
   const API_BASE = resolveApiBase()
 
@@ -14,13 +24,11 @@ export function NotificationProvider({ token, children }) {
     if (!token) return
     try {
       const res = await fetch(`${API_BASE}/api/notifications`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        const list = Array.isArray(data) ? data : []
-        setNotifications(list)
-        setUnreadCount(list.filter((n) => !n.read).length)
+        setRawNotifications(Array.isArray(data) ? data : [])
       }
     } catch {
       // silent fail
@@ -32,11 +40,14 @@ export function NotificationProvider({ token, children }) {
     try {
       const res = await fetch(`${API_BASE}/api/notifications/${id}/read`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        setRawNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === id ? { ...notification, read: true } : notification,
+          ),
+        )
       }
     } catch {
       // silent
@@ -48,11 +59,10 @@ export function NotificationProvider({ token, children }) {
     try {
       const res = await fetch(`${API_BASE}/api/notifications/read-all`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-        setUnreadCount(0)
+        setRawNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
       }
     } catch {
       // silent
@@ -68,7 +78,9 @@ export function NotificationProvider({ token, children }) {
   }, [token])
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications }}>
+    <NotificationContext.Provider
+      value={{ notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications }}
+    >
       {children}
     </NotificationContext.Provider>
   )
