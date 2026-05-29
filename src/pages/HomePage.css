@@ -1282,6 +1282,34 @@
 }
 
 @media (max-width: 420px) {
+  .he-hero {
+    padding: 48px 16px 40px;
+    gap: 32px;
+  }
+
+  .he-hero-right {
+    width: 100%;
+    max-width: min(100%, 300px);
+    margin-inline: auto;
+  }
+
+  .he-phone {
+    max-width: 100%;
+    padding: 14px 10px 0;
+    border-radius: 34px;
+    box-shadow: 0 24px 64px rgba(140, 87, 245, 0.2);
+  }
+
+  .he-phone-screen {
+    min-height: 380px;
+    padding: 14px;
+  }
+
+  .he-phone-items {
+    max-height: 220px;
+    overflow: hidden;
+  }
+
   .he-hero h1 {
     font-size: 32px;
     letter-spacing: -0.5px;

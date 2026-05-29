@@ -166,10 +166,10 @@ export default function App() {
   const [creatingNeedRequest, setCreatingNeedRequest] = useState(false)
   const [needActionPendingId, setNeedActionPendingId] = useState('')
 
-  const isAuthFlowRoute = AUTH_FLOW_PATHS.includes(location.pathname)
+  const isLoginSignupRoute = location.pathname === '/login' || location.pathname === '/signup'
   const isMarketingHome = !currentUser && location.pathname === '/'
   const isMessagesRoute = location.pathname.startsWith('/messages')
-  const showAppChrome = Boolean(currentUser) || location.pathname !== '/'
+  const showAppChrome = !isLoginSignupRoute && (Boolean(currentUser) || location.pathname !== '/')
 
   useEffect(() => { loadItems(readLocationPreferences()); loadNeedRequests('open') }, [])
 
@@ -833,7 +833,7 @@ export default function App() {
   ]
 
   return (
-    <NotificationProvider token={token}>
+    <NotificationProvider token={currentUser && token ? token : ''}>
       <div className="he-app flex min-h-screen flex-1 flex-col bg-he-page">
         <SplashScreen visible={showSplash} />
 
@@ -935,19 +935,23 @@ export default function App() {
 
                 {/* Profile and Notifications */}
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3">
-                  <NotificationBell />
-                  <NavLink
-                    to="/profile"
-                    className={({ isActive }) => [
-                      'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-he-soft transition-all duration-200 hover:bg-he-surface-soft hover:text-he-ink',
-                      isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : '',
-                    ].join(' ')}
-                    aria-label="Open profile settings"
-                  >
-                    <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
-                    </svg>
-                  </NavLink>
+                  {currentUser ? (
+                    <>
+                      <NotificationBell />
+                      <NavLink
+                        to="/profile"
+                        className={({ isActive }) => [
+                          'inline-flex h-8 w-8 items-center justify-center rounded-btn border border-transparent text-he-soft transition-all duration-200 hover:bg-he-surface-soft hover:text-he-ink',
+                          isActive ? 'bg-he-nav-active text-he-purple shadow-xs' : '',
+                        ].join(' ')}
+                        aria-label="Open profile settings"
+                      >
+                        <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                        </svg>
+                      </NavLink>
+                    </>
+                  ) : null}
                 </div>
               </div>
             </header>
@@ -956,7 +960,9 @@ export default function App() {
           ) : null}
 
           <main className={
-            isMarketingHome
+            isLoginSignupRoute
+              ? 'flex min-h-0 flex-1 flex-col overflow-x-clip'
+              : isMarketingHome
               ? 'flex-1 min-w-0 overflow-x-clip'
               : isMessagesRoute
                 ? 'flex min-h-0 flex-1 flex-col overflow-hidden md:pb-8'
@@ -1167,7 +1173,7 @@ export default function App() {
                   ].join(' ')}
                 >
                   {item.icon}
-                  <span className="max-w-[4.25rem] truncate">{item.label === 'Messages' ? 'Msgs' : item.label}</span>
+                  <span className="max-w-[4.75rem] truncate text-[9px] leading-tight">{item.label}</span>
                 </NavLink>
               ))}
             </nav>
