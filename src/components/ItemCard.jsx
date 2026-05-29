@@ -182,7 +182,7 @@ export default function ItemCard({
   }
 
   return (
-    <article className="group he-card flex overflow-hidden transition-all duration-300 hover:border-he-purple/30 md:hover:-translate-y-1">
+    <article className="group he-card flex overflow-hidden transition-all duration-300 hover:border-he-purple/30">
       <div className="relative aspect-square w-20 shrink-0 overflow-hidden bg-he-surface-soft sm:w-24">
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
@@ -200,7 +200,7 @@ export default function ItemCard({
               <img
                 src={displayImage}
                 alt={item.title}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-full w-full object-cover"
                 onError={() => setImageAvailable(false)}
               />
             </button>

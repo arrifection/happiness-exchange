@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import BrowseLocationPill from '../components/BrowseLocationPill.jsx'
 import ItemCard from '../components/ItemCard.jsx'
+import LocationSetupModal from '../components/LocationSetupModal.jsx'
 import ItemsBrowseMap from '../components/map/ItemsBrowseMap.jsx'
-import LocationSelector from '../components/LocationSelector.jsx'
 import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, InlineLoadingNotice } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 
@@ -10,7 +11,6 @@ const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen'
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
 const SORT_OPTIONS = ['Newest first', 'Oldest first']
 
-// Map display labels to actual DB values
 const CATEGORY_DB_MAP = {
   'Kids Goods': ['Kids', 'Kid'],
   'Family Items': ['Baby', 'Family'],
@@ -48,15 +48,17 @@ export default function BrowseItemsPage({
   const [statusFilter, setStatusFilter] = useState('Available')
   const [sortBy, setSortBy] = useState('Newest first')
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
+  const [locationModalOpen, setLocationModalOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
 
-  function handleLocationChange(values) {
+  function handleLocationSave(values) {
     const next = {
       country: values.country,
       city: values.city,
       area: values.area || '',
       latitude: values.latitude ?? null,
       longitude: values.longitude ?? null,
-      locationSource: values.locationSource || 'manual',
+      locationSource: values.locationSource || values.location_source || 'manual',
     }
     writeLocationPreferences(next)
     setLocationPrefs(next)
@@ -70,27 +72,22 @@ export default function BrowseItemsPage({
 
   useEffect(() => {
     onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when status filter changes
   }, [statusFilter])
 
   const filteredItems = useMemo(() => {
     let result = [...items]
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(
         (item) =>
           item.title?.toLowerCase().includes(q) ||
           item.description?.toLowerCase().includes(q) ||
-          item.category?.toLowerCase().includes(q) ||
-          item.location?.toLowerCase().includes(q) ||
-          item.location_display?.toLowerCase().includes(q) ||
-          item.city?.toLowerCase().includes(q) ||
-          item.country?.toLowerCase().includes(q),
+          item.category?.toLowerCase().includes(q),
       )
     }
 
-    // Category — client-side filter on the loaded page of items
     if (categoryFilter !== 'All') {
       const dbValues = CATEGORY_DB_MAP[categoryFilter]
       result = result.filter((item) => {
@@ -101,12 +98,10 @@ export default function BrowseItemsPage({
       })
     }
 
-    // Status — server fetch uses buildStatusQuery; keep client filter for mixed views
     if (statusFilter !== 'All') {
       result = result.filter((item) => item.status === statusFilter.toLowerCase())
     }
 
-    // Sort
     result.sort((a, b) => {
       const dateA = new Date(a.created_at || 0).getTime()
       const dateB = new Date(b.created_at || 0).getTime()
@@ -119,10 +114,19 @@ export default function BrowseItemsPage({
   const hasActiveFilters = search || categoryFilter !== 'All' || statusFilter !== 'All'
     || locationPrefs.city || locationPrefs.locationSource === 'current_location'
 
+  function resetFilters() {
+    setSearch('')
+    setCategoryFilter('All')
+    setStatusFilter('Available')
+    const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
+    writeLocationPreferences(resetPrefs)
+    setLocationPrefs(resetPrefs)
+    onRefreshItems?.(resetPrefs, buildStatusQuery('Available'))
+  }
+
   return (
     <div className="space-y-4">
-      {/* Search Header Area */}
-      <div className="space-y-3 md:space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="font-['Plus_Jakarta_Sans',sans-serif] text-lg md:text-xl font-bold tracking-tight text-he-ink">
@@ -132,67 +136,47 @@ export default function BrowseItemsPage({
           </div>
           <button
             type="button"
-            className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#8b4cf6] hover:underline"
-            onClick={() => onRefreshItems?.(locationPrefs)}
+            className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-he-purple hover:underline"
+            onClick={() => onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))}
             disabled={loadingItems}
           >
             {loadingItems ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
-        {/* Anonymous Trust Badge */}
         <AnonymousBadge />
 
-        {/* Location filters */}
-        <div className="he-filter-panel">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-he-muted">Location</p>
-          <LocationSelector
-            country={locationPrefs.country}
-            city={locationPrefs.city}
-            area={locationPrefs.area}
-            latitude={locationPrefs.latitude}
-            longitude={locationPrefs.longitude}
-            locationSource={locationPrefs.locationSource}
-            onChange={handleLocationChange}
-            showArea={false}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <BrowseLocationPill
+            locationPrefs={locationPrefs}
+            onOpenSetup={() => setLocationModalOpen(true)}
           />
-        </div>
-
-        <ItemsBrowseMap
-          items={filteredItems}
-          country={locationPrefs.country}
-          city={locationPrefs.city}
-          userLatitude={locationPrefs.latitude}
-          userLongitude={locationPrefs.longitude}
-          showUserLocation={locationPrefs.locationSource === 'current_location'}
-        />
-
-        {/* Search Input Box */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search items, locations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="he-field min-h-9 md:min-h-10 pl-9 pr-12 text-xs md:text-sm"
-          />
-          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8c755f]/60">
-            <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <div className="relative min-w-0 flex-1">
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="he-field min-h-9 w-full pl-9 pr-12 text-xs md:min-h-10 md:text-sm"
+            />
+            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8c755f]/60">
+              <svg className="h-3.5 w-3.5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#c65d4a] hover:underline md:text-xs"
+              >
+                Clear
+              </button>
+            ) : null}
           </div>
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] md:text-xs font-bold text-[#c65d4a] hover:underline"
-            >
-              Clear
-            </button>
-          )}
         </div>
 
-        {/* Categories */}
-        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:justify-center md:gap-2.5 md:overflow-visible md:pb-0">
+        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:gap-2 md:overflow-visible md:pb-0">
           {CATEGORIES.map((cat) => {
             const isActive = categoryFilter === cat
             return (
@@ -211,13 +195,12 @@ export default function BrowseItemsPage({
           })}
         </div>
 
-        {/* Status and Sort */}
-        <div className="flex flex-wrap sm:flex-nowrap md:justify-center gap-2 md:gap-4 md:pt-1">
-          <div className="relative flex-1 md:flex-none md:w-48">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="relative min-w-[140px] flex-1 md:flex-none md:w-44">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="he-field h-8 md:h-10 appearance-none px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-he-soft"
+              className="he-field h-9 w-full appearance-none px-3 pr-8 text-[11px] font-bold text-he-soft md:h-10 md:text-[13px]"
             >
               {STATUSES.map((stat) => (
                 <option key={stat} value={stat}>
@@ -225,58 +208,74 @@ export default function BrowseItemsPage({
                 </option>
               ))}
             </select>
-            <div className="pointer-events-none absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
-              <svg className="h-3 w-3 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
 
-          <div className="relative flex-1 md:flex-none md:w-48">
+          <div className="relative min-w-[140px] flex-1 md:flex-none md:w-44">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="he-field h-8 md:h-10 appearance-none px-2.5 md:px-3.5 pr-7 text-[10px] md:text-[13px] font-bold text-he-soft"
+              className="he-field h-9 w-full appearance-none px-3 pr-8 text-[11px] font-bold text-he-soft md:h-10 md:text-[13px]"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
-            <div className="pointer-events-none absolute right-2.5 md:right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
-              <svg className="h-3 w-3 md:h-3.5 md:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
 
-          {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={() => setMapOpen((open) => !open)}
+            className="inline-flex h-9 shrink-0 items-center rounded-full border border-he-border bg-he-surface-soft px-3 text-[10px] font-bold uppercase tracking-widest text-he-purple transition hover:border-he-purple/30 md:h-10"
+          >
+            {mapOpen ? 'Hide map' : 'View map'}
+          </button>
+
+          {hasActiveFilters ? (
             <button
-              onClick={() => {
-                setSearch('')
-                setCategoryFilter('All')
-                setStatusFilter('Available')
-                const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
-                writeLocationPreferences(resetPrefs)
-                setLocationPrefs(resetPrefs)
-                onRefreshItems?.(resetPrefs)
-              }}
-              className="text-[10px] md:text-[13px] font-bold text-[#c65d4a] hover:underline px-2"
+              type="button"
+              onClick={resetFilters}
+              className="px-1 text-[10px] font-bold text-[#c65d4a] hover:underline md:text-xs"
             >
               Reset
             </button>
-          )}
+          ) : null}
+
+          <span className="ml-auto hidden text-[10px] text-he-muted sm:inline">
+            {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}
+          </span>
         </div>
+
+        {mapOpen ? (
+          <ItemsBrowseMap
+            items={filteredItems}
+            country={locationPrefs.country}
+            city={locationPrefs.city}
+            userLatitude={locationPrefs.latitude}
+            userLongitude={locationPrefs.longitude}
+            showUserLocation={locationPrefs.locationSource === 'current_location'}
+            defaultOpen
+          />
+        ) : null}
       </div>
 
-      {/* Results grid */}
-      <div className="space-y-3 pt-1 md:pt-4">
+      <div className="space-y-3 pt-1">
         {loadingItems && items.length === 0 ? (
           <ItemCardSkeletonGrid count={4} />
         ) : itemsError ? (
           <ErrorState
             title="Couldn't load items"
             message={itemsError}
-            onRetry={() => onRefreshItems?.(locationPrefs)}
+            onRetry={() => onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))}
           />
         ) : !loadingItems && filteredItems.length === 0 ? (
           <EmptyState
@@ -289,19 +288,7 @@ export default function BrowseItemsPage({
             }
             action={
               hasActiveFilters ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setSearch('')
-                    setCategoryFilter('All')
-                    setStatusFilter('Available')
-                    const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
-                    writeLocationPreferences(resetPrefs)
-                    setLocationPrefs(resetPrefs)
-                    onRefreshItems?.(resetPrefs)
-                  }}
-                >
+                <Button type="button" variant="secondary" onClick={resetFilters}>
                   Clear filters
                 </Button>
               ) : (
@@ -314,7 +301,7 @@ export default function BrowseItemsPage({
         ) : (
           <>
             {loadingItems ? <InlineLoadingNotice label="Updating listings…" /> : null}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-6">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-6">
               {filteredItems.map((item) => (
                 <ItemCard
                   key={item.id}
@@ -331,6 +318,13 @@ export default function BrowseItemsPage({
           </>
         )}
       </div>
+
+      <LocationSetupModal
+        open={locationModalOpen}
+        initialPrefs={locationPrefs}
+        onSave={handleLocationSave}
+        onClose={() => setLocationModalOpen(false)}
+      />
     </div>
   )
 }
