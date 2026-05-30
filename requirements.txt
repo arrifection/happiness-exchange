@@ -35,3 +35,7 @@ Pillow==11.2.1
 
 # python-multipart - parses file uploads for FastAPI UploadFile endpoints
 python-multipart==0.0.20
+
+# pytest - integration tests and marker support
+pytest==8.3.5
+pytest-asyncio==0.25.3

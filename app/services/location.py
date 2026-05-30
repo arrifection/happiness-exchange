@@ -293,6 +293,29 @@ def build_items_list_query(
     return query
 
 
+def apply_keyset_cursor_filter(
+    mongo_query: dict[str, Any],
+    *,
+    created_at,
+    object_id,
+) -> dict[str, Any]:
+    """
+    Keyset pagination filter for newest-first browse (created_at DESC, _id DESC).
+
+    Offset/skip pagination skips or repeats rows when items are inserted between page
+    fetches; anchoring on the last seen (created_at, _id) pair prevents that.
+    """
+    keyset_clause = {
+        "$or": [
+            {"created_at": {"$lt": created_at}},
+            {"created_at": created_at, "_id": {"$lt": object_id}},
+        ]
+    }
+    if "$and" in mongo_query:
+        return {**mongo_query, "$and": [*mongo_query["$and"], keyset_clause]}
+    return {"$and": [mongo_query, keyset_clause]}
+
+
 def filter_and_sort_items(
     items: list[dict[str, Any]],
     *,

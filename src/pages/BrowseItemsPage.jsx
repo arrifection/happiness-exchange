@@ -41,8 +41,16 @@ export default function BrowseItemsPage({
   onOpenReview,
   onRefreshItems,
   loadingItems,
+  loadingMoreItems = false,
   itemsError,
-  itemsPagination = { page: 1, limit: 20, total: 0, total_pages: 1 },
+  itemsPagination = {
+    page: 1,
+    limit: 20,
+    total: 0,
+    total_pages: 1,
+    next_cursor: null,
+    has_more: false,
+  },
 }) {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
@@ -71,16 +79,21 @@ export default function BrowseItemsPage({
     return { status: filter.toLowerCase() }
   }
 
+  function loadMoreItems() {
+    if (!itemsPagination.has_more || !itemsPagination.next_cursor || loadingMoreItems) return
+    onRefreshItems?.(locationPrefs, {
+      ...buildStatusQuery(statusFilter),
+      append: true,
+      cursor: itemsPagination.next_cursor,
+    })
+  }
+
   useEffect(() => {
     onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: 1 })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when status filter changes
   }, [statusFilter])
 
-  function goToPage(nextPage) {
-    if (nextPage < 1 || nextPage > itemsPagination.total_pages) return
-    onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: nextPage })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const loadedCount = items.length
 
   const filteredItems = useMemo(() => {
     let result = [...items]
@@ -323,34 +336,25 @@ export default function BrowseItemsPage({
               ))}
             </div>
 
-            {itemsPagination.total_pages > 1 ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-he-border/60 pt-4">
+            {itemsPagination.has_more ? (
+              <div className="flex flex-col items-center gap-2 border-t border-he-border/60 pt-4">
                 <p className="text-[11px] text-he-muted">
-                  Page {itemsPagination.page} of {itemsPagination.total_pages}
-                  {' · '}
-                  {itemsPagination.total} total listings
+                  Showing {loadedCount} of {itemsPagination.total} listings
                 </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-8 min-h-0 px-3 text-[10px]"
-                    disabled={loadingItems || itemsPagination.page <= 1}
-                    onClick={() => goToPage(itemsPagination.page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-8 min-h-0 px-3 text-[10px]"
-                    disabled={loadingItems || itemsPagination.page >= itemsPagination.total_pages}
-                    onClick={() => goToPage(itemsPagination.page + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-9 min-h-0 px-5 text-[11px]"
+                  disabled={loadingItems || loadingMoreItems}
+                  onClick={loadMoreItems}
+                >
+                  {loadingMoreItems ? 'Loading more…' : 'Load more'}
+                </Button>
               </div>
+            ) : itemsPagination.total > 0 ? (
+              <p className="border-t border-he-border/60 pt-4 text-center text-[11px] text-he-muted">
+                {itemsPagination.total} listing{itemsPagination.total === 1 ? '' : 's'} total
+              </p>
             ) : null}
           </>
         )}

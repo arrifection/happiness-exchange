@@ -27,6 +27,10 @@ def _value_matches(actual, expected) -> bool:
             return actual in expected["$in"]
         if "$ne" in expected:
             return actual != expected["$ne"]
+        if "$lt" in expected:
+            return actual is not None and actual < expected["$lt"]
+        if "$gt" in expected:
+            return actual is not None and actual > expected["$gt"]
         if "$regex" in expected:
             if actual is None:
                 return False
@@ -60,9 +64,15 @@ class FakeCursor:
     def __init__(self, documents):
         self.documents = list(documents)
 
-    def sort(self, key, direction):
-        reverse = direction == -1
-        self.documents.sort(key=lambda document: document.get(key), reverse=reverse)
+    def sort(self, key_or_keys, direction=None):
+        if isinstance(key_or_keys, list):
+            sort_keys = key_or_keys
+        else:
+            sort_keys = [(key_or_keys, direction)]
+
+        for key, dir_value in reversed(sort_keys):
+            reverse = dir_value == -1
+            self.documents.sort(key=lambda document, sort_key=key: document.get(sort_key), reverse=reverse)
         return self
 
     def skip(self, count):

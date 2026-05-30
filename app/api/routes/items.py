@@ -28,7 +28,7 @@ from app.services.cloudinary import (
 from app.core.slowapi_limiter import authenticated_user_key, limiter
 from app.services.image_validation import validate_and_sanitize_image
 from app.services.items import build_item_document, serialize_item
-from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
+from app.services.location import apply_keyset_cursor_filter, build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
 from app.services.trust import award_completed_donation
 from app.services.notifications import notify_moderators, create_notification
@@ -74,104 +74,22 @@ async def create_item(
     return serialize_item(created_item)
 
 
-@router.get("/items", response_model=ItemListResponse)
-async def list_items(
-    country: str | None = Query(default=None, description="Filter by country"),
-    city: str | None = Query(default=None, description="Filter by city"),
-    status: str | None = Query(
-        default="available",
-        description="Filter by item status (default: available)",
-    ),
-    near_lat: float | None = Query(default=None, ge=-90, le=90),
-    near_lng: float | None = Query(default=None, ge=-180, le=180),
-    radius_km: float | None = Query(default=None, gt=0, le=500),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=20, ge=1, le=100),
-):
-    """Return paginated public item listings with optional location filters."""
-    items_collection = await get_items_collection_async()
-    if items_collection is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection is not available.",
-        )
-
-    mongo_query = build_items_list_query(country=country, city=city, status=status)
-    geo_mode = near_lat is not None and near_lng is not None
-    location_prefiltered = bool(country or city)
-
-    # Browse path: filter in MongoDB (indexed) → optional geo sort in app → paginate.
-    # Previously we fetched up to 1,000 candidates then filtered in Python, which silently
-    # hid listings beyond the cap in busy cities.
-    if geo_mode:
-        cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
-        candidate_items = await cursor.to_list(length=None)
-        filtered_items = filter_and_sort_items(
-            candidate_items,
-            near_lat=near_lat,
-            near_lng=near_lng,
-            radius_km=radius_km,
-            location_prefiltered=location_prefiltered,
-        )
-    else:
-        total = await items_collection.count_documents(mongo_query)
-        total_pages = max(1, math.ceil(total / limit)) if total else 1
-        if page > total_pages:
-            page = total_pages
-        skip = (page - 1) * limit
-        cursor = (
-            items_collection.find(mongo_query)
-            .sort("created_at", DESCENDING)
-            .skip(skip)
-            .limit(limit)
-        )
-        filtered_items = await cursor.to_list(length=limit)
-        items = filtered_items
-        owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
-
-        owner_reputation_lookup: dict[str, dict] = {}
-        try:
-            users_collection = await get_users_collection_async()
-            reviews_collection = await get_reviews_collection_async()
-            if users_collection is not None and reviews_collection is not None and owner_ids:
-                owner_reputation_lookup = await build_public_reputation_lookup(
-                    owner_ids,
-                    users_collection=users_collection,
-                    reviews_collection=reviews_collection,
-                )
-        except Exception:
-            logger.exception("Failed to build reputation lookup for public items list")
-
-        results = []
-        for item in items:
-            owner_id = str(item.get("owner_id", ""))
-            try:
-                results.append(
-                    serialize_item(
-                        item,
-                        owner_reputation=owner_reputation_lookup.get(owner_id),
-                    )
-                )
-            except Exception:
-                logger.exception("Failed to serialize item %s", item.get("_id"))
-
-        return {
-            "items": results,
-            "page": page,
-            "limit": limit,
-            "total": total,
-            "total_pages": total_pages,
-        }
-
-    total = len(filtered_items)
+async def _build_public_items_response(
+    *,
+    items: list[dict],
+    page: int,
+    limit: int,
+    total: int,
+    near_lat: float | None = None,
+    near_lng: float | None = None,
+    has_more: bool | None = None,
+) -> dict:
     total_pages = max(1, math.ceil(total / limit)) if total else 1
-    if page > total_pages:
-        page = total_pages
+    if has_more is None:
+        has_more = page < total_pages
+    next_cursor = str(items[-1]["_id"]) if items and has_more else None
 
-    start = (page - 1) * limit
-    items = filtered_items[start : start + limit]
     owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
-
     owner_reputation_lookup: dict[str, dict] = {}
     try:
         users_collection = await get_users_collection_async()
@@ -189,7 +107,12 @@ async def list_items(
     for item in items:
         owner_id = str(item.get("owner_id", ""))
         distance_km = None
-        if near_lat is not None and near_lng is not None and item.get("latitude") is not None and item.get("longitude") is not None:
+        if (
+            near_lat is not None
+            and near_lng is not None
+            and item.get("latitude") is not None
+            and item.get("longitude") is not None
+        ):
             distance_km = round(
                 haversine_km(near_lat, near_lng, float(item["latitude"]), float(item["longitude"])),
                 1,
@@ -211,7 +134,123 @@ async def list_items(
         "limit": limit,
         "total": total,
         "total_pages": total_pages,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
     }
+
+
+@router.get("/items", response_model=ItemListResponse)
+async def list_items(
+    country: str | None = Query(default=None, description="Filter by country"),
+    city: str | None = Query(default=None, description="Filter by city"),
+    status: str | None = Query(
+        default="available",
+        description="Filter by item status (default: available)",
+    ),
+    near_lat: float | None = Query(default=None, ge=-90, le=90),
+    near_lng: float | None = Query(default=None, ge=-180, le=180),
+    radius_km: float | None = Query(default=None, gt=0, le=500),
+    page: int = Query(default=1, ge=1, description="Offset page (fallback when cursor is omitted)"),
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = Query(
+        default=None,
+        description="Keyset cursor — _id of the last item from the previous page (newest-first feed)",
+    ),
+):
+    """Return paginated public item listings with optional location filters."""
+    items_collection = await get_items_collection_async()
+    if items_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    mongo_query = build_items_list_query(country=country, city=city, status=status)
+    geo_mode = near_lat is not None and near_lng is not None
+    location_prefiltered = bool(country or city)
+    total = await items_collection.count_documents(mongo_query)
+    sort_keys = [("created_at", DESCENDING), ("_id", DESCENDING)]
+
+    # Browse path: filter in MongoDB (indexed) → optional geo sort in app → paginate.
+    # Keyset cursor pagination avoids skip/offset gaps when listings change between fetches.
+    if geo_mode:
+        candidate_items = await items_collection.find(mongo_query).sort(sort_keys).to_list(length=None)
+        filtered_items = filter_and_sort_items(
+            candidate_items,
+            near_lat=near_lat,
+            near_lng=near_lng,
+            radius_km=radius_km,
+            location_prefiltered=location_prefiltered,
+        )
+        if cursor:
+            cursor_oid = parse_object_id(cursor)
+            if cursor_oid is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cursor.")
+            cursor_index = next(
+                (index for index, item in enumerate(filtered_items) if item["_id"] == cursor_oid),
+                None,
+            )
+            if cursor_index is not None:
+                filtered_items = filtered_items[cursor_index + 1 :]
+        page_items = filtered_items[: limit + 1]
+        has_more = len(page_items) > limit
+        if has_more:
+            page_items = page_items[:limit]
+        return await _build_public_items_response(
+            items=page_items,
+            page=page,
+            limit=limit,
+            total=len(filtered_items),
+            near_lat=near_lat,
+            near_lng=near_lng,
+            has_more=has_more,
+        )
+
+    list_query = dict(mongo_query)
+    effective_page = page
+
+    if cursor:
+        cursor_oid = parse_object_id(cursor)
+        if cursor_oid is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cursor.")
+        cursor_item = await items_collection.find_one({"_id": cursor_oid})
+        if cursor_item is not None:
+            list_query = apply_keyset_cursor_filter(
+                list_query,
+                created_at=cursor_item["created_at"],
+                object_id=cursor_item["_id"],
+            )
+        effective_page = 1
+        page_items = (
+            await items_collection.find(list_query)
+            .sort(sort_keys)
+            .limit(limit + 1)
+            .to_list(length=limit + 1)
+        )
+        has_more = len(page_items) > limit
+        if has_more:
+            page_items = page_items[:limit]
+    else:
+        total_pages = max(1, math.ceil(total / limit)) if total else 1
+        if page > total_pages:
+            page = total_pages
+        skip = (page - 1) * limit
+        page_items = (
+            await items_collection.find(list_query)
+            .sort(sort_keys)
+            .skip(skip)
+            .limit(limit)
+            .to_list(length=limit)
+        )
+        has_more = page < total_pages
+
+    return await _build_public_items_response(
+        items=page_items,
+        page=effective_page,
+        limit=limit,
+        total=total,
+        has_more=has_more,
+    )
 
 
 @router.get("/items/my", response_model=list[ItemResponse])

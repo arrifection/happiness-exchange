@@ -86,3 +86,5 @@ class ItemListResponse(BaseModel):
     limit: int
     total: int
     total_pages: int
+    next_cursor: str | None = None
+    has_more: bool = False

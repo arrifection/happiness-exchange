@@ -120,8 +120,16 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState(() => Boolean(readStoredToken()))
 
   const [items, setItems] = useState([])
-  const [itemsPagination, setItemsPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 1 })
+  const [itemsPagination, setItemsPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    total_pages: 1,
+    next_cursor: null,
+    has_more: false,
+  })
   const [loadingItems, setLoadingItems] = useState(true)
+  const [loadingMoreItems, setLoadingMoreItems] = useState(false)
   const [itemsError, setItemsError] = useState('')
 
   const [myItems, setMyItems] = useState([])
@@ -282,13 +290,26 @@ export default function App() {
   }
 
   async function loadItems(locationPrefs, options = {}) {
-    setLoadingItems(true); setItemsError('')
+    const append = Boolean(options.append)
+    if (append) {
+      setLoadingMoreItems(true)
+    } else {
+      setLoadingItems(true)
+    }
+    setItemsError('')
     try {
       const prefs = locationPrefs || readLocationPreferences()
       const params = buildItemsQueryParams(prefs)
-      const page = options.page || 1
-      params.set('page', String(page))
-      params.set('limit', String(options.limit || 20))
+      const limit = options.limit || 20
+      params.set('limit', String(limit))
+
+      if (append && options.cursor) {
+        params.set('cursor', String(options.cursor))
+      } else {
+        const page = options.page || 1
+        params.set('page', String(page))
+      }
+
       if (options.status === 'all') {
         params.set('status', '')
       } else if (options.status) {
@@ -308,13 +329,15 @@ export default function App() {
       }
       if (res.ok) {
         const nextItems = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : [])
-        setItems(nextItems)
+        setItems((currentItems) => (append ? [...currentItems, ...nextItems] : nextItems))
         if (data && typeof data.total === 'number') {
           setItemsPagination({
-            page: data.page || page,
-            limit: data.limit || 20,
+            page: data.page || (append ? itemsPagination.page : 1),
+            limit: data.limit || limit,
             total: data.total,
             total_pages: data.total_pages || 1,
+            next_cursor: data.next_cursor || null,
+            has_more: Boolean(data.has_more),
           })
         }
       } else {
@@ -322,7 +345,13 @@ export default function App() {
       }
     } catch {
       setItemsError('Unable to fetch community items. Check your connection and try again.')
-    } finally { setLoadingItems(false) }
+    } finally {
+      if (append) {
+        setLoadingMoreItems(false)
+      } else {
+        setLoadingItems(false)
+      }
+    }
   }
 
   async function loadMyItems() {
@@ -1089,7 +1118,8 @@ export default function App() {
                     items={items} currentUser={currentUser}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
-                    onRefreshItems={loadItems} loadingItems={loadingItems} itemsError={itemsError}
+                    onRefreshItems={loadItems} loadingItems={loadingItems} loadingMoreItems={loadingMoreItems}
+                    itemsError={itemsError}
                     itemsPagination={itemsPagination}
                   />
                 }
