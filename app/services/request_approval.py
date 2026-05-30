@@ -9,7 +9,7 @@ from pymongo import ReturnDocument
 
 from app.db.mongodb import get_mongo_client_async
 from app.services.auth import parse_object_id
-from app.services.conversations import ensure_admin_mediated_conversations
+from app.services.conversations import ADMIN_MEDIATED_CHAT_TYPES, ensure_admin_mediated_conversations
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ async def _approve_in_transaction(
     if conversations_collection is not None and users_collection is not None:
         request_id_str = str(request_object_id)
         merged_request = {**request, **updated_request}
-        await ensure_admin_mediated_conversations(
+        conversation_ids = await ensure_admin_mediated_conversations(
             conversations_collection,
             users_collection,
             request_id_str=request_id_str,
@@ -94,6 +94,27 @@ async def _approve_in_transaction(
             item=item,
             session=session,
         )
+        if len(conversation_ids) < len(ADMIN_MEDIATED_CHAT_TYPES):
+            logger.warning(
+                "Approval created %s/%s mediated chats for request %s; repairing.",
+                len(conversation_ids),
+                len(ADMIN_MEDIATED_CHAT_TYPES),
+                request_id_str,
+            )
+            conversation_ids = await ensure_admin_mediated_conversations(
+                conversations_collection,
+                users_collection,
+                request_id_str=request_id_str,
+                request=merged_request,
+                item=item,
+                session=session,
+            )
+        if len(conversation_ids) < len(ADMIN_MEDIATED_CHAT_TYPES):
+            logger.error(
+                "Mediated chats still incomplete after repair for request %s (got %s).",
+                request_id_str,
+                len(conversation_ids),
+            )
 
     return updated_request
 

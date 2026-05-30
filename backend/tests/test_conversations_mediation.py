@@ -94,3 +94,55 @@ class AdminMediatedConversationTests(IsolatedAsyncioTestCase):
         )
         self.assertEqual(len(created_again), 2)
         self.assertEqual(len(conversations.documents), 2)
+
+    async def test_repair_creates_missing_chat_when_one_exists(self):
+        conversations = FakeConversationsCollection()
+        admin_id = str(ObjectId())
+        requester_id = str(ObjectId())
+        owner_id = str(ObjectId())
+        request_id = str(ObjectId())
+
+        users = FakeUsersCollection(
+            admin_doc={
+                "_id": ObjectId(admin_id),
+                "name": "Platform Admin",
+                "role": "super_admin",
+                "is_banned": False,
+                "created_at": datetime.now(timezone.utc),
+            },
+            users_by_id={
+                requester_id: {"_id": ObjectId(requester_id), "name": "Requester Person", "email": "req@example.com"},
+                owner_id: {"_id": ObjectId(owner_id), "name": "Owner Person", "email": "owner@example.com"},
+            },
+        )
+
+        request = {
+            "item_id": str(ObjectId()),
+            "item_title": "Desk",
+            "requester_id": requester_id,
+            "requester_name": "Requester Person",
+            "owner_id": owner_id,
+            "owner_name": "Owner Person",
+        }
+
+        conversations.documents.append(
+            {
+                "_id": ObjectId(),
+                "request_id": request_id,
+                "chat_type": CHAT_ADMIN_RECEIVER,
+                "admin_id": admin_id,
+                "member_id": requester_id,
+            }
+        )
+
+        repaired = await ensure_admin_mediated_conversations(
+            conversations,
+            users,
+            request_id_str=request_id,
+            request=request,
+            item={"title": "Desk"},
+        )
+
+        self.assertEqual(len(repaired), 2)
+        chat_types = sorted(doc["chat_type"] for doc in conversations.documents)
+        self.assertEqual(chat_types, sorted([CHAT_ADMIN_RECEIVER, CHAT_ADMIN_LISTER]))

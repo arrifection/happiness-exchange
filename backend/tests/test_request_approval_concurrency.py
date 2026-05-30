@@ -191,3 +191,27 @@ class RequestApprovalConcurrencyTests(IsolatedAsyncioTestCase):
         chat_types = sorted(doc["chat_type"] for doc in self.conversations_collection.documents)
         self.assertEqual(chat_types, sorted([CHAT_ADMIN_RECEIVER, CHAT_ADMIN_LISTER]))
         self.assertEqual(len(self.conversations_collection.documents), 2)
+
+    def test_already_approved_request_returns_conflict_without_extra_conversations(self):
+        self.requests_collection.documents[0]["status"] = "approved"
+        self.conversations_collection.documents.extend(
+            [
+                {
+                    "_id": ObjectId(),
+                    "request_id": str(self.request_id),
+                    "chat_type": CHAT_ADMIN_RECEIVER,
+                },
+                {
+                    "_id": ObjectId(),
+                    "request_id": str(self.request_id),
+                    "chat_type": CHAT_ADMIN_LISTER,
+                },
+            ]
+        )
+
+        with TestClient(self.app) as client:
+            response = client.patch(f"/api/requests/{self.request_id}/approve")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["detail"], "Request already processed")
+        self.assertEqual(len(self.conversations_collection.documents), 2)

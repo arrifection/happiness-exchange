@@ -7,8 +7,9 @@ POST /api/admin/auth/login
 - Returns the same TokenResponse shape as the public login
 - Logs the admin login event to the audit log
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
+from app.core.slowapi_limiter import limiter
 from app.db.mongodb import get_users_collection_async
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.services.audit import AuditAction, write_audit_log
@@ -19,7 +20,8 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def admin_login(payload: LoginRequest):
+@limiter.limit("5/minute")
+async def admin_login(request: Request, payload: LoginRequest):
     """
     Authenticate an admin/staff user.
     Returns 403 if the account exists but has no admin role.
