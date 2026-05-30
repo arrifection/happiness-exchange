@@ -154,6 +154,7 @@ async def upload_proof(
     clean_bytes, content_type, safe_name = validate_and_sanitize_image(
         file_name=file.filename,
         file_bytes=file_bytes,
+        content_type=file.content_type,
     )
 
     try:

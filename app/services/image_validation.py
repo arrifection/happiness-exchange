@@ -10,6 +10,17 @@ from PIL import Image, UnidentifiedImageError
 
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+EXTENSIONS_BY_DETECTED_TYPE = {
+    "jpeg": {".jpg", ".jpeg"},
+    "png": {".png"},
+    "webp": {".webp"},
+}
+MIME_BY_DETECTED_TYPE = {
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "webp": "image/webp",
+}
 
 
 def _detect_image_type(file_bytes: bytes) -> str | None:
@@ -22,6 +33,12 @@ def _detect_image_type(file_bytes: bytes) -> str | None:
     return None
 
 
+def _is_svg_payload(file_bytes: bytes) -> bool:
+    stripped = file_bytes.lstrip()
+    lowered = stripped[:256].lower()
+    return lowered.startswith(b"<?xml") or lowered.startswith(b"<svg")
+
+
 def _save_format_for_type(image_type: str) -> tuple[str, str]:
     if image_type == "png":
         return "PNG", "image/png"
@@ -30,12 +47,24 @@ def _save_format_for_type(image_type: str) -> tuple[str, str]:
     return "JPEG", "image/jpeg"
 
 
-def validate_and_sanitize_image(*, file_name: str | None, file_bytes: bytes) -> tuple[bytes, str, str]:
+def validate_and_sanitize_image(
+    *,
+    file_name: str | None,
+    file_bytes: bytes,
+    content_type: str | None = None,
+) -> tuple[bytes, str, str]:
     """
-    Validate upload bytes and return re-encoded image bytes, MIME type, and safe filename stem.
+    Validate upload bytes and return re-encoded image bytes, MIME type, and safe filename.
 
-    Checks (in order): size, extension whitelist, magic-byte type, Pillow re-encode.
+    Checks: size, extension whitelist, SVG block, magic-byte type, MIME consistency,
+    extension/content match, Pillow verify + re-encode.
     """
+    if not file_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The selected image is empty.",
+        )
+
     if len(file_bytes) > MAX_IMAGE_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -43,10 +72,26 @@ def validate_and_sanitize_image(*, file_name: str | None, file_bytes: bytes) -> 
         )
 
     extension = Path(file_name or "").suffix.lower()
+    if extension == ".svg":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SVG uploads are not allowed.",
+        )
+    if extension == ".gif":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="GIF uploads are not allowed.",
+        )
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type not allowed. Use JPG, PNG, or WEBP.",
+        )
+
+    if _is_svg_payload(file_bytes):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SVG uploads are not allowed.",
         )
 
     detected_type = _detect_image_type(file_bytes)
@@ -55,6 +100,26 @@ def validate_and_sanitize_image(*, file_name: str | None, file_bytes: bytes) -> 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File type not allowed.",
         )
+
+    if extension not in EXTENSIONS_BY_DETECTED_TYPE[detected_type]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File extension does not match image content.",
+        )
+
+    expected_mime = MIME_BY_DETECTED_TYPE[detected_type]
+    if content_type:
+        normalized_type = content_type.split(";")[0].strip().lower()
+        if normalized_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File type not allowed. Use JPG, PNG, or WEBP.",
+            )
+        if normalized_type != expected_mime:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File content type does not match image data.",
+            )
 
     try:
         image = Image.open(io.BytesIO(file_bytes))
@@ -66,7 +131,7 @@ def validate_and_sanitize_image(*, file_name: str | None, file_bytes: bytes) -> 
             detail="Invalid or corrupted image file.",
         ) from None
 
-    save_format, content_type = _save_format_for_type(detected_type)
+    save_format, content_type_out = _save_format_for_type(detected_type)
     if save_format == "JPEG" and image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
 
@@ -97,4 +162,4 @@ def validate_and_sanitize_image(*, file_name: str | None, file_bytes: bytes) -> 
 
     stem = Path(file_name or "item-image").stem or "item-image"
     safe_ext = ".jpg" if save_format == "JPEG" else f".{save_format.lower()}"
-    return clean_bytes, content_type, f"{stem}{safe_ext}"
+    return clean_bytes, content_type_out, f"{stem}{safe_ext}"
