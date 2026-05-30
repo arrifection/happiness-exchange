@@ -151,6 +151,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
                 }
             ]
         )
+        self.reviews_collection = FakeCollection([])
 
         async def get_items_collection_async():
             return self.items_collection
@@ -158,8 +159,16 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         async def get_requests_collection_async():
             return self.requests_collection
 
+        async def get_reviews_collection_async():
+            return self.reviews_collection
+
+        async def fake_award_completed_donation(user_id, item_id):
+            return True
+
         items_routes.get_items_collection_async = get_items_collection_async
         items_routes.get_requests_collection_async = get_requests_collection_async
+        items_routes.get_reviews_collection_async = get_reviews_collection_async
+        items_routes.award_completed_donation = fake_award_completed_donation
         requests_routes.get_items_collection_async = get_items_collection_async
         requests_routes.get_requests_collection_async = get_requests_collection_async
 

@@ -29,6 +29,7 @@ from app.services.cloudinary import (
 from app.services.items import build_item_document, serialize_item
 from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
+from app.services.trust import award_completed_donation
 from app.services.notifications import notify_moderators, create_notification
 from app.core.rate_limit import check_user_rate_limit
 

@@ -15,6 +15,10 @@ def match_query(document, query):
         actual = document.get(key)
 
         if isinstance(expected, dict):
+            if "$in" in expected:
+                if actual not in expected["$in"]:
+                    return False
+                continue
             if "$ne" in expected and actual == expected["$ne"]:
                 return False
             continue
@@ -32,6 +36,10 @@ class FakeCursor:
     def sort(self, key, direction):
         reverse = direction == -1
         self.documents.sort(key=lambda document: document.get(key), reverse=reverse)
+        return self
+
+    def limit(self, length):
+        self.documents = self.documents[:length]
         return self
 
     async def to_list(self, length=100):
@@ -57,6 +65,9 @@ class FakeCollection:
         self.documents.append(stored)
         return SimpleNamespace(inserted_id=stored["_id"])
 
+    async def count_documents(self, query):
+        return len([document for document in self.documents if match_query(document, query)])
+
 
 class ReviewsReputationApiTests(IsolatedAsyncioTestCase):
     def setUp(self):
@@ -72,18 +83,21 @@ class ReviewsReputationApiTests(IsolatedAsyncioTestCase):
             "name": "Owner User",
             "email": "owner@example.com",
             "account_type": "giver",
+            "is_verified": True,
         }
         self.requester_user = {
             "id": self.requester_id,
             "name": "Requester User",
             "email": "requester@example.com",
             "account_type": "receiver",
+            "is_verified": True,
         }
         self.outsider_user = {
             "id": self.outsider_id,
             "name": "Outsider User",
             "email": "outsider@example.com",
             "account_type": "receiver",
+            "is_verified": True,
         }
 
         self.items_collection = FakeCollection(
@@ -132,11 +146,36 @@ class ReviewsReputationApiTests(IsolatedAsyncioTestCase):
         reviews_routes.get_requests_collection_async = get_requests_collection_async
         reviews_routes.get_reviews_collection_async = get_reviews_collection_async
 
+        async def get_users_collection_async():
+            return FakeCollection(
+                [
+                    {"_id": ObjectId(self.owner_id), "trust_score": 0},
+                    {"_id": ObjectId(self.requester_id), "trust_score": 0},
+                ]
+            )
+
+        async def get_trust_events_collection_async():
+            return FakeCollection([])
+
+        import app.services.reputation as reputation_module
+
+        reputation_module.get_users_collection_async = get_users_collection_async
+        reputation_module.get_trust_events_collection_async = get_trust_events_collection_async
+
+        async def fake_award_positive_review(user_id, review_id, rating):
+            return True
+
+        reviews_routes.award_positive_review = fake_award_positive_review
+
         self.app = FastAPI()
         self.app.include_router(reviews_routes.router, prefix="/api")
 
+    def tearDown(self):
+        self.app.dependency_overrides.clear()
+
     def make_client(self, user):
         self.app.dependency_overrides[auth_deps.get_current_user] = lambda: user
+        self.app.dependency_overrides[auth_deps.get_verified_user] = lambda: user
         return TestClient(self.app)
 
     def test_completed_exchange_allows_receiver_review(self):

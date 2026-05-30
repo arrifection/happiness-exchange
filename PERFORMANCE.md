@@ -43,6 +43,16 @@ Replaced per-item `count_documents` with a single aggregation grouped by `item_i
 | conversations | `(member_id, chat_type, last_message_at)` | User inbox |
 | messages | `(conversation_id, created_at)` | Thread load |
 
+## Startup note: trust events partial index (non-fatal)
+
+On MongoDB Atlas **M0**, index creation for `trust_events` may log:
+
+`Expression not supported in partial index: $not reference_id $eq null`
+
+This happens because the unique partial index uses `{ reference_id: { $exists: true, $ne: null } }`, which some Atlas tiers reject. **The app still starts and runs** — duplicate trust events are prevented in application code via `DuplicateKeyError` handling when the index exists, and via idempotent `record_trust_event` logic otherwise.
+
+**Deployment impact:** Safe to deploy. No runtime errors from this warning. To silence it on M0, upgrade Atlas tier or change the partial filter to `{ reference_id: { $type: "string" } }` in a future migration.
+
 ## Remaining limitations
 
 1. **Single-worker uvicorn** — concurrent requests queue on one process; HF Spaces free tier saturates under ~50–100 warm users.
