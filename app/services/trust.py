@@ -47,6 +47,28 @@ async def record_trust_event(
         )
     return True
 
+async def recalculate_user_trust_score(
+    user_id: str,
+    *,
+    users_collection,
+    trust_events_collection,
+) -> int:
+    """Set user trust_score to the sum of their trust event points (source of truth)."""
+    pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": None, "total": {"$sum": "$points_change"}}},
+    ]
+    rows = await trust_events_collection.aggregate(pipeline).to_list(length=1)
+    total = int(rows[0]["total"]) if rows else 0
+
+    user_oid = parse_object_id(user_id)
+    if user_oid:
+        await users_collection.update_one(
+            {"_id": user_oid},
+            {"$set": {"trust_score": total}},
+        )
+    return total
+
 async def award_completed_donation(user_id: str, item_id: str) -> bool:
     """Award +10 points for a successfully completed donation."""
     return await record_trust_event(

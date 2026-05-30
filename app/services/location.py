@@ -301,12 +301,15 @@ def filter_and_sort_items(
     near_lat: float | None = None,
     near_lng: float | None = None,
     radius_km: float | None = None,
+    location_prefiltered: bool = False,
 ) -> list[dict[str, Any]]:
+    """Filter/sort items for browse. Set location_prefiltered when Mongo already matched country/city."""
     results = items
-    if country:
-        results = [item for item in results if item_matches_country(item, country)]
-    if city:
-        results = [item for item in results if item_matches_city(item, city)]
+    if not location_prefiltered:
+        if country:
+            results = [item for item in results if item_matches_country(item, country)]
+        if city:
+            results = [item for item in results if item_matches_city(item, city)]
 
     if near_lat is not None and near_lng is not None:
         effective_radius = radius_km if radius_km and radius_km > 0 else 50.0

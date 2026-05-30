@@ -65,6 +65,14 @@ class FakeCursor:
         self.documents.sort(key=lambda document: document.get(key), reverse=reverse)
         return self
 
+    def skip(self, count):
+        self.documents = self.documents[count:]
+        return self
+
+    def limit(self, count):
+        self.documents = self.documents[:count]
+        return self
+
     async def to_list(self, length=100):
         return self.documents[:length]
 

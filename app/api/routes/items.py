@@ -98,28 +98,70 @@ async def list_items(
 
     mongo_query = build_items_list_query(country=country, city=city, status=status)
     geo_mode = near_lat is not None and near_lng is not None
+    location_prefiltered = bool(country or city)
 
+    # Browse path: filter in MongoDB (indexed) → optional geo sort in app → paginate.
+    # Previously we fetched up to 1,000 candidates then filtered in Python, which silently
+    # hid listings beyond the cap in busy cities.
     if geo_mode:
         cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
-        candidate_items = await cursor.to_list(length=1000)
+        candidate_items = await cursor.to_list(length=None)
         filtered_items = filter_and_sort_items(
             candidate_items,
-            country=country,
-            city=city,
             near_lat=near_lat,
             near_lng=near_lng,
             radius_km=radius_km,
+            location_prefiltered=location_prefiltered,
         )
     else:
-        total_in_db = await items_collection.count_documents(mongo_query)
-        max_scan = min(max(total_in_db, limit), 2000)
-        cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
-        candidate_items = await cursor.to_list(length=max_scan)
-        filtered_items = filter_and_sort_items(
-            candidate_items,
-            country=country,
-            city=city,
+        total = await items_collection.count_documents(mongo_query)
+        total_pages = max(1, math.ceil(total / limit)) if total else 1
+        if page > total_pages:
+            page = total_pages
+        skip = (page - 1) * limit
+        cursor = (
+            items_collection.find(mongo_query)
+            .sort("created_at", DESCENDING)
+            .skip(skip)
+            .limit(limit)
         )
+        filtered_items = await cursor.to_list(length=limit)
+        items = filtered_items
+        owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
+
+        owner_reputation_lookup: dict[str, dict] = {}
+        try:
+            users_collection = await get_users_collection_async()
+            reviews_collection = await get_reviews_collection_async()
+            if users_collection is not None and reviews_collection is not None and owner_ids:
+                owner_reputation_lookup = await build_public_reputation_lookup(
+                    owner_ids,
+                    users_collection=users_collection,
+                    reviews_collection=reviews_collection,
+                )
+        except Exception:
+            logger.exception("Failed to build reputation lookup for public items list")
+
+        results = []
+        for item in items:
+            owner_id = str(item.get("owner_id", ""))
+            try:
+                results.append(
+                    serialize_item(
+                        item,
+                        owner_reputation=owner_reputation_lookup.get(owner_id),
+                    )
+                )
+            except Exception:
+                logger.exception("Failed to serialize item %s", item.get("_id"))
+
+        return {
+            "items": results,
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": total_pages,
+        }
 
     total = len(filtered_items)
     total_pages = max(1, math.ceil(total / limit)) if total else 1

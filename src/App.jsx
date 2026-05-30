@@ -23,6 +23,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
 import RequestItemModal from './components/RequestItemModal.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import FlashBanner from './components/FlashBanner.jsx'
+import BackendWakeupBanner from './components/BackendWakeupBanner.jsx'
 import NotificationBell from './components/NotificationBell.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
@@ -35,6 +36,7 @@ import {
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
 import { resolveApiBase, asArray } from './lib/api.js'
+import { trackBootstrapFetch } from './lib/backendWakeup.js'
 import { getPageMeta } from './lib/siteMeta.js'
 import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
@@ -191,7 +193,10 @@ export default function App() {
     return () => root.classList.remove('he-auth-page')
   }, [isAuthPage])
 
-  useEffect(() => { loadItems(readLocationPreferences()); loadNeedRequests('open') }, [])
+  useEffect(() => {
+    loadItems(readLocationPreferences(), { bootstrap: true })
+    loadNeedRequests('open', { bootstrap: true })
+  }, [])
 
   useEffect(() => {
     if (token) loadUserData()
@@ -242,7 +247,8 @@ export default function App() {
         try {
           const controller = new AbortController()
           const timeoutId = window.setTimeout(() => controller.abort(), 20000)
-          const res = await fetch(ME_ENDPOINT, {
+          const fetchFn = attempt === 1 ? trackBootstrapFetch : fetch
+          const res = await fetchFn(ME_ENDPOINT, {
             headers: { Authorization: `Bearer ${token}` },
             signal: controller.signal,
           })
@@ -289,7 +295,8 @@ export default function App() {
         params.set('status', String(options.status).toLowerCase())
       }
       const url = `${ITEMS_ENDPOINT}?${params.toString()}`
-      const res = await fetch(url)
+      const fetchFn = options.bootstrap ? trackBootstrapFetch : fetch
+      const res = await fetchFn(url)
       let data = null
       try {
         data = await res.json()
@@ -506,13 +513,14 @@ export default function App() {
     finally { setCreatingItem(false) }
   }
 
-  async function loadNeedRequests(statusFilter = 'open') {
+  async function loadNeedRequests(statusFilter = 'open', options = {}) {
     setLoadingNeedRequests(true); setNeedRequestsError('')
     try {
       const params = new URLSearchParams()
       if (statusFilter) params.set('status', statusFilter)
       const url = params.toString() ? `${NEED_REQUESTS_ENDPOINT}?${params.toString()}` : NEED_REQUESTS_ENDPOINT
-      const res = await fetch(url)
+      const fetchFn = options.bootstrap ? trackBootstrapFetch : fetch
+      const res = await fetchFn(url)
       const data = await res.json()
       if (res.ok) setNeedRequests(Array.isArray(data) ? data : [])
       else setNeedRequestsError(formatApiError(data, 'Failed to load community needs.'))
@@ -1020,6 +1028,7 @@ export default function App() {
               </div>
             </header>
             <FlashBanner />
+            <BackendWakeupBanner />
             </>
           ) : null}
 

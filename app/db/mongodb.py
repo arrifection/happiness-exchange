@@ -43,6 +43,10 @@ async def _ensure_indexes(database) -> None:
     await database.items.create_index("city")
     await database.items.create_index([("status", ASCENDING), ("created_at", DESCENDING)])
     await database.items.create_index([("country", ASCENDING), ("city", ASCENDING), ("status", ASCENDING)])
+    await database.items.create_index(
+        [("country", ASCENDING), ("city", ASCENDING), ("category", ASCENDING), ("status", ASCENDING)],
+        name="country_city_category_status",
+    )
     await database.items.create_index([("owner_id", ASCENDING), ("status", ASCENDING)])
     await database.requests.create_index(
         [("item_id", 1), ("requester_id", 1)],
