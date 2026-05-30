@@ -252,30 +252,27 @@ async def update_request_status(
         {"$set": {"status": "reserved"}},
     )
 
-    # Auto-create a private conversation for the two participants
+    # Auto-create admin-mediated conversations (admin↔receiver, admin↔lister)
     conversations_collection = await get_conversations_collection_async()
-    if conversations_collection is not None:
+    users_collection = await get_users_collection_async()
+    if conversations_collection is not None and users_collection is not None:
         request_id_str = str(request_object_id)
-        existing_conv = await conversations_collection.find_one({"request_id": request_id_str})
-        if existing_conv is None:
-            now = datetime.now(timezone.utc)
-            conv_doc = {
-                "item_id": request["item_id"],
-                "item_title": request.get("item_title", ""),
-                "giver_id": request["owner_id"],
-                "giver_name": request.get("owner_name", ""),
-                "receiver_id": request["requester_id"],
-                "receiver_name": request.get("requester_name", ""),
-                "request_id": request_id_str,
-                "created_at": now,
-                "last_message_at": None,
-                "last_message_text": None,
-                "unread_counts": {
-                    request["owner_id"]: 0,
-                    request["requester_id"]: 0,
-                },
-            }
-            await conversations_collection.insert_one(conv_doc)
+        if not request.get("owner_name"):
+            await requests_collection.update_one(
+                {"_id": request_object_id},
+                {"$set": {"owner_name": item.get("owner_name") or current_user.get("name", "")}},
+            )
+            request["owner_name"] = item.get("owner_name") or current_user.get("name", "")
+
+        from app.services.conversations import ensure_admin_mediated_conversations
+
+        await ensure_admin_mediated_conversations(
+            conversations_collection,
+            users_collection,
+            request_id_str=request_id_str,
+            request=request,
+            item=item,
+        )
 
     # Notify requester
     import asyncio

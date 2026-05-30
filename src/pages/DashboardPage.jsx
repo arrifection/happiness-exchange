@@ -265,7 +265,7 @@ export default function DashboardPage({
                 {loadingRequests ? <InlineLoadingNotice label="Updating requests…" className="sm:col-span-2" /> : null}
                 {requestList.map((request) => {
                 const reviewContext = getReviewContextForMyRequest?.(request)
-                const convId = getChatConversationForRequest?.(request.id)
+                const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
                     <div className="mt-2.5 flex flex-col gap-1.5 border-t border-he-border/60 pt-2">
@@ -343,7 +343,7 @@ export default function DashboardPage({
                 {loadingRequests ? <InlineLoadingNotice label="Updating incoming requests…" /> : null}
                 {incomingRequests.slice(0, 5).map((request) => {
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
-                const convId = getChatConversationForRequest?.(request.id)
+                const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
                     {request.status === 'pending' ? (

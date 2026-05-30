@@ -62,14 +62,26 @@ async def _ensure_indexes(database) -> None:
     await database.reviews.create_index("reviewer_id")
     await database.reviews.create_index("created_at")
     await database.reviews.create_index([("reviewed_user_id", ASCENDING), ("created_at", DESCENDING)])
-    # Chat indexes
-    await database.conversations.create_index("request_id", unique=True)
+    # Chat indexes — admin-mediated: two chats per request (admin↔receiver, admin↔lister)
+    with suppress(Exception):
+        await database.conversations.drop_index("request_id_1")
+    await database.conversations.create_index(
+        [("request_id", ASCENDING), ("chat_type", ASCENDING)],
+        unique=True,
+        name="request_id_chat_type_unique",
+        partialFilterExpression={"chat_type": {"$exists": True}},
+    )
+    await database.conversations.create_index("chat_type")
+    await database.conversations.create_index("admin_id")
+    await database.conversations.create_index("member_id")
     await database.conversations.create_index("item_id")
     await database.conversations.create_index("giver_id")
     await database.conversations.create_index("receiver_id")
     await database.conversations.create_index("last_message_at")
     await database.conversations.create_index([("giver_id", ASCENDING), ("last_message_at", DESCENDING)])
     await database.conversations.create_index([("receiver_id", ASCENDING), ("last_message_at", DESCENDING)])
+    await database.conversations.create_index([("member_id", ASCENDING), ("last_message_at", DESCENDING)])
+    await database.conversations.create_index([("admin_id", ASCENDING), ("last_message_at", DESCENDING)])
     await database.messages.create_index("conversation_id")
     await database.messages.create_index("created_at")
     await database.messages.create_index([("conversation_id", ASCENDING), ("created_at", ASCENDING)])

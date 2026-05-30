@@ -103,8 +103,9 @@ export const analyticsApi = {
 
 // ── Conversations endpoints ────────────────────────────────────────────────────
 export const conversationsApi = {
-  list:    (params) => api.get('/api/conversations', { params }),
-  getById: (id)     => api.get(`/api/conversations/${id}`),
+  list: () => api.get('/api/conversations/my'),
+  messages: (id) => api.get(`/api/conversations/${id}/messages`),
+  sendMessage: (id, data) => api.post(`/api/conversations/${id}/message`, data),
 }
 
 // ── Notifications endpoints ──────────────────────────────────────────────────

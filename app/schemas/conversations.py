@@ -18,6 +18,16 @@ class ConversationResponse(BaseModel):
     unread_count: int = 0
     is_flagged: bool = False
     typing_status: dict = Field(default_factory=dict)
+    chat_type: str | None = None
+    member_role: str | None = None
+    admin_id: str | None = None
+    admin_name: str | None = None
+    member_id: str | None = None
+    member_name: str | None = None
+    counterpart_id: str | None = None
+    counterpart_name: str | None = None
+    list_title: str | None = None
+    role_label: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

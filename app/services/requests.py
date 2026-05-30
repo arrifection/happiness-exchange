@@ -7,6 +7,7 @@ def serialize_request(request: dict) -> dict:
         "requester_id": request["requester_id"],
         "requester_name": request["requester_name"],
         "owner_id": request["owner_id"],
+        "owner_name": request.get("owner_name", ""),
         "status": request["status"],
         "created_at": request["created_at"],
     }
@@ -20,5 +21,6 @@ def build_request_document(item: dict, current_user: dict) -> dict:
         "requester_id": current_user["id"],
         "requester_name": current_user["name"],
         "owner_id": item["owner_id"],
+        "owner_name": item.get("owner_name", ""),
         "status": "pending",
     }

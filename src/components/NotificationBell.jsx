@@ -17,6 +17,13 @@ function timeAgo(dateString) {
   return date.toLocaleDateString()
 }
 
+function normalizeActionUrl(url) {
+  if (!url) return null
+  const queryMatch = url.match(/[?&]conversation=([^&]+)/)
+  if (queryMatch) return `/messages/${queryMatch[1]}`
+  return url
+}
+
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
@@ -43,7 +50,7 @@ export default function NotificationBell() {
     }
     setIsOpen(false)
     if (notification.action_url) {
-      navigate(notification.action_url)
+      navigate(normalizeActionUrl(notification.action_url))
     }
   }
 

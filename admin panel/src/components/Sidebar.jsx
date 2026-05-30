@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronRight,
   Shield,
+  MessageSquare,
 } from 'lucide-react'
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
     items: [
       { label: 'Listings', to: '/listings', icon: Package, minRole: ROLES.MODERATOR },
       { label: 'Requests', to: '/requests', icon: FileText, minRole: ROLES.MODERATOR },
+      { label: 'Messages', to: '/messages', icon: MessageSquare, minRole: ROLES.MODERATOR },
       { label: 'Reviews', to: '/reviews', icon: Star, minRole: ROLES.MODERATOR },
     ],
   },

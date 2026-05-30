@@ -47,12 +47,25 @@ function getInitials(name) {
   return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-function getOtherParticipant(conversation, currentUserId) {
-  if (!conversation) return { id: null, name: 'Unknown' }
-  const isGiver = conversation.giver_id === currentUserId
+function getConversationDisplay(conversation, currentUserId) {
+  if (!conversation) {
+    return { id: null, name: '', title: '', roleLabel: '', itemTitle: '', isAdminChat: false }
+  }
+
+  const name = conversation.counterpart_name
+    || conversation.admin_name
+    || 'Happiness Exchange Admin'
+  const itemTitle = conversation.item_title || 'Item chat'
+  const title = conversation.list_title
+    || `${name} — ${itemTitle}`
+
   return {
-    id: isGiver ? conversation.receiver_id : conversation.giver_id,
-    name: isGiver ? conversation.receiver_name : conversation.giver_name,
+    id: conversation.counterpart_id || conversation.admin_id || conversation.member_id,
+    name,
+    title,
+    roleLabel: conversation.role_label || '',
+    itemTitle,
+    isAdminChat: Boolean(conversation.chat_type),
   }
 }
 
@@ -74,7 +87,7 @@ function GlobalEmptyState() {
         No conversations yet
       </h2>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-he-muted">
-        When a request is approved, a private chat will open here so you can coordinate pickup safely.
+        When a request is approved, Happiness Exchange Admin will coordinate pickup with you here.
       </p>
       <p className="mt-3 max-w-md text-[11px] text-he-soft">
         Share only pickup details you&apos;re comfortable sharing.
@@ -111,18 +124,19 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   const [otherUserOnline, setOtherUserOnline] = useState(false)
 
   const activeConv = conversations.find((c) => c.id === conversationId)
-  const otherParticipant = getOtherParticipant(activeConv, currentUser?.id)
-  const iBlockedThem = otherParticipant.id && currentUser?.blocked_users?.includes(otherParticipant.id)
+  const display = getConversationDisplay(activeConv, currentUser?.id)
+  const iBlockedThem = display.id && !display.isAdminChat && currentUser?.blocked_users?.includes(display.id)
 
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     if (!query) return conversations
 
     return conversations.filter((conversation) => {
-      const other = getOtherParticipant(conversation, currentUser?.id)
+      const row = getConversationDisplay(conversation, currentUser?.id)
       return (
-        other.name?.toLowerCase().includes(query)
-        || conversation.item_title?.toLowerCase().includes(query)
+        row.name?.toLowerCase().includes(query)
+        || row.title?.toLowerCase().includes(query)
+        || row.itemTitle?.toLowerCase().includes(query)
         || conversation.last_message_text?.toLowerCase().includes(query)
       )
     })
@@ -154,9 +168,10 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   }, [conversationId, token])
 
   useEffect(() => {
-    if (!activeConv || !token) return undefined
+    if (!activeConv || !token || display.isAdminChat) return undefined
     const checkStatus = async () => {
-      const otherId = activeConv.giver_id === currentUser?.id ? activeConv.receiver_id : activeConv.giver_id
+      const otherId = display.id
+      if (!otherId) return
       try {
         const res = await fetch(`${apiBase}/api/users/${otherId}/status`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -174,7 +189,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
     checkStatus()
     const intv = setInterval(checkStatus, 30000)
     return () => clearInterval(intv)
-  }, [activeConv, token, apiBase, currentUser?.id])
+  }, [activeConv, token, apiBase, display.id, display.isAdminChat])
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -304,8 +319,8 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   }
 
   async function handleBlock() {
-    if (!activeConv || !confirm("Block this user? You won't receive messages from them anymore.")) return
-    const otherId = activeConv.giver_id === currentUser?.id ? activeConv.receiver_id : activeConv.giver_id
+    if (!activeConv || display.isAdminChat || !confirm("Block this user? You won't receive messages from them anymore.")) return
+    const otherId = display.id
     try {
       const res = await fetch(`${apiBase}/api/users/${otherId}/block`, {
         method: 'POST',
@@ -379,7 +394,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
     return (
       <div className="divide-y divide-he-border/70">
         {filteredConversations.map((conversation) => {
-          const other = getOtherParticipant(conversation, currentUser?.id)
+          const row = getConversationDisplay(conversation, currentUser?.id)
           const isActive = conversation.id === conversationId
           const unread = conversation.unread_count > 0
 
@@ -391,7 +406,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
               className={`he-chat-conv-row ${isActive ? 'is-active' : ''}`}
             >
               <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b4cf6] to-[#c084fc] text-xs font-bold text-white">
-                {getInitials(other.name)}
+                {getInitials(row.name)}
                 {unread ? (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-he-surface-soft bg-red-500 px-1 text-[9px] font-bold text-white">
                     {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
@@ -402,15 +417,21 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
               <div className="min-w-0 flex-1">
                 <div className="mb-0.5 flex items-start justify-between gap-2">
                   <p className={`truncate text-sm ${unread ? 'font-bold text-he-ink' : 'font-semibold text-he-ink'}`}>
-                    {other.name || 'Unknown'}
+                    {row.title}
                   </p>
                   <span className="shrink-0 text-[10px] text-he-muted">
                     {formatConvTime(conversation.last_message_at)}
                   </span>
                 </div>
-                <p className="truncate text-[11px] font-medium text-he-purple">
-                  {conversation.item_title || 'Item chat'}
-                </p>
+                {row.roleLabel ? (
+                  <p className="truncate text-[10px] font-bold uppercase tracking-wide text-he-purple">
+                    {row.roleLabel}
+                  </p>
+                ) : (
+                  <p className="truncate text-[11px] font-medium text-he-purple">
+                    Admin chat
+                  </p>
+                )}
                 <p className={`mt-0.5 truncate text-xs ${unread ? 'font-medium text-he-ink' : 'text-he-soft'}`}>
                   {conversation.last_message_text || 'No messages yet'}
                 </p>
@@ -440,24 +461,24 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
           </button>
 
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b4cf6] to-[#c084fc] text-xs font-bold text-white">
-            {getInitials(otherParticipant.name)}
-            {otherUserOnline ? (
+            {getInitials(display.name)}
+            {otherUserOnline && !display.isAdminChat ? (
               <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-he-surface bg-green-500" />
             ) : null}
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-sm font-bold text-he-ink">{otherParticipant.name}</p>
+              <p className="truncate text-sm font-bold text-he-ink">{display.name}</p>
               <span className="inline-flex items-center rounded-full bg-[#efe7ff] px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[#8b4cf6] dark:bg-[#2d2640] dark:text-[#c4b5fd]">
-                Pickup chat
+                {display.isAdminChat ? 'Admin chat' : 'Pickup chat'}
               </span>
             </div>
-            <p className="truncate text-xs text-he-muted">{activeConv.item_title}</p>
-            {otherUserOnline ? (
+            <p className="truncate text-xs text-he-muted">{display.title}</p>
+            {otherUserOnline && !display.isAdminChat ? (
               <p className="text-[10px] font-medium text-green-600 dark:text-green-400">Online</p>
             ) : (
-              <p className="text-[10px] text-he-soft">Share only pickup details you&apos;re comfortable sharing.</p>
+              <p className="text-[10px] text-he-soft">All pickup coordination goes through Happiness Exchange Admin.</p>
             )}
           </div>
 
@@ -476,13 +497,15 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowOptions(false)} role="presentation" />
                 <div className="absolute right-0 top-10 z-20 w-48 overflow-hidden rounded-xl border border-he-border bg-he-surface shadow-lg">
-                  <button
-                    type="button"
-                    onClick={handleBlock}
-                    className="w-full border-b border-he-border px-4 py-3 text-left text-sm font-semibold text-[#c65d4a] hover:bg-rose-950/30"
-                  >
-                    Block user
-                  </button>
+                  {!display.isAdminChat ? (
+                    <button
+                      type="button"
+                      onClick={handleBlock}
+                      className="w-full border-b border-he-border px-4 py-3 text-left text-sm font-semibold text-[#c65d4a] hover:bg-rose-950/30"
+                    >
+                      Block user
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => { setReportModalOpen(true); setShowOptions(false) }}
@@ -510,7 +533,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
           </div>
           <p className="mt-3 text-sm font-semibold text-he-ink">Start the conversation</p>
           <p className="mt-1 max-w-sm text-xs leading-relaxed text-he-muted">
-            Send a message to coordinate pickup. Keep details respectful and stay within the app.
+            Send a message to Happiness Exchange Admin to coordinate pickup.
           </p>
         </div>
       )

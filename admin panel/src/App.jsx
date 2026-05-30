@@ -18,6 +18,7 @@ import ReviewsPage       from './pages/Reviews'
 import TeamPage          from './pages/Team'
 import CourierPage       from './pages/Courier'
 import AnalyticsPage     from './pages/Analytics'
+import MessagesPage      from './pages/Messages'
 
 export default function App() {
   return (
@@ -42,6 +43,8 @@ export default function App() {
             <Route path="listings"   element={<RequireRole requiredRole={ROLES.MODERATOR}><ListingsPage /></RequireRole>} />
             <Route path="users"      element={<RequireRole requiredRole={ROLES.ADMIN}><UsersPage /></RequireRole>} />
             <Route path="requests"   element={<RequireRole requiredRole={ROLES.MODERATOR}><RequestsPage /></RequireRole>} />
+            <Route path="messages" element={<RequireRole requiredRole={ROLES.MODERATOR}><MessagesPage /></RequireRole>} />
+            <Route path="messages/:conversationId" element={<RequireRole requiredRole={ROLES.MODERATOR}><MessagesPage /></RequireRole>} />
 
             {/* Moderator+ only */}
             <Route

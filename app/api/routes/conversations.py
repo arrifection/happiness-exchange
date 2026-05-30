@@ -1,12 +1,21 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
-from bson import ObjectId
 
 from app.api.deps.auth import get_current_user, get_verified_user
-from app.db.mongodb import get_conversations_collection_async, get_messages_collection_async
+from app.core.roles import is_admin_role
+from app.db.mongodb import get_conversations_collection_async, get_messages_collection_async, get_users_collection_async
 from app.schemas.conversations import ConversationResponse, MessageResponse, SendMessageRequest
 from app.services.auth import parse_object_id
+from app.services.conversations import (
+    ADMIN_DISPLAY_NAME,
+    ADMIN_MEDIATED_CHAT_TYPES,
+    chat_type_for_request_participant,
+    ensure_admin_mediated_conversations,
+    get_other_participant_id,
+    is_admin_mediated,
+    user_is_participant,
+)
 from app.services.notifications import create_notification
 from app.services.cloudinary import (
     CloudinaryConfigError,
@@ -18,25 +27,63 @@ from app.services.cloudinary import (
 router = APIRouter()
 
 
-def serialize_conversation(doc: dict, current_user_id: str) -> dict:
+def serialize_conversation(doc: dict, current_user: dict) -> dict:
     """Convert a MongoDB conversation document to API response shape."""
-    unread = doc.get("unread_counts", {}).get(current_user_id, 0)
-    return {
+    current_user_id = current_user["id"]
+    current_role = current_user.get("role", "user")
+    if is_admin_mediated(doc) and is_admin_role(current_role):
+        unread = doc.get("unread_counts", {}).get(doc.get("admin_id"), 0)
+    else:
+        unread = doc.get("unread_counts", {}).get(current_user_id, 0)
+    item_title = doc.get("item_title", "")
+
+    base = {
         "id": str(doc["_id"]),
         "item_id": doc["item_id"],
-        "item_title": doc.get("item_title", ""),
-        "giver_id": doc["giver_id"],
+        "item_title": item_title,
+        "giver_id": doc.get("giver_id", ""),
         "giver_name": doc.get("giver_name", ""),
-        "receiver_id": doc["receiver_id"],
+        "receiver_id": doc.get("receiver_id", ""),
         "receiver_name": doc.get("receiver_name", ""),
-        "request_id": doc["request_id"],
+        "request_id": doc.get("request_id", ""),
         "created_at": doc["created_at"],
         "last_message_at": doc.get("last_message_at"),
         "last_message_text": doc.get("last_message_text"),
         "unread_count": unread,
         "is_flagged": doc.get("is_flagged", False),
         "typing_status": doc.get("typing_status", {}),
+        "chat_type": doc.get("chat_type"),
+        "member_role": doc.get("member_role"),
+        "admin_id": doc.get("admin_id"),
+        "admin_name": doc.get("admin_name"),
+        "member_id": doc.get("member_id"),
+        "member_name": doc.get("member_name"),
+        "counterpart_id": None,
+        "counterpart_name": None,
+        "list_title": None,
+        "role_label": None,
     }
+
+    if is_admin_mediated(doc):
+        admin_display = doc.get("admin_display_name") or ADMIN_DISPLAY_NAME
+        member_name = doc.get("member_name") or ""
+        role_label = "Receiver" if doc.get("member_role") == "receiver" else "Lister"
+
+        if is_admin_role(current_role):
+            base["counterpart_id"] = doc.get("member_id")
+            base["counterpart_name"] = member_name
+            base["role_label"] = role_label
+            base["list_title"] = f"{role_label}: {member_name} — {item_title}"
+        elif current_user_id == doc.get("member_id"):
+            base["counterpart_id"] = doc.get("admin_id")
+            base["counterpart_name"] = admin_display
+            base["list_title"] = f"{admin_display} — {item_title}"
+        else:
+            base["counterpart_id"] = doc.get("admin_id")
+            base["counterpart_name"] = admin_display
+            base["list_title"] = f"{admin_display} — {item_title}"
+
+    return base
 
 
 def serialize_message(doc: dict) -> dict:
@@ -54,6 +101,31 @@ def serialize_message(doc: dict) -> dict:
     }
 
 
+def _conversation_list_query(current_user: dict) -> dict:
+    user_id = current_user["id"]
+    role = current_user.get("role", "user")
+    if is_admin_role(role):
+        return {"chat_type": {"$in": list(ADMIN_MEDIATED_CHAT_TYPES)}}
+    return {"member_id": user_id, "chat_type": {"$in": list(ADMIN_MEDIATED_CHAT_TYPES)}}
+
+
+def _require_participant(conv: dict, user_id: str, *, current_user: dict | None = None) -> None:
+    if not is_admin_mediated(conv):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Direct messaging between members is disabled. Contact Happiness Exchange Admin.",
+        )
+    role = (current_user or {}).get("role", "user")
+    if user_is_participant(conv, user_id):
+        return
+    if current_user and is_admin_role(role):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You are not a participant in this conversation.",
+    )
+
+
 @router.post(
     "/conversations/create",
     response_model=ConversationResponse,
@@ -63,18 +135,15 @@ async def create_conversation(
     payload: dict,
     current_user: dict = Depends(get_current_user),
 ):
-    """
-    Create or return an existing conversation for an approved request.
-    Payload: { "request_id": "..." }
-    Only the giver or receiver of that request may call this.
-    """
+    """Ensure admin-mediated conversations exist and return the caller's chat."""
     from app.db.mongodb import get_items_collection_async, get_requests_collection_async
 
     conversations_col = await get_conversations_collection_async()
     requests_col = await get_requests_collection_async()
     items_col = await get_items_collection_async()
+    users_col = await get_users_collection_async()
 
-    if conversations_col is None or requests_col is None or items_col is None:
+    if conversations_col is None or requests_col is None or items_col is None or users_col is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
@@ -96,43 +165,34 @@ async def create_conversation(
         )
 
     user_id = current_user["id"]
-    if user_id not in (request["owner_id"], request["requester_id"]):
+    chat_type = chat_type_for_request_participant(user_id=user_id, request=request)
+    if chat_type is None and not is_admin_role(current_user.get("role", "user")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the participants of this request can access the chat.",
+            detail="Only the request participants or admin staff can access this chat.",
         )
 
-    # Return existing conversation if already exists
-    existing = await conversations_col.find_one({"request_id": request_id_str})
-    if existing is not None:
-        return serialize_conversation(existing, user_id)
-
-    # Fetch item for title
     item_oid = parse_object_id(request["item_id"])
     item = await items_col.find_one({"_id": item_oid}) if item_oid else None
-    item_title = item["title"] if item else request.get("item_title", "")
+    await ensure_admin_mediated_conversations(
+        conversations_col,
+        users_col,
+        request_id_str=request_id_str,
+        request=request,
+        item=item,
+    )
 
-    now = datetime.now(timezone.utc)
-    doc = {
-        "item_id": request["item_id"],
-        "item_title": item_title,
-        "giver_id": request["owner_id"],
-        "giver_name": request.get("owner_name", ""),
-        "receiver_id": request["requester_id"],
-        "receiver_name": request.get("requester_name", ""),
-        "request_id": request_id_str,
-        "created_at": now,
-        "last_message_at": None,
-        "last_message_text": None,
-        "unread_counts": {
-            request["owner_id"]: 0,
-            request["requester_id"]: 0,
-        },
-        "is_flagged": False,
-    }
-    result = await conversations_col.insert_one(doc)
-    created = await conversations_col.find_one({"_id": result.inserted_id})
-    return serialize_conversation(created, user_id)
+    lookup_type = chat_type or ADMIN_MEDIATED_CHAT_TYPES[0]
+    existing = await conversations_col.find_one(
+        {"request_id": request_id_str, "chat_type": lookup_type}
+    )
+    if existing is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not create admin-mediated conversation.",
+        )
+
+    return serialize_conversation(existing, current_user)
 
 
 @router.post("/conversations/{conversation_id}/upload-image", response_model=dict)
@@ -145,18 +205,16 @@ async def upload_chat_image(
     conversations_col = await get_conversations_collection_async()
     if conversations_col is None:
         raise HTTPException(status_code=503, detail="Database connection is not available.")
-        
+
     conv_oid = parse_object_id(conversation_id)
     if not conv_oid:
         raise HTTPException(status_code=400, detail="Invalid conversation id.")
-        
+
     conv = await conversations_col.find_one({"_id": conv_oid})
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found.")
-        
-    user_id = current_user["id"]
-    if user_id not in (conv["giver_id"], conv["receiver_id"]):
-        raise HTTPException(status_code=403, detail="Not a participant.")
+
+    _require_participant(conv, current_user["id"], current_user=current_user)
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Please choose an image file (JPG, PNG, WEBP, etc.).")
@@ -186,7 +244,7 @@ async def upload_chat_image(
 
 @router.get("/conversations/my", response_model=list[ConversationResponse])
 async def list_my_conversations(current_user: dict = Depends(get_current_user)):
-    """Return all conversations where the current user is a participant."""
+    """Return admin-mediated conversations visible to the current user."""
     conversations_col = await get_conversations_collection_async()
     if conversations_col is None:
         raise HTTPException(
@@ -194,12 +252,10 @@ async def list_my_conversations(current_user: dict = Depends(get_current_user)):
             detail="Database connection is not available.",
         )
 
-    user_id = current_user["id"]
-    cursor = conversations_col.find(
-        {"$or": [{"giver_id": user_id}, {"receiver_id": user_id}]}
-    ).sort("last_message_at", -1)
+    query = _conversation_list_query(current_user)
+    cursor = conversations_col.find(query).sort("last_message_at", -1)
     docs = await cursor.to_list(length=100)
-    return [serialize_conversation(doc, user_id) for doc in docs]
+    return [serialize_conversation(doc, current_user) for doc in docs]
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])
@@ -207,7 +263,7 @@ async def list_messages(
     conversation_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    """Return all messages in a conversation. Only participants may access."""
+    """Return all messages in a conversation."""
     conversations_col = await get_conversations_collection_async()
     messages_col = await get_messages_collection_async()
     if conversations_col is None or messages_col is None:
@@ -225,21 +281,19 @@ async def list_messages(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
     user_id = current_user["id"]
-    if user_id not in (conv["giver_id"], conv["receiver_id"]):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a participant in this conversation.",
-        )
+    _require_participant(conv, user_id, current_user=current_user)
 
-    # Mark messages as read for this user
+    unread_key = user_id
+    if is_admin_role(current_user.get("role", "user")) and user_id != conv.get("admin_id"):
+        unread_key = conv.get("admin_id")
+
     await messages_col.update_many(
-        {"conversation_id": conversation_id, "sender_id": {"$ne": user_id}, "read": False},
+        {"conversation_id": conversation_id, "sender_id": {"$ne": unread_key}, "read": False},
         {"$set": {"read": True}},
     )
-    # Reset unread count
     await conversations_col.update_one(
         {"_id": conv_oid},
-        {"$set": {f"unread_counts.{user_id}": 0}},
+        {"$set": {f"unread_counts.{unread_key}": 0}},
     )
 
     cursor = messages_col.find({"conversation_id": conversation_id}).sort("created_at", 1)
@@ -253,9 +307,7 @@ async def send_message(
     payload: SendMessageRequest,
     current_user: dict = Depends(get_verified_user),
 ):
-    """Send a message to a conversation. Only participants may send."""
-    from app.db.mongodb import get_users_collection_async
-    
+    """Send a message to an admin-mediated conversation."""
     conversations_col = await get_conversations_collection_async()
     messages_col = await get_messages_collection_async()
     users_col = await get_users_collection_async()
@@ -274,45 +326,48 @@ async def send_message(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
     user_id = current_user["id"]
-    if user_id not in (conv["giver_id"], conv["receiver_id"]):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a participant in this conversation.",
-        )
+    _require_participant(conv, user_id, current_user=current_user)
 
-    # Determine the other participant
-    other_id = conv["receiver_id"] if user_id == conv["giver_id"] else conv["giver_id"]
+    if user_id == conv.get("member_id"):
+        other_id = conv.get("admin_id")
+    else:
+        other_id = conv.get("member_id")
 
-    # Blocked check
-    other_user = await users_col.find_one({"_id": parse_object_id(other_id)})
-    if other_user and user_id in other_user.get("blocked_users", []):
-        raise HTTPException(status_code=403, detail="You have been blocked by this user.")
-    
-    current_db_user = await users_col.find_one({"_id": parse_object_id(user_id)})
-    if current_db_user and other_id in current_db_user.get("blocked_users", []):
-        raise HTTPException(status_code=403, detail="You have blocked this user. Unblock to send messages.")
+    if not other_id:
+        raise HTTPException(status_code=400, detail="Invalid conversation participants.")
 
-    # Spam check (rate limit)
+    if other_id != conv.get("admin_id"):
+        other_user = await users_col.find_one({"_id": parse_object_id(other_id)})
+        if other_user and user_id in other_user.get("blocked_users", []):
+            raise HTTPException(status_code=403, detail="You have been blocked by this user.")
+
+        current_db_user = await users_col.find_one({"_id": parse_object_id(user_id)})
+        if current_db_user and other_id in current_db_user.get("blocked_users", []):
+            raise HTTPException(status_code=403, detail="You have blocked this user. Unblock to send messages.")
+
     now = datetime.now(timezone.utc)
     ten_seconds_ago = now - timedelta(seconds=10)
     recent_msgs = await messages_col.count_documents({
         "sender_id": user_id,
-        "created_at": {"$gte": ten_seconds_ago}
+        "created_at": {"$gte": ten_seconds_ago},
     })
     if recent_msgs >= 5:
         raise HTTPException(status_code=429, detail="You are sending messages too fast. Please slow down.")
 
-    # Profanity check
     if payload.text:
         profane_words = {"fuck", "shit", "bitch", "asshole", "cunt", "nigger", "faggot", "dick", "pussy", "slut", "whore"}
         text_lower = payload.text.lower()
         if any(bad_word in text_lower for bad_word in profane_words):
             raise HTTPException(status_code=400, detail="Your message contains prohibited language.")
 
+    sender_name = current_user["name"]
+    if user_id != conv.get("member_id"):
+        sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
+
     msg_doc = {
         "conversation_id": conversation_id,
         "sender_id": user_id,
-        "sender_name": current_user["name"],
+        "sender_name": sender_name,
         "text": payload.text.strip() if payload.text else "",
         "message_type": payload.message_type,
         "image_url": payload.image_url,
@@ -321,7 +376,6 @@ async def send_message(
     }
     result = await messages_col.insert_one(msg_doc)
 
-    # Update conversation metadata
     last_text = payload.text.strip()[:100] if payload.text else "Sent an image"
     await conversations_col.update_one(
         {"_id": conv_oid},
@@ -334,15 +388,14 @@ async def send_message(
         },
     )
 
-    # Notify receiver
     import asyncio
     asyncio.create_task(
         create_notification(
             user_id=other_id,
-            title=f"New Message from {current_user['name']}",
+            title=f"New message from {sender_name}",
             message=last_text,
             type_="new_message",
-            action_url=f"/messages?conversation={conversation_id}"
+            action_url=f"/messages/{conversation_id}",
         )
     )
 
@@ -356,45 +409,42 @@ async def report_conversation(
     payload: dict,
     current_user: dict = Depends(get_verified_user),
 ):
-    """Report a conversation."""
+    """Report a conversation to admins."""
     from app.db.mongodb import get_db_async
-    
+
     conversations_col = await get_conversations_collection_async()
     db = await get_db_async()
     if conversations_col is None or db is None:
         raise HTTPException(status_code=503, detail="Database connection is not available.")
-        
+
     conv_oid = parse_object_id(conversation_id)
     if not conv_oid:
         raise HTTPException(status_code=400, detail="Invalid conversation id.")
-        
+
     conv = await conversations_col.find_one({"_id": conv_oid})
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found.")
-        
+
     user_id = current_user["id"]
-    if user_id not in (conv["giver_id"], conv["receiver_id"]):
-        raise HTTPException(status_code=403, detail="Not a participant.")
-        
-    other_id = conv["receiver_id"] if user_id == conv["giver_id"] else conv["giver_id"]
-    
+    _require_participant(conv, user_id, current_user=current_user)
+
     await conversations_col.update_one(
         {"_id": conv_oid},
-        {"$set": {"is_flagged": True}}
+        {"$set": {"is_flagged": True}},
     )
-    
-    reports_col = db["reports"]
+
+    reports_col = db["admin_reports"]
     await reports_col.insert_one({
         "reporter_id": user_id,
         "reporter_name": current_user["name"],
         "target_id": conversation_id,
         "target_type": "conversation",
-        "reported_user_id": other_id,
+        "reported_user_id": get_other_participant_id(conv, user_id),
         "reason": payload.get("reason", "Inappropriate behavior in chat"),
-        "status": "pending",
-        "created_at": datetime.now(timezone.utc)
+        "status": "open",
+        "created_at": datetime.now(timezone.utc),
     })
-    
+
     return {"status": "ok", "message": "Conversation reported successfully."}
 
 
@@ -404,22 +454,26 @@ async def set_typing_status(
     payload: dict,
     current_user: dict = Depends(get_current_user),
 ):
-    """Update typing status. For polling MVPs, we update a transient field."""
+    """Update typing status."""
     conversations_col = await get_conversations_collection_async()
     if conversations_col is None:
         raise HTTPException(status_code=503, detail="Database connection is not available.")
-        
+
     conv_oid = parse_object_id(conversation_id)
     if not conv_oid:
         raise HTTPException(status_code=400, detail="Invalid conversation id.")
-        
-    is_typing = payload.get("is_typing", False)
+
+    conv = await conversations_col.find_one({"_id": conv_oid})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+
     user_id = current_user["id"]
-    
-    # Store typing status with a timestamp so the other user can ignore stale typing states (>5s old)
+    _require_participant(conv, user_id, current_user=current_user)
+
+    is_typing = payload.get("is_typing", False)
     await conversations_col.update_one(
         {"_id": conv_oid},
-        {"$set": {f"typing_status.{user_id}": datetime.now(timezone.utc) if is_typing else None}}
+        {"$set": {f"typing_status.{user_id}": datetime.now(timezone.utc) if is_typing else None}},
     )
-    
+
     return {"status": "ok"}

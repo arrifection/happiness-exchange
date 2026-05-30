@@ -254,7 +254,7 @@ export default function RequestsPage({
               {visibleRequests.map((request) => {
                 if (activeView === 'mine') {
                   const reviewContext = getReviewContextForMyRequest?.(request)
-                  const convId = getChatConversationForRequest?.(request.id)
+                  const convId = getChatConversationForRequest?.(request.id, request)
                   const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
 
                   return (
@@ -317,6 +317,7 @@ export default function RequestsPage({
 
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
                 const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
+                const convId = getChatConversationForRequest?.(request.id, request)
 
                 return (
                   <RequestCardShell
@@ -361,6 +362,15 @@ export default function RequestsPage({
                                 Track Delivery
                               </Button>
                             )
+                          ) : null}
+                          {request.status === 'approved' && convId ? (
+                            <Button
+                              as="link"
+                              to={`/messages/${convId}`}
+                              className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
+                            >
+                              Open Chat
+                            </Button>
                           ) : null}
                           {reviewContext ? (
                             <Button

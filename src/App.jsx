@@ -784,10 +784,20 @@ export default function App() {
     return { itemId: request.item_id, itemTitle: request.item_title, reviewedUserId: request.requester_id, reviewedUserName: request.requester_name }
   }
 
-  // Map requestId → conversationId for "Open Chat" buttons
-  function getChatConversationForRequest(requestId) {
-    const conv = asArray(conversations).find((c) => c.request_id === requestId)
-    return conv ? conv.id : null
+  // Map requestId → conversationId for "Open Chat" buttons (admin-mediated chats only)
+  function getChatConversationForRequest(requestId, request) {
+    const list = asArray(conversations)
+    if (request && currentUser) {
+      let chatType = null
+      if (currentUser.id === request.requester_id) chatType = 'admin_receiver'
+      else if (currentUser.id === request.owner_id) chatType = 'admin_lister'
+      if (chatType) {
+        const match = list.find((c) => c.request_id === requestId && c.chat_type === chatType)
+        if (match) return match.id
+      }
+    }
+    const fallback = list.find((c) => c.request_id === requestId && c.chat_type)
+    return fallback ? fallback.id : null
   }
 
   const bottomTabItems = [
