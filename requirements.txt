@@ -27,5 +27,11 @@ email-validator==2.2.0
 # httpx - required by FastAPI/Starlette TestClient for backend tests
 httpx==0.28.1
 
+# slowapi - IP/user rate limiting for auth and write endpoints
+slowapi==0.1.9
+
+# Pillow - image validation and re-encoding for uploads
+Pillow==11.2.1
+
 # python-multipart - parses file uploads for FastAPI UploadFile endpoints
 python-multipart==0.0.20

@@ -195,6 +195,12 @@ async def get_db_async():
     return db
 
 
+async def get_mongo_client_async() -> AsyncIOMotorClient | None:
+    """Return the shared Motor client (for multi-document transactions)."""
+    await connect_to_mongo()
+    return client
+
+
 async def get_users_collection_async():
     database = await get_db_async()
     if database is None:

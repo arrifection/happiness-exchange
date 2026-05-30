@@ -17,6 +17,7 @@ from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
 from app.services.notifications import create_notification
 from app.services.reputation import build_public_reputation_lookup
+from app.services.request_approval import approve_request_and_create_conversations
 from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
@@ -226,6 +227,11 @@ async def update_request_status(
         )
 
     if request["status"] != "pending":
+        if request["status"] == "approved":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Request already processed",
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only pending requests can be approved.",
@@ -251,57 +257,20 @@ async def update_request_status(
             detail="Completed items cannot accept requests.",
         )
 
-    existing_approved = await requests_collection.find_one(
-        {
-            "item_id": request["item_id"],
-            "status": "approved",
-            "_id": {"$ne": request_object_id},
-        }
-    )
-    if existing_approved is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Another request has already been approved for this item.",
-        )
-
-    await requests_collection.update_one(
-        {"_id": request_object_id},
-        {"$set": {"status": "approved"}},
-    )
-    await requests_collection.update_many(
-        {
-            "item_id": request["item_id"],
-            "status": "pending",
-            "_id": {"$ne": request_object_id},
-        },
-        {"$set": {"status": "rejected"}},
-    )
-    await items_collection.update_one(
-        {"_id": item_object_id},
-        {"$set": {"status": "reserved"}},
-    )
-
-    # Auto-create admin-mediated conversations (admin↔receiver, admin↔lister)
     conversations_collection = await get_conversations_collection_async()
     users_collection = await get_users_collection_async()
-    if conversations_collection is not None and users_collection is not None:
-        request_id_str = str(request_object_id)
-        if not request.get("owner_name"):
-            await requests_collection.update_one(
-                {"_id": request_object_id},
-                {"$set": {"owner_name": item.get("owner_name") or current_user.get("name", "")}},
-            )
-            request["owner_name"] = item.get("owner_name") or current_user.get("name", "")
 
-        from app.services.conversations import ensure_admin_mediated_conversations
-
-        await ensure_admin_mediated_conversations(
-            conversations_collection,
-            users_collection,
-            request_id_str=request_id_str,
-            request=request,
-            item=item,
-        )
+    await approve_request_and_create_conversations(
+        requests_collection=requests_collection,
+        items_collection=items_collection,
+        conversations_collection=conversations_collection,
+        users_collection=users_collection,
+        request_object_id=request_object_id,
+        request=request,
+        item=item,
+        item_object_id=item_object_id,
+        current_user=current_user,
+    )
 
     # Notify requester
     import asyncio

@@ -16,7 +16,7 @@ class FakeUsersCollection:
         self.admin_doc = admin_doc
         self.users_by_id = users_by_id
 
-    async def find_one(self, query, projection=None, sort=None):
+    async def find_one(self, query, projection=None, sort=None, session=None):
         if query.get("role"):
             return self.admin_doc
         oid = query.get("_id")
@@ -29,13 +29,13 @@ class FakeConversationsCollection:
     def __init__(self):
         self.documents = []
 
-    async def find_one(self, query):
+    async def find_one(self, query, session=None):
         for document in self.documents:
             if all(document.get(key) == value for key, value in query.items()):
                 return document
         return None
 
-    async def insert_one(self, document):
+    async def insert_one(self, document, session=None):
         stored = {**document, "_id": ObjectId()}
         self.documents.append(stored)
         return SimpleNamespace(inserted_id=stored["_id"])

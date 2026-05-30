@@ -9,7 +9,7 @@ from app.services.local_uploads import save_local_item_image, should_use_local_u
 
 logger = logging.getLogger(__name__)
 
-MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+from app.services.image_validation import MAX_IMAGE_SIZE_BYTES
 
 
 class CloudinaryConfigError(RuntimeError):

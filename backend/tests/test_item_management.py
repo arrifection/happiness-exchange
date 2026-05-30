@@ -286,7 +286,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["detail"],
-            "Please choose an image file (JPG, PNG, WEBP, etc.).",
+            "File type not allowed. Use JPG, PNG, or WEBP.",
         )
 
     def test_upload_image_rejects_large_files(self):
@@ -301,14 +301,22 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.json()["detail"],
-            "Please choose an image smaller than 5 MB.",
+            "File too large. Maximum 5 MB.",
         )
 
     def test_upload_image_returns_secure_url(self):
+        import io
+
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (8, 8), color="red").save(buffer, format="PNG")
+        png_bytes = buffer.getvalue()
+
         async def fake_upload_image_to_cloudinary(*, file_name, content_type, file_bytes):
-            self.assertEqual(file_name, "lamp.png")
+            self.assertTrue(file_name.endswith(".png"))
             self.assertEqual(content_type, "image/png")
-            self.assertEqual(file_bytes, b"png-bytes")
+            self.assertTrue(file_bytes.startswith(b"\x89PNG"))
             return "https://res.cloudinary.com/demo/image/upload/sample.png"
 
         items_routes.upload_image_to_cloudinary = fake_upload_image_to_cloudinary
@@ -316,7 +324,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         with self.make_client(self.owner_user) as client:
             response = client.post(
                 "/api/items/upload-image",
-                files={"file": ("lamp.png", b"png-bytes", "image/png")},
+                files={"file": ("lamp.png", png_bytes, "image/png")},
             )
 
         self.assertEqual(response.status_code, 200)

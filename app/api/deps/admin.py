@@ -70,3 +70,18 @@ get_admin_only = _role_guard(UserRole.ADMIN, "get_admin_only")
 
 # Super admin only
 get_super_admin = _role_guard(UserRole.SUPER_ADMIN, "get_super_admin")
+
+
+async def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Require any staff/admin role. Returns 403 (not 401) for authenticated non-admins."""
+    if not is_admin_role(current_user.get("role", "user")):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    if current_user.get("is_banned"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been suspended.",
+        )
+    return current_user

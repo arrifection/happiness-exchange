@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo.errors import DuplicateKeyError
 
 from app.core.roles import UserRole
+from app.core.slowapi_limiter import limiter
 from app.db.mongodb import get_users_collection_async
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, VerifyEmailResponse, ResendVerificationResponse
 from app.services.auth import (
@@ -16,7 +17,6 @@ from app.services.auth import (
     verify_password,
 )
 from app.core.config import settings
-from app.core.rate_limit import rate_limit_ip
 from app.services.email import EmailSendError, get_email_diagnostics, send_verification_email
 from app.services.notifications import notify_admins
 from app.api.deps.auth import get_current_user, get_optional_current_user
@@ -68,9 +68,10 @@ async def email_config_check():
 
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def signup(
+    request: Request,
     payload: SignupRequest,
-    _: None = Depends(rate_limit_ip("auth_signup", max_calls=8, window_seconds=3600)),
 ):
     """Create a new community member account and immediately return an access token."""
     users_collection = await get_users_collection_async()
@@ -162,9 +163,10 @@ async def signup(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     payload: LoginRequest,
-    _: None = Depends(rate_limit_ip("auth_login", max_calls=20, window_seconds=900)),
 ):
     """Authenticate an existing user and return an access token."""
     users_collection = await get_users_collection_async()
@@ -262,9 +264,10 @@ async def verify_email(
 
 
 @router.post("/resend-verification", response_model=ResendVerificationResponse)
+@limiter.limit("3/minute")
 async def resend_verification(
+    request: Request,
     current_user: dict = Depends(get_current_user),
-    _: None = Depends(rate_limit_ip("auth_resend", max_calls=12, window_seconds=3600)),
 ):
     """Resend verification email if user is not already verified."""
     if current_user.get("is_verified"):

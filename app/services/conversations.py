@@ -79,6 +79,7 @@ async def ensure_admin_mediated_conversations(
     request_id_str: str,
     request: dict,
     item: dict | None,
+    session=None,
 ) -> list[str]:
     """Create admin↔receiver and admin↔lister chats for an approved request."""
     admin = await get_platform_admin(users_col)
@@ -113,7 +114,8 @@ async def ensure_admin_mediated_conversations(
 
     for chat_type, member_id, member_name, member_role in specs:
         existing = await conversations_col.find_one(
-            {"request_id": request_id_str, "chat_type": chat_type}
+            {"request_id": request_id_str, "chat_type": chat_type},
+            session=session,
         )
         if existing is not None:
             created_ids.append(str(existing["_id"]))
@@ -141,11 +143,12 @@ async def ensure_admin_mediated_conversations(
             "is_flagged": False,
         }
         try:
-            result = await conversations_col.insert_one(doc)
+            result = await conversations_col.insert_one(doc, session=session)
             created_ids.append(str(result.inserted_id))
         except DuplicateKeyError:
             existing = await conversations_col.find_one(
-                {"request_id": request_id_str, "chat_type": chat_type}
+                {"request_id": request_id_str, "chat_type": chat_type},
+                session=session,
             )
             if existing is not None:
                 created_ids.append(str(existing["_id"]))

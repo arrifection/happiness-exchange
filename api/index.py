@@ -4,9 +4,13 @@ import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.core.slowapi_limiter import limiter
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.conversations import router as conversations_router
@@ -58,6 +62,9 @@ app = FastAPI(
     description="Happiness Exchange - a free item donation and exchange platform.",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

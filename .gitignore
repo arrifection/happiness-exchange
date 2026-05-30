@@ -43,3 +43,5 @@ app/core/_generated_build_info.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+.vercel

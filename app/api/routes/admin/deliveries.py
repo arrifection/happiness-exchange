@@ -2,24 +2,16 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 
-from app.api.deps.auth import get_current_user
+from app.api.deps.admin import get_admin_user
 from app.db.mongodb import get_deliveries_collection_async
 from app.schemas.deliveries import DeliveryResponse, DeliveryStatusUpdateRequest
 from app.services.auth import parse_object_id
 from app.services.encryption import decrypt_text
 from app.services.notifications import create_notification
-from app.services.cloudinary import upload_image_to_cloudinary, MAX_IMAGE_SIZE_BYTES, CloudinaryConfigError, CloudinaryUploadError
+from app.services.cloudinary import upload_image_to_cloudinary, CloudinaryConfigError, CloudinaryUploadError
+from app.services.image_validation import validate_and_sanitize_image
 
 router = APIRouter()
-
-def get_courier_or_admin(current_user: dict = Depends(get_current_user)) -> dict:
-    role = current_user.get("role", "user")
-    if role not in ("courier", "admin", "super_admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Requires courier or admin privileges.",
-        )
-    return current_user
 
 def serialize_delivery_admin(doc: dict) -> dict:
     """
@@ -53,7 +45,7 @@ def serialize_delivery_admin(doc: dict) -> dict:
     }
 
 @router.get("/deliveries", response_model=list[DeliveryResponse])
-async def list_deliveries(current_admin: dict = Depends(get_courier_or_admin)):
+async def list_deliveries(current_admin: dict = Depends(get_admin_user)):
     """Courier dashboard: lists all ready or active deliveries with decrypted addresses."""
     deliveries_col = await get_deliveries_collection_async()
     if deliveries_col is None:
@@ -77,7 +69,7 @@ async def list_deliveries(current_admin: dict = Depends(get_courier_or_admin)):
 async def update_delivery_status(
     delivery_id: str,
     payload: DeliveryStatusUpdateRequest,
-    current_admin: dict = Depends(get_courier_or_admin)
+    current_admin: dict = Depends(get_admin_user)
 ):
     """Update delivery status (e.g. assigned -> picked_up -> delivered)."""
     deliveries_col = await get_deliveries_collection_async()
@@ -141,7 +133,7 @@ async def update_delivery_status(
 async def upload_proof(
     delivery_id: str,
     file: UploadFile = File(...),
-    current_admin: dict = Depends(get_courier_or_admin)
+    current_admin: dict = Depends(get_admin_user)
 ):
     """Courier uploads proof of delivery photo."""
     deliveries_col = await get_deliveries_collection_async()
@@ -156,20 +148,19 @@ async def upload_proof(
     if not doc:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Must be an image file.")
-
     file_bytes = await file.read()
     await file.close()
 
-    if len(file_bytes) > MAX_IMAGE_SIZE_BYTES:
-        raise HTTPException(status_code=400, detail="Image too large.")
+    clean_bytes, content_type, safe_name = validate_and_sanitize_image(
+        file_name=file.filename,
+        file_bytes=file_bytes,
+    )
 
     try:
         secure_url = await upload_image_to_cloudinary(
             file_name=f"pod-{delivery_id}-{int(datetime.now(timezone.utc).timestamp())}",
-            content_type=file.content_type,
-            file_bytes=file_bytes,
+            content_type=content_type,
+            file_bytes=clean_bytes,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))

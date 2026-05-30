@@ -3,7 +3,7 @@ import math
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user, get_verified_user
@@ -23,9 +23,10 @@ from app.services.auth import parse_object_id
 from app.services.cloudinary import (
     CloudinaryConfigError,
     CloudinaryUploadError,
-    MAX_IMAGE_SIZE_BYTES,
     upload_image_to_cloudinary,
 )
+from app.core.slowapi_limiter import authenticated_user_key, limiter
+from app.services.image_validation import validate_and_sanitize_image
 from app.services.items import build_item_document, serialize_item
 from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
@@ -38,12 +39,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/items", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/hour", key_func=authenticated_user_key)
 async def create_item(
+    request: Request,
     payload: ItemCreateRequest,
     current_user: dict = Depends(get_verified_user),
 ):
     """Create a new item listing for the logged-in user."""
-    check_user_rate_limit(current_user["id"], "create_item", max_calls=30, window_seconds=3600)
+    del request
     items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
@@ -226,12 +229,6 @@ async def upload_item_image(
     check_user_rate_limit(current_user["id"], "upload_image", max_calls=40, window_seconds=3600)
     del current_user
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please choose an image file (JPG, PNG, WEBP, etc.).",
-        )
-
     file_bytes = await file.read()
     await file.close()
 
@@ -241,17 +238,16 @@ async def upload_item_image(
             detail="The selected image is empty. Please choose a different file.",
         )
 
-    if len(file_bytes) > MAX_IMAGE_SIZE_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please choose an image smaller than 5 MB.",
-        )
+    clean_bytes, content_type, safe_name = validate_and_sanitize_image(
+        file_name=file.filename,
+        file_bytes=file_bytes,
+    )
 
     try:
         secure_url = await upload_image_to_cloudinary(
-            file_name=file.filename or "item-image",
-            content_type=file.content_type,
-            file_bytes=file_bytes,
+            file_name=safe_name,
+            content_type=content_type,
+            file_bytes=clean_bytes,
         )
     except CloudinaryConfigError as exc:
         raise HTTPException(
