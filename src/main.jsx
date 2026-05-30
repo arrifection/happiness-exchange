@@ -10,6 +10,7 @@ import './index.css'
 import 'leaflet/dist/leaflet.css'
 
 applyTheme(getStoredTheme())
+document.documentElement.classList.add('he-app-ready')
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

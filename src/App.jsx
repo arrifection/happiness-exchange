@@ -26,6 +26,7 @@ import FlashBanner from './components/FlashBanner.jsx'
 import NotificationBell from './components/NotificationBell.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
+import AppBootSkeleton from './components/AppBootSkeleton.jsx'
 import { Button, Surface } from './components/ui.jsx'
 import { NotificationProvider } from './components/NotificationContext.jsx'
 import {
@@ -115,7 +116,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
-  const [loadingUser, setLoadingUser] = useState(false)
+  const [loadingUser, setLoadingUser] = useState(() => Boolean(readStoredToken()))
 
   const [items, setItems] = useState([])
   const [loadingItems, setLoadingItems] = useState(true)
@@ -1001,7 +1002,9 @@ export default function App() {
               <Route
                 path="/"
                 element={
-                  currentUser ? (
+                  token && !currentUser && loadingUser ? (
+                    <AppBootSkeleton />
+                  ) : currentUser ? (
                     <AuthenticatedHomePage
                       items={items} currentUser={currentUser} myReputation={myReputation}
                       getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}

@@ -22,7 +22,10 @@
   <meta name="twitter:description" content="Reach the Happiness Exchange team for support, safety reports, or partnership inquiries." />
   <meta name="twitter:image" content="https://www.happyexchange.net/og-image.png" />
   <meta name="theme-color" content="#8c57f5" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/initial-shell.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -33,15 +36,29 @@
       }
     } catch (e) {}
   </script>
-  <style>
-    body { font-family: 'Outfit', sans-serif; }
-  </style>
 </head>
 
 <body>
+  <noscript>
+    <div class="he-noscript-fallback">
+      <div>
+        <strong>Happiness Exchange</strong>
+        <p>JavaScript is required to use this app. Please enable JavaScript or visit on a modern browser.</p>
+      </div>
+    </div>
+  </noscript>
   <div id="root">
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fffaf0;color:#68766d;font-family:Outfit,sans-serif">
-      Loading Happiness Exchange…
+    <div class="he-initial-loader" role="status" aria-live="polite" aria-busy="true">
+      <svg class="he-initial-loader__mark" viewBox="0 0 74 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="12" cy="16.5" r="6.2" fill="#8C57F5"/>
+        <rect x="24" y="5" width="35" height="43" rx="11" fill="#F9C826"/>
+        <circle cx="38" cy="16.5" r="5.3" fill="#8C57F5"/>
+        <circle cx="46.5" cy="34.5" r="5.2" fill="#8C57F5"/>
+        <path d="M6 27.5C6 41 15.5 50 29.5 50C40.5 50 48 44.5 48 35" stroke="#8C57F5" stroke-width="5.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <p class="he-initial-loader__brand">Happiness Exchange</p>
+      <p class="he-initial-loader__message">Loading page…</p>
+      <div class="he-initial-loader__bar" aria-hidden="true"><span></span></div>
     </div>
   </div>
   <script type="module" src="/src/main.jsx"></script>

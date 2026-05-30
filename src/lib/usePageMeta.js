@@ -27,6 +27,7 @@ export function applyPageMeta(meta) {
 
   document.title = meta.title
   upsertMeta('name', 'description', meta.description)
+  upsertMeta('name', 'robots', meta.robots || 'index, follow, max-image-preview:large')
   upsertLink('canonical', meta.url)
 
   upsertMeta('property', 'og:type', 'website')
