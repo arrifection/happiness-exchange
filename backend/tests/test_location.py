@@ -82,6 +82,9 @@ class FakeCollection:
     def find(self, query):
         return FakeCursor([document for document in self.documents if match_query(document, query)])
 
+    async def count_documents(self, query):
+        return len([document for document in self.documents if match_query(document, query)])
+
     async def insert_one(self, document):
         stored = {**document}
         stored.setdefault("_id", ObjectId())
@@ -267,25 +270,39 @@ class LocationApiTests(IsolatedAsyncioTestCase):
     def test_list_items_filtered_by_pakistan(self):
         response = self.client.get("/api/items", params={"country": "Pakistan"})
         self.assertEqual(response.status_code, 200)
-        titles = [item["title"] for item in response.json()]
+        payload = response.json()
+        titles = [item["title"] for item in payload["items"]]
         self.assertIn("Pakistan Lamp", titles)
         self.assertNotIn("Saudi Desk", titles)
+        self.assertEqual(payload["page"], 1)
+        self.assertIn("total", payload)
 
     def test_list_items_filtered_by_saudi_city(self):
         response = self.client.get("/api/items", params={"country": "Saudi Arabia", "city": "Riyadh"})
         self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["country"], "Saudi Arabia")
-        self.assertEqual(data[0]["city"], "Riyadh")
+        payload = response.json()
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertEqual(payload["items"][0]["country"], "Saudi Arabia")
+        self.assertEqual(payload["items"][0]["city"], "Riyadh")
 
     def test_list_items_default_status_available_only(self):
         response = self.client.get("/api/items", params={"country": "Pakistan"})
         self.assertEqual(response.status_code, 200)
-        titles = [item["title"] for item in response.json()]
+        payload = response.json()
+        titles = [item["title"] for item in payload["items"]]
         self.assertIn("Pakistan Lamp", titles)
         self.assertNotIn("Completed Chair", titles)
-        for item in response.json():
+        for item in payload["items"]:
             self.assertEqual(item["status"], "available")
             self.assertEqual(item["request_count"], 0)
             self.assertIsNone(item["owner_average_rating"])
+
+    def test_list_items_pagination_metadata(self):
+        response = self.client.get("/api/items", params={"country": "Pakistan", "page": 1, "limit": 1})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["page"], 1)
+        self.assertEqual(payload["limit"], 1)
+        self.assertGreaterEqual(payload["total"], 1)
+        self.assertGreaterEqual(payload["total_pages"], 1)
+        self.assertEqual(len(payload["items"]), 1)

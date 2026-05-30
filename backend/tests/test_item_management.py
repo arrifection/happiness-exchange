@@ -256,7 +256,10 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.items_collection.documents[0]["status"] = "completed"
 
         with self.make_client(self.other_user) as client:
-            response = client.post(f"/api/requests/{self.item_id}")
+            response = client.post(
+                f"/api/requests/{self.item_id}",
+                json={"reason": "I am a student and need this completed-item test case for validation."},
+            )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(

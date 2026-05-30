@@ -16,6 +16,7 @@ from app.services.conversations import (
     is_admin_mediated,
     user_is_participant,
 )
+from app.services.display_names import resolve_user_display_name, sanitize_display_name
 from app.services.notifications import create_notification
 from app.services.cloudinary import (
     CloudinaryConfigError,
@@ -66,7 +67,8 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
 
     if is_admin_mediated(doc):
         admin_display = doc.get("admin_display_name") or ADMIN_DISPLAY_NAME
-        member_name = doc.get("member_name") or ""
+        member_name = sanitize_display_name(doc.get("member_name"), fallback="User")
+        item_title = sanitize_display_name(item_title, fallback="Item")
         role_label = "Receiver" if doc.get("member_role") == "receiver" else "Lister"
 
         if is_admin_role(current_role):
@@ -83,6 +85,11 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
             base["counterpart_name"] = admin_display
             base["list_title"] = f"{admin_display} — {item_title}"
 
+    base["member_name"] = sanitize_display_name(base.get("member_name"), fallback="User")
+    base["admin_name"] = sanitize_display_name(base.get("admin_name"), fallback=ADMIN_DISPLAY_NAME)
+    base["giver_name"] = sanitize_display_name(base.get("giver_name"), fallback="User")
+    base["receiver_name"] = sanitize_display_name(base.get("receiver_name"), fallback="User")
+    base["item_title"] = sanitize_display_name(base.get("item_title"), fallback="Item")
     return base
 
 
@@ -92,7 +99,7 @@ def serialize_message(doc: dict) -> dict:
         "id": str(doc["_id"]),
         "conversation_id": doc["conversation_id"],
         "sender_id": doc["sender_id"],
-        "sender_name": doc.get("sender_name", ""),
+        "sender_name": sanitize_display_name(doc.get("sender_name"), fallback="User"),
         "text": doc["text"],
         "message_type": doc.get("message_type", "text"),
         "image_url": doc.get("image_url"),
@@ -360,9 +367,11 @@ async def send_message(
         if any(bad_word in text_lower for bad_word in profane_words):
             raise HTTPException(status_code=400, detail="Your message contains prohibited language.")
 
-    sender_name = current_user["name"]
+    sender_name = resolve_user_display_name(current_user, fallback="User")
     if user_id != conv.get("member_id"):
         sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
+    else:
+        sender_name = sanitize_display_name(sender_name, fallback="User")
 
     msg_doc = {
         "conversation_id": conversation_id,

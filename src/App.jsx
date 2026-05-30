@@ -118,6 +118,7 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState(() => Boolean(readStoredToken()))
 
   const [items, setItems] = useState([])
+  const [itemsPagination, setItemsPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 1 })
   const [loadingItems, setLoadingItems] = useState(true)
   const [itemsError, setItemsError] = useState('')
 
@@ -279,12 +280,15 @@ export default function App() {
     try {
       const prefs = locationPrefs || readLocationPreferences()
       const params = buildItemsQueryParams(prefs)
+      const page = options.page || 1
+      params.set('page', String(page))
+      params.set('limit', String(options.limit || 20))
       if (options.status === 'all') {
         params.set('status', '')
       } else if (options.status) {
         params.set('status', String(options.status).toLowerCase())
       }
-      const url = params.toString() ? `${ITEMS_ENDPOINT}?${params.toString()}` : ITEMS_ENDPOINT
+      const url = `${ITEMS_ENDPOINT}?${params.toString()}`
       const res = await fetch(url)
       let data = null
       try {
@@ -295,8 +299,20 @@ export default function App() {
           return
         }
       }
-      if (res.ok) setItems(Array.isArray(data) ? data : [])
-      else setItemsError(formatApiError(data, 'Failed to load items.'))
+      if (res.ok) {
+        const nextItems = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : [])
+        setItems(nextItems)
+        if (data && typeof data.total === 'number') {
+          setItemsPagination({
+            page: data.page || page,
+            limit: data.limit || 20,
+            total: data.total,
+            total_pages: data.total_pages || 1,
+          })
+        }
+      } else {
+        setItemsError(formatApiError(data, 'Failed to load items.'))
+      }
     } catch {
       setItemsError('Unable to fetch community items. Check your connection and try again.')
     } finally { setLoadingItems(false) }
@@ -1065,6 +1081,7 @@ export default function App() {
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onRefreshItems={loadItems} loadingItems={loadingItems} itemsError={itemsError}
+                    itemsPagination={itemsPagination}
                   />
                 }
               />

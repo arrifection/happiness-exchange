@@ -42,6 +42,7 @@ export default function BrowseItemsPage({
   onRefreshItems,
   loadingItems,
   itemsError,
+  itemsPagination = { page: 1, limit: 20, total: 0, total_pages: 1 },
 }) {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
@@ -62,7 +63,7 @@ export default function BrowseItemsPage({
     }
     writeLocationPreferences(next)
     setLocationPrefs(next)
-    onRefreshItems?.(next, buildStatusQuery(statusFilter))
+    onRefreshItems?.(next, { ...buildStatusQuery(statusFilter), page: 1 })
   }
 
   function buildStatusQuery(filter) {
@@ -71,9 +72,15 @@ export default function BrowseItemsPage({
   }
 
   useEffect(() => {
-    onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))
+    onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: 1 })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch only when status filter changes
   }, [statusFilter])
+
+  function goToPage(nextPage) {
+    if (nextPage < 1 || nextPage > itemsPagination.total_pages) return
+    onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: nextPage })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const filteredItems = useMemo(() => {
     let result = [...items]
@@ -121,7 +128,7 @@ export default function BrowseItemsPage({
     const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
     writeLocationPreferences(resetPrefs)
     setLocationPrefs(resetPrefs)
-    onRefreshItems?.(resetPrefs, buildStatusQuery('Available'))
+    onRefreshItems?.(resetPrefs, { ...buildStatusQuery('Available'), page: 1 })
   }
 
   return (
@@ -137,7 +144,7 @@ export default function BrowseItemsPage({
           <button
             type="button"
             className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-he-purple hover:underline"
-            onClick={() => onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))}
+            onClick={() => onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: itemsPagination.page })}
             disabled={loadingItems}
           >
             {loadingItems ? 'Refreshing...' : 'Refresh'}
@@ -251,7 +258,7 @@ export default function BrowseItemsPage({
           ) : null}
 
           <span className="ml-auto hidden text-[10px] text-he-muted sm:inline">
-            {filteredItems.length} listing{filteredItems.length === 1 ? '' : 's'}
+            {itemsPagination.total || filteredItems.length} listing{(itemsPagination.total || filteredItems.length) === 1 ? '' : 's'}
           </span>
         </div>
 
@@ -275,7 +282,7 @@ export default function BrowseItemsPage({
           <ErrorState
             title="Couldn't load items"
             message={itemsError}
-            onRetry={() => onRefreshItems?.(locationPrefs, buildStatusQuery(statusFilter))}
+            onRetry={() => onRefreshItems?.(locationPrefs, { ...buildStatusQuery(statusFilter), page: itemsPagination.page })}
           />
         ) : !loadingItems && filteredItems.length === 0 ? (
           <EmptyState
@@ -315,6 +322,36 @@ export default function BrowseItemsPage({
                 />
               ))}
             </div>
+
+            {itemsPagination.total_pages > 1 ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-he-border/60 pt-4">
+                <p className="text-[11px] text-he-muted">
+                  Page {itemsPagination.page} of {itemsPagination.total_pages}
+                  {' · '}
+                  {itemsPagination.total} total listings
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-8 min-h-0 px-3 text-[10px]"
+                    disabled={loadingItems || itemsPagination.page <= 1}
+                    onClick={() => goToPage(itemsPagination.page - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-8 min-h-0 px-3 text-[10px]"
+                    disabled={loadingItems || itemsPagination.page >= itemsPagination.total_pages}
+                    onClick={() => goToPage(itemsPagination.page + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </>
         )}
       </div>

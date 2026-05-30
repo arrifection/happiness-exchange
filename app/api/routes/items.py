@@ -1,4 +1,5 @@
 import logging
+import math
 
 from datetime import datetime, timezone
 
@@ -15,6 +16,7 @@ from app.db.mongodb import (
 from app.schemas.items import (
     ItemCreateRequest,
     ItemImageUploadResponse,
+    ItemListResponse,
     ItemResponse,
 )
 from app.services.auth import parse_object_id
@@ -68,7 +70,7 @@ async def create_item(
     return serialize_item(created_item)
 
 
-@router.get("/items", response_model=list[ItemResponse])
+@router.get("/items", response_model=ItemListResponse)
 async def list_items(
     country: str | None = Query(default=None, description="Filter by country"),
     city: str | None = Query(default=None, description="Filter by city"),
@@ -79,8 +81,10 @@ async def list_items(
     near_lat: float | None = Query(default=None, ge=-90, le=90),
     near_lng: float | None = Query(default=None, ge=-180, le=180),
     radius_km: float | None = Query(default=None, gt=0, le=500),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
 ):
-    """Return public item listings with optional location filters."""
+    """Return paginated public item listings with optional location filters."""
     items_collection = await get_items_collection_async()
     if items_collection is None:
         raise HTTPException(
@@ -89,16 +93,37 @@ async def list_items(
         )
 
     mongo_query = build_items_list_query(country=country, city=city, status=status)
-    cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
-    items = await cursor.to_list(length=100)
-    items = filter_and_sort_items(
-        items,
-        country=country,
-        city=city,
-        near_lat=near_lat,
-        near_lng=near_lng,
-        radius_km=radius_km,
-    )
+    geo_mode = near_lat is not None and near_lng is not None
+
+    if geo_mode:
+        cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
+        candidate_items = await cursor.to_list(length=1000)
+        filtered_items = filter_and_sort_items(
+            candidate_items,
+            country=country,
+            city=city,
+            near_lat=near_lat,
+            near_lng=near_lng,
+            radius_km=radius_km,
+        )
+    else:
+        total_in_db = await items_collection.count_documents(mongo_query)
+        max_scan = min(max(total_in_db, limit), 2000)
+        cursor = items_collection.find(mongo_query).sort("created_at", DESCENDING)
+        candidate_items = await cursor.to_list(length=max_scan)
+        filtered_items = filter_and_sort_items(
+            candidate_items,
+            country=country,
+            city=city,
+        )
+
+    total = len(filtered_items)
+    total_pages = max(1, math.ceil(total / limit)) if total else 1
+    if page > total_pages:
+        page = total_pages
+
+    start = (page - 1) * limit
+    items = filtered_items[start : start + limit]
     owner_ids = [str(item["owner_id"]) for item in items if item.get("owner_id") is not None]
 
     owner_reputation_lookup: dict[str, dict] = {}
@@ -133,7 +158,14 @@ async def list_items(
             )
         except Exception:
             logger.exception("Failed to serialize item %s", item.get("_id"))
-    return results
+
+    return {
+        "items": results,
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages,
+    }
 
 
 @router.get("/items/my", response_model=list[ItemResponse])

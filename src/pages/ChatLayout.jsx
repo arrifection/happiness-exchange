@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { showFlash } from '../lib/flash.js'
+import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
 
@@ -43,8 +43,7 @@ function shouldShowDateSeparator(messages, index) {
 }
 
 function getInitials(name) {
-  if (!name) return '?'
-  return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+  return displayInitials(name, 'HE')
 }
 
 function getConversationDisplay(conversation, currentUserId) {
@@ -52,12 +51,19 @@ function getConversationDisplay(conversation, currentUserId) {
     return { id: null, name: '', title: '', roleLabel: '', itemTitle: '', isAdminChat: false }
   }
 
-  const name = conversation.counterpart_name
-    || conversation.admin_name
-    || 'Happiness Exchange Admin'
-  const itemTitle = conversation.item_title || 'Item chat'
+  const name = resolveDisplayName(
+    {
+      counterpart_name: conversation.counterpart_name,
+      admin_name: conversation.admin_name,
+      member_name: conversation.member_name,
+      name: conversation.counterpart_name,
+    },
+    'Happiness Exchange Admin',
+  )
+  const itemTitle = resolveDisplayName({ name: conversation.item_title }, 'Item chat')
   const title = conversation.list_title
-    || `${name} — ${itemTitle}`
+    ? conversation.list_title.replace(/\bUnknown\b/gi, 'User')
+    : `${name} — ${itemTitle}`
 
   return {
     id: conversation.counterpart_id || conversation.admin_id || conversation.member_id,
@@ -87,7 +93,7 @@ function GlobalEmptyState() {
         No conversations yet
       </h2>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-he-muted">
-        When a request is approved, Happiness Exchange Admin will coordinate pickup with you here.
+        When a request is approved, Happiness Exchange administrators will coordinate the exchange with you here.
       </p>
       <p className="mt-3 max-w-md text-[11px] text-he-soft">
         Share only pickup details you&apos;re comfortable sharing.

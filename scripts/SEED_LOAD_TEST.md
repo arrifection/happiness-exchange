@@ -134,7 +134,9 @@ Based on `LAUNCH_READINESS_REPORT.md` and HF Spaces + Atlas M0 architecture:
 | **250** | Over free-tier comfort zone; timeouts and 503s probable |
 | **500** | Exceeds current architecture; HF queue + Atlas M0 op limits |
 
-**First endpoints to degrade:** `GET /api/items` (reputation N+1), `GET /api/notifications` (polling), `GET /api/conversations/my`.
+**First endpoints to degrade:** `GET /api/items` (now paginated + batched reputation), `GET /api/notifications` (polling), `GET /api/conversations/my`.
+
+See **`PERFORMANCE.md`** for before/after latency numbers and remaining limitations.
 
 **Before heavy promotion:** upgrade HF to paid CPU, Atlas M10+, consider WebSockets or longer poll intervals.
 

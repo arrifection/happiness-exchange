@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageSquare, Send } from 'lucide-react'
 import { conversationsApi } from '../lib/api'
+import { resolveDisplayName, getInitials } from '../lib/displayNames'
 import { resolveApiError } from '../lib/backend'
 import { EmptyState, ErrorState, LoadingSpinner } from '../components/States'
 
@@ -12,11 +13,6 @@ function formatTime(dateStr) {
     minute: '2-digit',
     hour12: true,
   })
-}
-
-function getInitials(name) {
-  if (!name) return 'HE'
-  return name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 }
 
 export default function MessagesPage() {
@@ -157,11 +153,12 @@ export default function MessagesPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold shrink-0">
-                        {getInitials(conv.member_name)}
+                        {getInitials(resolveDisplayName(conv, 'User'))}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-surface-800 truncate">
-                          {conv.list_title || conv.item_title}
+                          {(conv.list_title || `${resolveDisplayName(conv, 'User')} — ${resolveDisplayName({ name: conv.item_title }, 'Item')}`)
+                            .replace(/\bUnknown\b/gi, 'User')}
                         </p>
                         <p className="text-[11px] font-bold uppercase tracking-wide text-brand-600 mt-0.5">
                           {conv.role_label || (conv.member_role === 'receiver' ? 'Receiver' : 'Lister')}
@@ -195,7 +192,9 @@ export default function MessagesPage() {
           ) : (
             <>
               <div className="px-5 py-4 border-b border-surface-300 bg-white">
-                <p className="text-sm font-semibold text-surface-800">{activeConv.list_title}</p>
+                <p className="text-sm font-semibold text-surface-800">
+                  {(activeConv.list_title || resolveDisplayName(activeConv, 'User')).replace(/\bUnknown\b/gi, 'User')}
+                </p>
                 <p className="text-xs text-surface-500 mt-1">
                   You are messaging as Happiness Exchange Admin
                 </p>

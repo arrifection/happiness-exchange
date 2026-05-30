@@ -27,55 +27,55 @@ const phoneItems = [
 const giveSteps = [
   'Photograph your item - clothes, books, electronics, kitchenware, toys. Takes under 2 minutes.',
   'Set your pickup zone - area-level only. Your home address is never shared with anyone.',
-  'Accept a request - when someone nearby requests your item, confirm in the app. A courier collects from you.',
-  'Earn Happiness Points - climb the city leaderboard. The recipient never knows who gave it.',
+  'Review requests - see why someone needs the item, their trust level, and approve or decline.',
+  'After approval, Happiness Exchange administrators coordinate the exchange with both parties.',
 ]
 
 const getSteps = [
   'Browse your city - filter by category, distance, and item type. Every item is completely free.',
-  'Request the item - pay only the delivery fee (PKR 150-300) via JazzCash or EasyPaisa.',
-  'Set your drop zone - a nearby public area, not your home. Full privacy guaranteed throughout.',
-  'Receive your item - the donor never learns your name. Dignity is built into every single delivery.',
+  'Request the item - explain why you need it so the donor can review your request.',
+  'Wait for approval - the donor reviews your profile, trust level, and reason.',
+  'Approved exchanges are coordinated through Happiness Exchange administrators.',
 ]
 
 const anonymousPills = [
   'Zone-level pickup - no home address ever shared',
-  'All packages sealed and QR-coded only',
+  'Donors review trust level and request reason',
   'CNIC-verified accounts for trust and safety',
-  'OTP confirmation at pickup and delivery',
+  'Admin-mediated coordination after approval',
 ]
 
-const deliveryCards = [
+const coordinationCards = [
   {
     className: 'courier',
-    icon: '📦',
-    title: 'Professional Courier',
-    body: 'TCS, Leopards, and M&P collect from the donor and deliver to the recipient. Fast, reliable, tracked, nationwide - 200+ cities covered.',
+    icon: '🤝',
+    title: 'Admin-Mediated Exchanges',
+    body: 'After a request is approved, Happiness Exchange administrators coordinate pickup and handoff with both the donor and recipient.',
     features: [
-      'PKR 150-300 flat delivery fee',
-      'JazzCash & EasyPaisa accepted',
-      'Real-time in-app tracking',
-      '200+ cities covered nationwide',
+      'No direct donor-recipient messaging',
+      'Dedicated admin chat for each party',
+      'Privacy preserved throughout',
+      'Clear status updates in Activity',
     ],
   },
   {
     className: 'carrier',
-    icon: '🚗',
-    title: 'Happy Carriers',
-    body: 'Verified community volunteers already travelling your direction carry the item along their route - at zero delivery cost to the recipient.',
+    icon: '🛡️',
+    title: 'Trust-First Review',
+    body: 'Donors decide using requester trust score, profile signals, and the reason provided before approving any request.',
     features: [
-      'Completely free for the recipient',
-      'AI-matched by route and timing',
-      'Public handoff points only',
-      'Carriers earn 2x Happiness Points',
+      'Required request reason (30+ characters)',
+      'Trust badges and review history',
+      'Approve or decline from Activity',
+      'Reviews after completed exchanges',
     ],
   },
 ]
 
 const impactStats = [
   ['Free to claim', 'Every listed item is shared at no cost'],
-  ['Fully anonymous', 'Pickup and delivery protect both sides'],
-  ['Courier ready', 'Professional delivery across Pakistan'],
+  ['Fully anonymous', 'Personal details stay private until admin coordination'],
+  ['Admin coordinated', 'Approved exchanges are handled by our team'],
   ['Community powered', 'Real people giving what they no longer need'],
 ]
 
@@ -347,8 +347,8 @@ export default function HomePage({ currentUser }) {
             <div className="he-col-icon-big">🌟</div>
             <h3>Get Happiness</h3>
             <p className="he-col-sub">
-              Browse items listed near you. Request what you need. It reaches you through a courier - and the giver
-              never knows who you are.
+              Browse items listed near you. Request what you need with a short reason. Approved exchanges are
+              coordinated through Happiness Exchange administrators.
             </p>
             <div className="he-steps">
               {getSteps.map((step, index) => (
@@ -373,8 +373,8 @@ export default function HomePage({ currentUser }) {
             <em>Built into everything.</em>
           </h3>
           <p>
-            Neither giver nor receiver ever learns the other&apos;s identity. No names. No addresses. No face-to-face.
-            The courier is the invisible bridge - and that&apos;s exactly how it should be.
+            Neither giver nor receiver arranges the exchange directly. Donors review trust and request reasons;
+            approved exchanges are coordinated through Happiness Exchange administrators.
           </p>
         </div>
 
@@ -389,15 +389,15 @@ export default function HomePage({ currentUser }) {
       </section>
 
       <section className="he-delivery-section">
-        <div className="he-sec-label">How items move</div>
-        <h2>Delivered two ways</h2>
+        <div className="he-sec-label">How exchanges work</div>
+        <h2>Admin-mediated coordination</h2>
         <p className="he-sub">
-          Professional couriers nationwide - or community volunteers already heading your way. Either way, you and the
-          other person never meet.
+          Approved exchanges are coordinated through Happiness Exchange administrators — not direct user-to-user
+          messaging or self-arranged delivery.
         </p>
 
         <div className="he-delivery-grid">
-          {deliveryCards.map((card) => (
+          {coordinationCards.map((card) => (
             <div key={card.title} className={`he-del-card ${card.className}`}>
               <div className="he-del-icon">{card.icon}</div>
               <h4>{card.title}</h4>

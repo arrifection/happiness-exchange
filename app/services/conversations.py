@@ -10,6 +10,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.roles import UserRole
 from app.services.auth import parse_object_id
+from app.services.display_names import resolve_user_display_name, sanitize_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,14 @@ async def get_platform_admin(users_col):
     return None
 
 
-async def resolve_user_name(users_col, user_id: str, fallback: str = "") -> str:
+async def resolve_user_name(users_col, user_id: str, fallback: str = "User") -> str:
     user_oid = parse_object_id(user_id)
     if user_oid is None:
         return fallback
     user = await users_col.find_one({"_id": user_oid})
     if user is None:
         return fallback
-    return user.get("name") or fallback
+    return resolve_user_display_name(user, fallback=fallback)
 
 
 def is_admin_mediated(conv: dict) -> bool:
@@ -86,19 +87,21 @@ async def ensure_admin_mediated_conversations(
         return []
 
     admin_id = str(admin["_id"])
-    admin_name = admin.get("name") or ADMIN_DISPLAY_NAME
+    admin_name = resolve_user_display_name(admin, fallback=ADMIN_DISPLAY_NAME)
     owner_id = request["owner_id"]
     requester_id = request["requester_id"]
     item_title = request.get("item_title") or (item or {}).get("title", "")
     item_id = request["item_id"]
 
-    owner_name = (
+    owner_name = sanitize_display_name(
         request.get("owner_name")
         or (item or {}).get("owner_name")
-        or await resolve_user_name(users_col, owner_id)
+        or await resolve_user_name(users_col, owner_id),
+        fallback="User",
     )
-    requester_name = request.get("requester_name") or await resolve_user_name(
-        users_col, requester_id
+    requester_name = sanitize_display_name(
+        request.get("requester_name") or await resolve_user_name(users_col, requester_id),
+        fallback="User",
     )
 
     now = datetime.now(timezone.utc)

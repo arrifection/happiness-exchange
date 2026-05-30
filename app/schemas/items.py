@@ -78,3 +78,11 @@ class ItemResponse(BaseModel):
 
 class ItemImageUploadResponse(BaseModel):
     secure_url: HttpUrl
+
+
+class ItemListResponse(BaseModel):
+    items: list[ItemResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int

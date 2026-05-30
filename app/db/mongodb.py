@@ -53,6 +53,7 @@ async def _ensure_indexes(database) -> None:
     await database.requests.create_index("requester_id")
     await database.requests.create_index("status")
     await database.requests.create_index([("owner_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)])
+    await database.requests.create_index([("item_id", ASCENDING), ("status", ASCENDING)])
     await database.requests.create_index([("requester_id", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)])
     await database.reviews.create_index(
         [("item_id", 1), ("reviewer_id", 1)],
@@ -82,6 +83,12 @@ async def _ensure_indexes(database) -> None:
     await database.conversations.create_index([("receiver_id", ASCENDING), ("last_message_at", DESCENDING)])
     await database.conversations.create_index([("member_id", ASCENDING), ("last_message_at", DESCENDING)])
     await database.conversations.create_index([("admin_id", ASCENDING), ("last_message_at", DESCENDING)])
+    await database.conversations.create_index(
+        [("chat_type", ASCENDING), ("last_message_at", DESCENDING)],
+    )
+    await database.conversations.create_index(
+        [("member_id", ASCENDING), ("chat_type", ASCENDING), ("last_message_at", DESCENDING)],
+    )
     await database.messages.create_index("conversation_id")
     await database.messages.create_index("created_at")
     await database.messages.create_index([("conversation_id", ASCENDING), ("created_at", ASCENDING)])
