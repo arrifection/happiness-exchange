@@ -26,7 +26,7 @@ function AnonymousBadge() {
       </div>
       <div>
         <p className="text-[11px] font-bold text-he-purple">Completely Anonymous</p>
-        <p className="text-[10px] text-he-soft">Addresses remain private · Courier handled securely</p>
+        <p className="text-[10px] text-he-soft">Addresses remain private · Admin coordinates approved exchanges</p>
       </div>
     </div>
   )

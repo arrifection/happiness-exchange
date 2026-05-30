@@ -10,6 +10,7 @@ from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
     get_reviews_collection_async,
+    get_users_collection_async,
 )
 from app.schemas.items import (
     ItemCreateRequest,
@@ -25,7 +26,7 @@ from app.services.cloudinary import (
 )
 from app.services.items import build_item_document, serialize_item
 from app.services.location import build_items_list_query, filter_and_sort_items, haversine_km
-from app.services.reputation import build_reputation_lookup, calculate_reputation_summary
+from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
 from app.services.notifications import notify_moderators, create_notification
 from app.core.rate_limit import check_user_rate_limit
 
@@ -102,16 +103,14 @@ async def list_items(
 
     owner_reputation_lookup: dict[str, dict] = {}
     try:
-        requests_collection = await get_requests_collection_async()
+        users_collection = await get_users_collection_async()
         reviews_collection = await get_reviews_collection_async()
-        if requests_collection is not None and reviews_collection is not None and owner_ids:
-            raw_lookup = await build_reputation_lookup(
+        if users_collection is not None and reviews_collection is not None and owner_ids:
+            owner_reputation_lookup = await build_public_reputation_lookup(
                 owner_ids,
-                items_collection=items_collection,
-                requests_collection=requests_collection,
+                users_collection=users_collection,
                 reviews_collection=reviews_collection,
             )
-            owner_reputation_lookup = {str(key): value for key, value in raw_lookup.items()}
     except Exception:
         logger.exception("Failed to build reputation lookup for public items list")
 
@@ -160,15 +159,24 @@ async def list_my_items(current_user: dict = Depends(get_current_user)):
         requests_collection=requests_collection,
         reviews_collection=reviews_collection,
     )
+
+    request_counts: dict[str, int] = {}
+    if items:
+        item_ids = [str(item["_id"]) for item in items]
+        pipeline = [
+            {"$match": {"item_id": {"$in": item_ids}}},
+            {"$group": {"_id": "$item_id", "count": {"$sum": 1}}},
+        ]
+        rows = await requests_collection.aggregate(pipeline).to_list(length=len(item_ids))
+        for row in rows:
+            request_counts[str(row["_id"])] = int(row["count"])
+
     serialized_items = []
     for item in items:
-        request_count = await requests_collection.count_documents(
-            {"item_id": str(item["_id"])}
-        )
         serialized_items.append(
             serialize_item(
                 item,
-                request_count=request_count,
+                request_count=request_counts.get(str(item["_id"]), 0),
                 owner_reputation=owner_reputation,
             )
         )

@@ -53,15 +53,16 @@ async def calculate_reputation_summary(
     approved_requests = await requests_collection.find(
         {"requester_id": user_id, "status": "approved"},
     ).to_list(length=500)
+    approved_item_ids = [
+        oid
+        for request in approved_requests
+        if (oid := parse_object_id(request.get("item_id"))) is not None
+    ]
     completed_received_count = 0
-    for request in approved_requests:
-        item_object_id = parse_object_id(request["item_id"])
-        if item_object_id is None:
-            continue
-
-        item = await items_collection.find_one({"_id": item_object_id})
-        if item is not None and item.get("status") == "completed":
-            completed_received_count += 1
+    if approved_item_ids:
+        completed_received_count = await items_collection.count_documents(
+            {"_id": {"$in": approved_item_ids}, "status": "completed"},
+        )
 
     completed_exchange_count = completed_shared_count + completed_received_count
 
@@ -127,7 +128,7 @@ async def build_reputation_lookup(
     requests_collection,
     reviews_collection,
 ) -> dict[str, dict]:
-    """Build a simple reputation map for the given user ids."""
+    """Build a full reputation map for the given user ids."""
     lookup = {}
     for user_id in dict.fromkeys(str(uid) for uid in user_ids if uid):
         try:
@@ -139,4 +140,62 @@ async def build_reputation_lookup(
             )
         except Exception:
             logger.exception("Failed to calculate reputation for user %s", user_id)
+    return lookup
+
+
+async def build_public_reputation_lookup(
+    user_ids: list[str],
+    *,
+    users_collection,
+    reviews_collection,
+) -> dict[str, dict]:
+    """Batch-fetch lightweight owner reputation for public item listings."""
+    unique_ids = list(dict.fromkeys(str(uid) for uid in user_ids if uid))
+    if not unique_ids:
+        return {}
+
+    trust_by_user: dict[str, int] = {}
+    if users_collection is not None:
+        object_ids = [oid for uid in unique_ids if (oid := parse_object_id(uid))]
+        if object_ids:
+            user_docs = await users_collection.find(
+                {"_id": {"$in": object_ids}},
+                {"trust_score": 1},
+            ).to_list(length=len(object_ids))
+            for user_doc in user_docs:
+                trust_by_user[str(user_doc["_id"])] = int(user_doc.get("trust_score") or 0)
+
+    review_stats: dict[str, dict] = {}
+    if reviews_collection is not None:
+        pipeline = [
+            {"$match": {"reviewed_user_id": {"$in": unique_ids}}},
+            {
+                "$group": {
+                    "_id": "$reviewed_user_id",
+                    "review_count": {"$sum": 1},
+                    "average_rating": {"$avg": "$rating"},
+                }
+            },
+        ]
+        rows = await reviews_collection.aggregate(pipeline).to_list(length=len(unique_ids))
+        for row in rows:
+            uid = str(row["_id"])
+            count = int(row["review_count"])
+            review_stats[uid] = {
+                "review_count": count,
+                "average_rating": round(float(row["average_rating"]), 1) if count > 0 else 0.0,
+            }
+
+    lookup: dict[str, dict] = {}
+    for uid in unique_ids:
+        trust_score = trust_by_user.get(uid, 0)
+        stats = review_stats.get(uid, {"review_count": 0, "average_rating": 0.0})
+        lookup[uid] = {
+            "user_id": uid,
+            "trust_score": trust_score,
+            "level": determine_level(trust_score),
+            "next_level_points": get_next_level_points(trust_score),
+            "review_count": stats["review_count"],
+            "average_rating": stats["average_rating"],
+        }
     return lookup

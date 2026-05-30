@@ -8,7 +8,6 @@ import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
 import AuthenticatedHomePage from './pages/AuthenticatedHomePage.jsx'
 import ChatLayout from './pages/ChatLayout.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
-import DeliveryTrackingPage from './pages/DeliveryTrackingPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import NeedsBoardPage from './pages/NeedsBoardPage.jsx'
 import HomePage from './pages/HomePage.jsx'
@@ -21,6 +20,7 @@ import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import CheckYourEmailPage from './pages/CheckYourEmailPage.jsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
+import RequestItemModal from './components/RequestItemModal.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import FlashBanner from './components/FlashBanner.jsx'
 import NotificationBell from './components/NotificationBell.jsx'
@@ -49,7 +49,6 @@ const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
 const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const CONVERSATIONS_ENDPOINT = `${API_BASE}/api/conversations/my`
-const DELIVERIES_ENDPOINT = `${API_BASE}/api/deliveries/my`
 const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
 const TOKEN_KEY = 'happiness_exchange_token'
 const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
@@ -144,6 +143,9 @@ export default function App() {
   const [requestsMessage, setRequestsMessage] = useState('')
   const [requestsError, setRequestsError] = useState('')
   const [cancelPendingRequestId, setCancelPendingRequestId] = useState('')
+  const [requestModalItem, setRequestModalItem] = useState(null)
+  const [requestSubmitting, setRequestSubmitting] = useState(false)
+  const [requestSubmitError, setRequestSubmitError] = useState('')
 
   const [profileUpdating, setProfileUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
@@ -165,9 +167,6 @@ export default function App() {
   // Chat state — map of requestId → conversationId
   const [conversations, setConversations] = useState([])
   const [chatUnreadTotal, setChatUnreadTotal] = useState(0)
-
-  // Deliveries state
-  const [myDeliveries, setMyDeliveries] = useState([])
 
   const [needRequests, setNeedRequests] = useState([])
   const [loadingNeedRequests, setLoadingNeedRequests] = useState(true)
@@ -319,18 +318,16 @@ export default function App() {
     if (!currentUser) return
     setLoadingRequests(true); setRequestsError('')
     try {
-      const [myRes, ownerRes, delivRes] = await Promise.all([
+      const [myRes, ownerRes] = await Promise.all([
         fetch(MY_REQUESTS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/requests/incoming`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(DELIVERIES_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
       ])
-      const [myData, ownerData, delivData] = await Promise.all([myRes.json(), ownerRes.json(), delivRes.json()])
+      const [myData, ownerData] = await Promise.all([myRes.json(), ownerRes.json()])
       if (myRes.ok && ownerRes.ok) {
         setMyRequests(asArray(myData))
         setOwnerRequests(asArray(ownerData))
       }
       else setRequestsError('Failed to sync activity.')
-      if (delivRes.ok) setMyDeliveries(asArray(delivData))
     } catch { setRequestsError('Unable to sync activity.') }
     finally { setLoadingRequests(false) }
   }
@@ -581,17 +578,38 @@ export default function App() {
     }))
   }
 
-  async function handleCreateRequest(itemId) {
-    setRequestsError(''); setRequestsMessage('')
+  function openRequestModal(item) {
+    setRequestSubmitError('')
+    setRequestModalItem(item)
+  }
+
+  async function handleCreateRequest(itemId, reason) {
+    setRequestsError('')
+    setRequestsMessage('')
+    setRequestSubmitError('')
+    setRequestSubmitting(true)
     try {
       const res = await fetch(`${API_BASE}/api/requests/${itemId}`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(formatApiError(data, 'Request failed.'))
-      setRequestsMessage('Request sent to owner!')
-      await loadItems(); await loadRequestData(); return data
-    } catch (err) { setRequestsError(err.message); return null }
+      setRequestModalItem(null)
+      setRequestsMessage('Request sent to the donor for review!')
+      await loadItems()
+      await loadRequestData()
+      return data
+    } catch (err) {
+      setRequestSubmitError(err.message)
+      return null
+    } finally {
+      setRequestSubmitting(false)
+    }
   }
 
   async function handleRequestAction(requestId, action) {
@@ -604,7 +622,7 @@ export default function App() {
       if (!res.ok) throw new Error(formatApiError(data, 'Action failed.'))
       setRequestsMessage(
         action === 'approve'
-          ? 'That request has been approved and the item is now reserved.'
+          ? 'Request approved. Our team will coordinate the exchange through Messages.'
           : 'That request has been declined.',
       )
       await loadItems(); await loadMyItems(); await loadRequestData()
@@ -1008,7 +1026,7 @@ export default function App() {
                     <AuthenticatedHomePage
                       items={items} currentUser={currentUser} myReputation={myReputation}
                       getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
-                      onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
+                      onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                       loadingItems={loadingItems} itemsError={itemsError}
                       onRefreshItems={loadItems}
                       myRequests={myRequests} ownerRequests={ownerRequests}
@@ -1016,7 +1034,7 @@ export default function App() {
                   ) : (
                     <HomePage
                       items={items} currentUser={currentUser}
-                      getMyRequestForItem={getMyRequestForItem} onCreateRequest={handleCreateRequest}
+                      getMyRequestForItem={getMyRequestForItem} onCreateRequest={openRequestModal}
                       loadingItems={loadingItems} itemsError={itemsError}
                       myRequests={myRequests} ownerRequests={ownerRequests}
                     />
@@ -1045,7 +1063,7 @@ export default function App() {
                   <BrowseItemsPage
                     items={items} currentUser={currentUser}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
-                    onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
+                    onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onRefreshItems={loadItems} loadingItems={loadingItems} itemsError={itemsError}
                   />
                 }
@@ -1090,7 +1108,7 @@ export default function App() {
                     loadingItems={loadingItems} itemsError={itemsError}
                     onRefreshItems={loadItems}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
-                    onCreateRequest={handleCreateRequest} onOpenReview={openReviewModal}
+                    onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
                     ownerActionItemId={ownerActionItemId}
                   />
@@ -1106,7 +1124,7 @@ export default function App() {
                   <DashboardPage
                     currentUser={currentUser} items={items} myReputation={myReputation}
                     myItems={myItems} myRequests={myRequests} ownerRequests={ownerRequests}
-                    myDeliveries={myDeliveries} loadRequestData={loadRequestData} token={token}
+                    loadRequestData={loadRequestData}
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
@@ -1134,9 +1152,7 @@ export default function App() {
                     onRequestAction={handleRequestAction}
                     onCancelRequest={handleCancelRequest}
                     cancelPendingRequestId={cancelPendingRequestId}
-                    myDeliveries={myDeliveries}
                     loadRequestData={loadRequestData}
-                    token={token}
                   />
                 }
               />
@@ -1150,7 +1166,7 @@ export default function App() {
               />
               <Route
                 path="/deliveries/:deliveryId"
-                element={<DeliveryTrackingPage token={token} currentUser={currentUser} />}
+                element={<Navigate to="/requests" replace />}
               />
               <Route
                 path="/reputation"
@@ -1231,6 +1247,19 @@ export default function App() {
         submitting={reviewSubmitting}
         onClose={closeReviewModal}
         onSubmit={handleSubmitReview}
+      />
+      <RequestItemModal
+        item={requestModalItem}
+        open={Boolean(requestModalItem)}
+        submitting={requestSubmitting}
+        error={requestSubmitError}
+        onClose={() => {
+          if (!requestSubmitting) {
+            setRequestModalItem(null)
+            setRequestSubmitError('')
+          }
+        }}
+        onSubmit={handleCreateRequest}
       />
       </div>
     </NotificationProvider>

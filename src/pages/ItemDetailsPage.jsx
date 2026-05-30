@@ -160,7 +160,7 @@ export default function ItemDetailsPage({
             showFlash('Please verify your email to request an item.')
             return
           }
-          onCreateRequest(item.id)
+          onCreateRequest(item)
         }}
       >
         Request this item

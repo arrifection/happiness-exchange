@@ -1,12 +1,11 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { asArray } from '../lib/api.js'
+import IncomingRequestReview from '../components/IncomingRequestReview.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import TrustLevelLadder from '../components/TrustLevelLadder.jsx'
 import { Button, EmptyState, ErrorState, RequestCardSkeletonList, SectionHeading, StatusBadge, Surface, InlineLoadingNotice } from '../components/ui.jsx'
-import { ArrangeDeliveryModal, AddDeliveryAddressModal } from '../components/delivery/DeliveryModals.jsx'
+import { Link, useNavigate } from 'react-router-dom'
 
 function StatCard({ label, value, onClick, highlight, to }) {
   const navigate = useNavigate()
@@ -78,16 +77,10 @@ export default function DashboardPage({
   loadingRequests,
   requestsMessage,
   requestsError,
-  myDeliveries,
   loadRequestData,
-  token
 }) {
-  const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
-  const [addAddressDelivery, setAddAddressDelivery] = useState(null)
-
   const requestList = asArray(myRequests)
   const incomingRequests = asArray(ownerRequests)
-  const deliveries = asArray(myDeliveries)
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
   const itemsSharedCount = myItems?.length || 0
@@ -219,30 +212,6 @@ export default function DashboardPage({
         />
       ) : null}
 
-      {arrangeDeliveryRequest && (
-        <ArrangeDeliveryModal
-          request={arrangeDeliveryRequest}
-          token={token}
-          onComplete={(newDelivery) => {
-            setArrangeDeliveryRequest(null)
-            loadRequestData()
-          }}
-          onCancel={() => setArrangeDeliveryRequest(null)}
-        />
-      )}
-
-      {addAddressDelivery && (
-        <AddDeliveryAddressModal
-          delivery={addAddressDelivery}
-          token={token}
-          onComplete={(updatedDelivery) => {
-            setAddAddressDelivery(null)
-            loadRequestData()
-          }}
-          onCancel={() => setAddAddressDelivery(null)}
-        />
-      )}
-
       <div className="flex flex-col gap-6 md:gap-8 lg:flex-row">
         {/* My Requests */}
         <div className="flex-1 space-y-4 md:space-y-5">
@@ -268,39 +237,17 @@ export default function DashboardPage({
                 const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
+                    {request.reason ? (
+                      <p className="mt-2 text-[11px] italic leading-relaxed text-he-muted">&ldquo;{request.reason}&rdquo;</p>
+                    ) : null}
                     <div className="mt-2.5 flex flex-col gap-1.5 border-t border-he-border/60 pt-2">
-                      {request.status === 'approved' && (() => {
-                        const delivery = deliveries.find((d) => d.request_id === request.id)
-                        if (delivery) {
-                          if (delivery.status === 'awaiting_dropoff_address' && delivery.receiver_id === currentUser.id) {
-                            return (
-                              <Button
-                                className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
-                                onClick={() => setAddAddressDelivery(delivery)}
-                              >
-                                📍 Add Delivery Address
-                              </Button>
-                            )
-                          }
-                          return (
-                            <Button
-                              as="link"
-                              to={`/deliveries/${delivery.id}`}
-                              className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
-                            >
-                              🚚 Track Delivery
-                            </Button>
-                          )
-                        }
-                        return null
-                      })()}
                       {request.status === 'approved' && convId && (
                         <Button
                           as="link"
                           to={`/messages/${convId}`}
-                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#8b4cf6] text-white"
+                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-he-purple text-white"
                         >
-                          💬 Open Chat
+                          Open Messages
                         </Button>
                       )}
                       {reviewContext ? (
@@ -346,38 +293,13 @@ export default function DashboardPage({
                 const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
+                    <IncomingRequestReview request={request} />
                     {request.status === 'pending' ? (
                       <div className="mt-2.5 flex gap-1.5 border-t border-he-border/60 pt-2">
                         <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction?.(request.id, 'approve')}>Approve</Button>
                         <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction?.(request.id, 'reject')}>Decline</Button>
                       </div>
                     ) : null}
-                    {request.status === 'approved' && (() => {
-                      const delivery = deliveries.find((d) => d.request_id === request.id)
-                      if (!delivery) {
-                        return (
-                          <div className="mt-1.5 flex gap-1.5">
-                            <Button
-                              className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#1f1f1f] text-white"
-                              onClick={() => setArrangeDeliveryRequest(request)}
-                            >
-                              📦 Arrange Delivery
-                            </Button>
-                          </div>
-                        )
-                      }
-                      return (
-                        <div className="mt-1.5 flex gap-1.5">
-                          <Button
-                            as="link"
-                            to={`/deliveries/${delivery.id}`}
-                            className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
-                          >
-                            🚚 Track Delivery
-                          </Button>
-                        </div>
-                      )
-                    })()}
                     {request.status === 'approved' && convId && (
                       <div className="mt-1.5 flex gap-1.5">
                         <Button
@@ -385,7 +307,7 @@ export default function DashboardPage({
                           to={`/messages/${convId}`}
                           className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
                         >
-                          💬 Open Chat
+                          Open Messages
                         </Button>
                       </div>
                     )}

@@ -198,6 +198,7 @@ async def seed_all(*, execute: bool, allow_staging: bool) -> dict:
                 "requester_name": requester_name,
                 "owner_id": item_doc["owner_id"],
                 "owner_name": item_doc["owner_name"],
+                "reason": "I am requesting this seeded test item because it would help my household during load testing.",
                 "status": status,
                 "created_at": random_past_datetime(90, rng),
                 "is_test_data": True,

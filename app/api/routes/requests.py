@@ -9,11 +9,14 @@ from app.db.mongodb import (
     get_conversations_collection_async,
     get_items_collection_async,
     get_requests_collection_async,
+    get_reviews_collection_async,
+    get_users_collection_async,
 )
-from app.schemas.requests import RequestResponse
+from app.schemas.requests import RequestCreateRequest, RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
 from app.services.notifications import create_notification
+from app.services.reputation import build_public_reputation_lookup
 from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
@@ -22,6 +25,7 @@ router = APIRouter()
 @router.post("/requests/{item_id}", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_request(
     item_id: str,
+    payload: RequestCreateRequest,
     current_user: dict = Depends(get_verified_user),
 ):
     """Create an interest request for an item."""
@@ -32,6 +36,13 @@ async def create_request(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection is not available.",
+        )
+
+    reason = payload.reason.strip()
+    if len(reason) < 30:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please explain why you need this item in at least 30 characters.",
         )
 
     object_id = parse_object_id(item_id)
@@ -60,7 +71,7 @@ async def create_request(
             detail="This item is not currently available for requests.",
         )
 
-    request_document = build_request_document(item, current_user)
+    request_document = build_request_document(item, current_user, reason=reason)
     request_document["created_at"] = datetime.now(timezone.utc)
 
     try:
@@ -79,7 +90,7 @@ async def create_request(
         create_notification(
             user_id=item["owner_id"],
             title="New Request Received",
-            message=f"{current_user.get('name')} requested your item '{item.get('title')}'.",
+            message=f"{current_user.get('name')} requested your item '{item.get('title')}' and shared why they need it.",
             type_="request_received",
             action_url=f"/requests/incoming"
         )
@@ -109,6 +120,8 @@ async def list_my_requests(current_user: dict = Depends(get_current_user)):
 async def list_incoming_requests(current_user: dict = Depends(get_current_user)):
     """Return requests for items owned by the logged-in user."""
     requests_collection = await get_requests_collection_async()
+    users_collection = await get_users_collection_async()
+    reviews_collection = await get_reviews_collection_async()
     if requests_collection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -119,7 +132,23 @@ async def list_incoming_requests(current_user: dict = Depends(get_current_user))
         {"owner_id": current_user["id"]},
     ).sort("created_at", DESCENDING)
     requests = await cursor.to_list(length=100)
-    return [serialize_request(request) for request in requests]
+
+    requester_ids = [str(request["requester_id"]) for request in requests if request.get("requester_id")]
+    reputation_lookup: dict[str, dict] = {}
+    if requester_ids and users_collection is not None and reviews_collection is not None:
+        reputation_lookup = await build_public_reputation_lookup(
+            requester_ids,
+            users_collection=users_collection,
+            reviews_collection=reviews_collection,
+        )
+
+    return [
+        serialize_request(
+            request,
+            requester_reputation=reputation_lookup.get(str(request.get("requester_id", ""))),
+        )
+        for request in requests
+    ]
 
 
 @router.get("/items/{item_id}/requests", response_model=list[RequestResponse])
@@ -280,7 +309,7 @@ async def update_request_status(
         create_notification(
             user_id=request["requester_id"],
             title="Request Approved!",
-            message=f"Your request for '{item.get('title')}' was approved. Check your messages to coordinate pickup.",
+            message=f"Your request for '{item.get('title')}' was approved. Our team will contact you through Messages to coordinate the exchange.",
             type_="request_approved",
             action_url=f"/messages"
         )

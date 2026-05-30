@@ -173,7 +173,7 @@ export default function ItemCard({
             showFlash('Please verify your email to request an item.')
             return
           }
-          onCreateRequest(item.id)
+          onCreateRequest(item)
         }}
       >
         Interested

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { asArray } from '../lib/api.js'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
+import IncomingRequestReview from '../components/IncomingRequestReview.jsx'
 import {
   Button,
   EmptyState,
@@ -12,7 +13,6 @@ import {
   StatusBadge,
   Surface,
 } from '../components/ui.jsx'
-import { ArrangeDeliveryModal } from '../components/delivery/DeliveryModals.jsx'
 
 const FILTERS = ['all', 'pending', 'approved', 'rejected']
 const VIEW_TABS = [
@@ -92,19 +92,15 @@ export default function RequestsPage({
   onRequestAction,
   onCancelRequest,
   cancelPendingRequestId,
-  myDeliveries,
   loadRequestData,
-  token,
 }) {
   const [activeView, setActiveView] = useState('mine')
   const [activeFilter, setActiveFilter] = useState('all')
-  const [arrangeDeliveryRequest, setArrangeDeliveryRequest] = useState(null)
 
   const safeMyRequests = asArray(myRequests)
   const safeOwnerRequests = asArray(ownerRequests)
   const safeMyItems = asArray(myItems)
   const safeBrowseItems = asArray(items)
-  const safeDeliveries = asArray(myDeliveries)
 
   const itemLookup = useMemo(
     () => Object.fromEntries(
@@ -199,18 +195,6 @@ export default function RequestsPage({
         />
       ) : null}
 
-      {arrangeDeliveryRequest && (
-        <ArrangeDeliveryModal
-          request={arrangeDeliveryRequest}
-          token={token}
-          onComplete={() => {
-            setArrangeDeliveryRequest(null)
-            loadRequestData()
-          }}
-          onCancel={() => setArrangeDeliveryRequest(null)}
-        />
-      )}
-
       <div className="space-y-3 pt-1 md:pt-4">
         {loadingRequests && visibleRequests.length === 0 ? (
           <RequestCardSkeletonList count={4} />
@@ -255,7 +239,6 @@ export default function RequestsPage({
                 if (activeView === 'mine') {
                   const reviewContext = getReviewContextForMyRequest?.(request)
                   const convId = getChatConversationForRequest?.(request.id, request)
-                  const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
 
                   return (
                     <RequestCardShell
@@ -265,8 +248,15 @@ export default function RequestsPage({
                     >
                       {{
                         meta: (
-                          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
-                            <span>Requested {formatRequestDate(request.created_at)}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
+                              <span>Requested {formatRequestDate(request.created_at)}</span>
+                            </div>
+                            {request.reason ? (
+                              <p className="line-clamp-3 text-[11px] italic leading-relaxed text-he-muted">
+                                &ldquo;{request.reason}&rdquo;
+                              </p>
+                            ) : null}
                           </div>
                         ),
                         actions: (
@@ -281,22 +271,13 @@ export default function RequestsPage({
                                 {cancelPendingRequestId === request.id ? 'Cancelling…' : 'Cancel Request'}
                               </Button>
                             ) : null}
-                            {request.status === 'approved' && delivery ? (
-                              <Button
-                                as="link"
-                                to={`/deliveries/${delivery.id}`}
-                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
-                              >
-                                Track Delivery
-                              </Button>
-                            ) : null}
                             {request.status === 'approved' && convId ? (
                               <Button
                                 as="link"
                                 to={`/messages/${convId}`}
                                 className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
                               >
-                                Open Chat
+                                Open Messages
                               </Button>
                             ) : null}
                             {reviewContext ? (
@@ -316,7 +297,6 @@ export default function RequestsPage({
                 }
 
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
-                const delivery = safeDeliveries.find((entry) => entry.request_id === request.id)
                 const convId = getChatConversationForRequest?.(request.id, request)
 
                 return (
@@ -326,13 +306,7 @@ export default function RequestsPage({
                     item={itemLookup[request.item_id]}
                   >
                     {{
-                      meta: (
-                        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
-                          <span>By {request.requester_name.split(' ')[0]}</span>
-                          <span className="opacity-40">/</span>
-                          <span>{formatRequestDate(request.created_at)}</span>
-                        </div>
-                      ),
+                      meta: <IncomingRequestReview request={request} />,
                       actions: (
                         <div className="mt-2 space-y-1.5 border-t border-he-border/60 pt-2">
                           {request.status === 'pending' ? (
@@ -345,31 +319,13 @@ export default function RequestsPage({
                               </Button>
                             </div>
                           ) : null}
-                          {request.status === 'approved' ? (
-                            !delivery ? (
-                              <Button
-                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#1f1f1f] text-white"
-                                onClick={() => setArrangeDeliveryRequest(request)}
-                              >
-                                Arrange Delivery
-                              </Button>
-                            ) : (
-                              <Button
-                                as="link"
-                                to={`/deliveries/${delivery.id}`}
-                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd]"
-                              >
-                                Track Delivery
-                              </Button>
-                            )
-                          ) : null}
                           {request.status === 'approved' && convId ? (
                             <Button
                               as="link"
                               to={`/messages/${convId}`}
                               className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
                             >
-                              Open Chat
+                              Open Messages
                             </Button>
                           ) : null}
                           {reviewContext ? (
