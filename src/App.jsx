@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import PrivacyPage from './pages/PrivacyPage.jsx'
 import TermsPage from './pages/TermsPage.jsx'
@@ -34,6 +34,8 @@ import {
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
 import { resolveApiBase, asArray } from './lib/api.js'
+import { getPageMeta } from './lib/siteMeta.js'
+import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
 
 const API_BASE = resolveApiBase()
@@ -105,6 +107,8 @@ function formatApiError(errorData, fallbackMessage) {
 
 export default function App() {
   const location = useLocation()
+  const pageMeta = useMemo(() => getPageMeta(location.pathname), [location.pathname])
+  usePageMeta(pageMeta)
   const navigate = useNavigate()
   const [showSplash, setShowSplash] = useState(false)
   const [token, setToken] = useState(() => readStoredToken())

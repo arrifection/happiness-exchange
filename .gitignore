@@ -32,7 +32,6 @@ dist/
 uploads/
 scripts/.seed/
 app/core/_generated_build_info.json
-public/og-image.png
 
 # Editor / IDE
 .vscode/
