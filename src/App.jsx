@@ -36,7 +36,11 @@ import {
   syncResendCooldownFromSeconds,
 } from './lib/verificationResend.js'
 import { resolveApiBase, asArray } from './lib/api.js'
-import { trackBootstrapFetch } from './lib/backendWakeup.js'
+import {
+  fetchWithBootstrapRetry,
+  isServerStartingErrorMessage,
+  SERVER_STARTING_MESSAGE,
+} from './lib/bootstrapFetch.js'
 import { getPageMeta } from './lib/siteMeta.js'
 import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
@@ -207,6 +211,36 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (!itemsError || loadingItems) return
+    if (!isServerStartingErrorMessage(itemsError)) return
+
+    const timer = window.setTimeout(() => {
+      loadItems(readLocationPreferences())
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [itemsError, loadingItems])
+
+  useEffect(() => {
+    if (!needRequestsError || loadingNeedRequests) return
+    if (!isServerStartingErrorMessage(needRequestsError)) return
+
+    const timer = window.setTimeout(() => {
+      loadNeedRequests('open')
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [needRequestsError, loadingNeedRequests])
+
+  useEffect(() => {
+    if (!token || currentUser || !authError) return
+    if (!isServerStartingErrorMessage(authError)) return
+
+    const timer = window.setTimeout(() => {
+      loadUserData()
+    }, 8000)
+    return () => window.clearTimeout(timer)
+  }, [token, currentUser, authError])
+
+  useEffect(() => {
     if (token) loadUserData()
     else setCurrentUser(null)
   }, [token])
@@ -251,39 +285,25 @@ export default function App() {
     setAuthError('')
 
     try {
-      for (let attempt = 1; attempt <= 3; attempt += 1) {
-        try {
-          const controller = new AbortController()
-          const timeoutId = window.setTimeout(() => controller.abort(), 20000)
-          const fetchFn = attempt === 1 ? trackBootstrapFetch : fetch
-          const res = await fetchFn(ME_ENDPOINT, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          })
-          window.clearTimeout(timeoutId)
-          const data = await res.json()
+      const res = await fetchWithBootstrapRetry(ME_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
 
-          if (res.ok) {
-            setCurrentUser(data)
-            return
-          }
-
-          if (res.status === 401 || res.status === 403) {
-            handleLogout()
-            setAuthError(formatApiError(data, 'Session expired. Please log in again.'))
-            return
-          }
-
-          setAuthError(formatApiError(data, 'Could not load your profile.'))
-          return
-        } catch {
-          if (attempt < 3) {
-            await new Promise((resolve) => window.setTimeout(resolve, 1500 * attempt))
-            continue
-          }
-          setAuthError('Could not reach the server. Your session is still saved — please try again.')
-        }
+      if (res.ok) {
+        setCurrentUser(data)
+        return
       }
+
+      if (res.status === 401 || res.status === 403) {
+        handleLogout()
+        setAuthError(formatApiError(data, 'Session expired. Please log in again.'))
+        return
+      }
+
+      setAuthError(formatApiError(data, 'Could not load your profile.'))
+    } catch {
+      setAuthError(`${SERVER_STARTING_MESSAGE} Your session is saved — we'll keep trying.`)
     } finally {
       setLoadingUser(false)
     }
@@ -316,8 +336,9 @@ export default function App() {
         params.set('status', String(options.status).toLowerCase())
       }
       const url = `${ITEMS_ENDPOINT}?${params.toString()}`
-      const fetchFn = options.bootstrap ? trackBootstrapFetch : fetch
-      const res = await fetchFn(url)
+      const res = options.bootstrap
+        ? await fetchWithBootstrapRetry(url)
+        : await fetch(url)
       let data = null
       try {
         data = await res.json()
@@ -344,7 +365,11 @@ export default function App() {
         setItemsError(formatApiError(data, 'Failed to load items.'))
       }
     } catch {
-      setItemsError('Unable to fetch community items. Check your connection and try again.')
+      setItemsError(
+        options.bootstrap
+          ? `${SERVER_STARTING_MESSAGE} Retrying automatically…`
+          : 'Unable to fetch community items. Check your connection and try again.',
+      )
     } finally {
       if (append) {
         setLoadingMoreItems(false)
@@ -548,13 +573,18 @@ export default function App() {
       const params = new URLSearchParams()
       if (statusFilter) params.set('status', statusFilter)
       const url = params.toString() ? `${NEED_REQUESTS_ENDPOINT}?${params.toString()}` : NEED_REQUESTS_ENDPOINT
-      const fetchFn = options.bootstrap ? trackBootstrapFetch : fetch
-      const res = await fetchFn(url)
+      const res = options.bootstrap
+        ? await fetchWithBootstrapRetry(url)
+        : await fetch(url)
       const data = await res.json()
       if (res.ok) setNeedRequests(Array.isArray(data) ? data : [])
       else setNeedRequestsError(formatApiError(data, 'Failed to load community needs.'))
     } catch {
-      setNeedRequestsError('Unable to load community needs.')
+      setNeedRequestsError(
+        options.bootstrap
+          ? `${SERVER_STARTING_MESSAGE} Retrying automatically…`
+          : 'Unable to load community needs.',
+      )
     } finally {
       setLoadingNeedRequests(false)
     }

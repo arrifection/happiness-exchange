@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 
+import {
+  SERVER_STARTING_DETAIL,
+  SERVER_STARTING_MESSAGE,
+} from '../lib/bootstrapFetch.js'
 import { dismissBackendWakeup, subscribeBackendWakeup } from '../lib/backendWakeup.js'
 
 export default function BackendWakeupBanner() {
@@ -32,10 +36,10 @@ export default function BackendWakeupBanner() {
         />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-he-ink dark:text-[#ede9ff]">
-            The server is starting up — this takes about 30 seconds on first load. Hang tight.
+            {SERVER_STARTING_MESSAGE}
           </p>
           <p className="mt-0.5 text-xs text-he-muted">
-            You can keep browsing while we connect to the backend.
+            {SERVER_STARTING_DETAIL} You can keep browsing while we connect.
           </p>
         </div>
         <button
