@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { authApi } from '../lib/api'
 import { BACKEND_ERROR_MESSAGE, isBackendUnreachable } from '../lib/backend'
+import { canAccess as roleCanAccess } from '../lib/adminPermissions'
 
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
@@ -83,6 +84,8 @@ export function AuthProvider({ children }) {
     return (ROLE_HIERARCHY[user.role] ?? 0) >= (ROLE_HIERARCHY[requiredRole] ?? 99)
   }, [user])
 
+  const canAccess = useCallback((permission) => roleCanAccess(user?.role, permission), [user])
+
   const isSuperAdmin = useCallback(() => hasRole(ROLES.SUPER_ADMIN), [hasRole])
   const isAdmin      = useCallback(() => hasRole(ROLES.ADMIN),       [hasRole])
   const isModerator  = useCallback(() => hasRole(ROLES.MODERATOR),   [hasRole])
@@ -92,7 +95,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, token, loading, isAuthenticated: !!token && !!user,
       login, logout,
-      hasRole, isSuperAdmin, isAdmin, isModerator, isCourier,
+      hasRole, canAccess, isSuperAdmin, isAdmin, isModerator, isCourier,
     }}>
       {children}
     </AuthContext.Provider>

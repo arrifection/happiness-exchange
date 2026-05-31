@@ -7,7 +7,8 @@ DELETE /api/admin/reviews/{id}   — remove any review (moderation)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_moderator_or_admin
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_REVIEWS
 from app.db.mongodb import get_reviews_collection_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import parse_object_id
@@ -20,7 +21,7 @@ router = APIRouter()
 async def list_reviews_admin(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REVIEWS)),
 ):
     """List all platform reviews. Moderator+ required."""
     reviews_collection = await get_reviews_collection_async()
@@ -42,7 +43,7 @@ async def list_reviews_admin(
 @router.delete("/{review_id}", status_code=204)
 async def admin_delete_review(
     review_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REVIEWS)),
 ):
     """
     Remove any review as a moderation action.

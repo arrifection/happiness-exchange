@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 
-from app.api.deps.admin import get_admin_user
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_DELIVERIES
 from app.db.mongodb import get_deliveries_collection_async
 from app.schemas.deliveries import DeliveryResponse, DeliveryStatusUpdateRequest
 from app.services.auth import parse_object_id
@@ -45,7 +46,7 @@ def serialize_delivery_admin(doc: dict) -> dict:
     }
 
 @router.get("/deliveries", response_model=list[DeliveryResponse])
-async def list_deliveries(current_admin: dict = Depends(get_admin_user)):
+async def list_deliveries(current_admin: dict = Depends(require_permission(PERMISSION_DELIVERIES))):
     """Courier dashboard: lists all ready or active deliveries with decrypted addresses."""
     deliveries_col = await get_deliveries_collection_async()
     if deliveries_col is None:
@@ -69,7 +70,7 @@ async def list_deliveries(current_admin: dict = Depends(get_admin_user)):
 async def update_delivery_status(
     delivery_id: str,
     payload: DeliveryStatusUpdateRequest,
-    current_admin: dict = Depends(get_admin_user)
+    current_admin: dict = Depends(require_permission(PERMISSION_DELIVERIES))
 ):
     """Update delivery status (e.g. assigned -> picked_up -> delivered)."""
     deliveries_col = await get_deliveries_collection_async()
@@ -133,7 +134,7 @@ async def update_delivery_status(
 async def upload_proof(
     delivery_id: str,
     file: UploadFile = File(...),
-    current_admin: dict = Depends(get_admin_user)
+    current_admin: dict = Depends(require_permission(PERMISSION_DELIVERIES))
 ):
     """Courier uploads proof of delivery photo."""
     deliveries_col = await get_deliveries_collection_async()

@@ -21,7 +21,8 @@ Completion rate = completed_requests / total_requests * 100
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_admin_user
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_ANALYTICS
 from app.db.mongodb import (
     get_db_async,
     get_items_collection_async,
@@ -35,7 +36,7 @@ router = APIRouter()
 
 
 @router.get("/summary")
-async def analytics_summary(admin: dict = Depends(get_admin_user)):
+async def analytics_summary(admin: dict = Depends(require_permission(PERMISSION_ANALYTICS))):
     """Return high-level platform counts. Any admin role required."""
     users_col    = await get_users_collection_async()
     items_col    = await get_items_collection_async()
@@ -91,7 +92,7 @@ async def analytics_summary(admin: dict = Depends(get_admin_user)):
 async def recent_audit_log(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    admin: dict = Depends(get_admin_user),
+    admin: dict = Depends(require_permission(PERMISSION_ANALYTICS)),
 ):
     """Return recent audit log entries (newest first). Any admin role required."""
     db = await get_db_async()

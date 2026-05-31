@@ -136,8 +136,18 @@ function TeamMemberCard({
           Last login {formatTeamDateTime(member.last_login_at)}
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className={`badge ${member.status === 'suspended' ? 'badge-red' : 'badge-green'}`}>
-            {member.status === 'suspended' ? 'Suspended' : 'Active'}
+          <span className={`badge ${
+            member.status === 'suspended'
+              ? 'badge-red'
+              : member.status === 'pending'
+                ? 'badge-yellow'
+                : 'badge-green'
+          }`}>
+            {member.status === 'suspended'
+              ? 'Suspended'
+              : member.status === 'pending'
+                ? 'Pending invite'
+                : 'Active'}
           </span>
         </div>
       </div>
@@ -430,7 +440,7 @@ export default function TeamPage() {
             ) : (
               <>
                 <p className="text-sm text-surface-500 mb-4">
-                  Enter their name and email. A staff account is created on the backend and the invite email is sent via the same Resend setup as main-site emails.
+                  Enter their name and email. They will receive a link to set their admin password. Status stays pending until they accept.
                 </p>
                 <form onSubmit={handleInvite} className="space-y-4">
                   <div>
@@ -496,7 +506,13 @@ export default function TeamPage() {
               <div><dt className="text-surface-500">Name</dt><dd className="font-medium text-surface-800">{detailMember.name}</dd></div>
               <div><dt className="text-surface-500">Email</dt><dd className="font-medium text-surface-800 break-all">{detailMember.email}</dd></div>
               <div><dt className="text-surface-500">Role</dt><dd><span className={`badge ${roleColors[detailMember.role] || 'badge-gray'}`}>{ROLE_LABELS[detailMember.role]}</span></dd></div>
-              <div><dt className="text-surface-500">Status</dt><dd>{detailMember.status === 'suspended' ? 'Suspended' : 'Active'}</dd></div>
+              <div><dt className="text-surface-500">Status</dt><dd>{
+                detailMember.status === 'pending'
+                  ? 'Pending invite — waiting for password setup'
+                  : detailMember.status === 'suspended'
+                    ? 'Suspended'
+                    : 'Active'
+              }</dd></div>
               <div><dt className="text-surface-500">Joined</dt><dd>{formatTeamDate(detailMember.created_at)}</dd></div>
               <div><dt className="text-surface-500">Last login</dt><dd>{formatTeamDateTime(detailMember.last_login_at)}</dd></div>
               <div><dt className="text-surface-500">User ID</dt><dd className="font-mono text-xs break-all">{detailMember.id}</dd></div>

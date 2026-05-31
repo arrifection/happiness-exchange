@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_moderator_or_admin
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_MESSAGES
 from app.db.mongodb import (
     get_conversations_collection_async,
     get_items_collection_async,
@@ -143,7 +144,7 @@ async def list_admin_conversations(
     limit: int = Query(50, ge=1, le=100),
     skip: int = Query(0, ge=0),
     repair_missing: bool = Query(True, description="Create missing mediated chats for approved requests"),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_MESSAGES)),
 ):
     """List approved exchanges grouped with admin_receiver and admin_lister chats."""
     requests_col = await get_requests_collection_async()
@@ -281,7 +282,7 @@ async def list_admin_conversations(
 @router.post("/{request_id}/repair")
 async def repair_admin_conversations(
     request_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_MESSAGES)),
 ):
     """Ensure admin_receiver and admin_lister chats exist for an approved request."""
     requests_col = await get_requests_collection_async()

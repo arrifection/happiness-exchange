@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_admin_user, get_moderator_or_admin, get_super_admin
+from app.api.deps.admin import get_super_admin, require_permission
+from app.core.admin_permissions import PERMISSION_USERS
 from app.db.mongodb import get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import parse_object_id, serialize_user
@@ -28,7 +29,7 @@ async def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: str = Query(""),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_USERS)),
 ):
     """List all users with optional text search. Moderator+ required."""
     users_collection = await get_users_collection_async()
@@ -57,7 +58,7 @@ async def list_users(
 @router.get("/{user_id}")
 async def get_user(
     user_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_USERS)),
 ):
     """Get a single user by ID. Moderator+ required."""
     users_collection = await get_users_collection_async()
@@ -78,7 +79,7 @@ async def get_user(
 @router.patch("/{user_id}/ban")
 async def ban_user(
     user_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_USERS)),
 ):
     """
     Ban a user — prevents login and all platform actions.
@@ -127,7 +128,7 @@ async def ban_user(
 @router.patch("/{user_id}/unban")
 async def unban_user(
     user_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_USERS)),
 ):
     """Lift a ban. Moderator+ required."""
     users_collection = await get_users_collection_async()
@@ -212,7 +213,7 @@ class TrustPenaltyRequest(BaseModel):
 async def apply_trust_penalty(
     user_id: str,
     payload: TrustPenaltyRequest,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_USERS)),
 ):
     """
     Manually deduct trust points from a user. Moderator+ required.

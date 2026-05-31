@@ -16,6 +16,7 @@ Hierarchy:
 from fastapi import Depends, HTTPException, status
 
 from app.api.deps.auth import get_current_user
+from app.core.admin_permissions import role_has_permission
 from app.core.roles import UserRole, has_role, is_admin_role
 
 
@@ -70,6 +71,35 @@ get_admin_only = _role_guard(UserRole.ADMIN, "get_admin_only")
 
 # Super admin only
 get_super_admin = _role_guard(UserRole.SUPER_ADMIN, "get_super_admin")
+
+
+def require_permission(permission: str):
+    """Require a specific admin-panel permission for the current staff role."""
+    async def _dependency(current_user: dict = Depends(get_current_user)) -> dict:
+        user_role = current_user.get("role", "user")
+
+        if not is_admin_role(user_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin panel access is restricted to authorized staff only.",
+            )
+
+        if not role_has_permission(user_role, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to perform this action.",
+            )
+
+        if current_user.get("is_banned"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account has been suspended.",
+            )
+
+        return current_user
+
+    _dependency.__name__ = f"require_permission_{permission}"
+    return _dependency
 
 
 async def require_admin(current_user: dict = Depends(get_current_user)) -> dict:

@@ -3,7 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ApiHealthProvider } from './contexts/ApiHealthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequireRole from './components/RequireRole'
-import { ROLES } from './contexts/AuthContext'
+import { PERMISSIONS } from './lib/adminPermissions'
 import { NotificationProvider } from './contexts/NotificationContext'
 // Layouts
 import AdminLayout from './layouts/AdminLayout'
@@ -43,27 +43,16 @@ export default function App() {
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="listings"   element={<RequireRole requiredRole={ROLES.MODERATOR}><ListingsPage /></RequireRole>} />
-            <Route path="users"      element={<RequireRole requiredRole={ROLES.ADMIN}><UsersPage /></RequireRole>} />
-            <Route path="requests"   element={<RequireRole requiredRole={ROLES.MODERATOR}><RequestsPage /></RequireRole>} />
-            <Route path="messages" element={<RequireRole requiredRole={ROLES.MODERATOR}><MessagesPage /></RequireRole>} />
-
-            {/* Moderator+ only */}
-            <Route
-              path="reports"
-              element={<RequireRole requiredRole={ROLES.MODERATOR}><ReportsPage /></RequireRole>}
-            />
-            <Route path="reviews" element={<RequireRole requiredRole={ROLES.MODERATOR}><ReviewsPage /></RequireRole>} />
-
-            {/* Admin+ only */}
-            <Route
-              path="team"
-              element={<RequireRole requiredRole={ROLES.SUPER_ADMIN}><TeamPage /></RequireRole>}
-            />
-
-            <Route path="courier"   element={<RequireRole requiredRole={ROLES.COURIER}><CourierPage /></RequireRole>} />
-            <Route path="analytics" element={<RequireRole requiredRole={ROLES.ADMIN}><AnalyticsPage /></RequireRole>} />
+            <Route path="dashboard" element={<RequireRole permission={PERMISSIONS.DASHBOARD}><DashboardPage /></RequireRole>} />
+            <Route path="listings" element={<RequireRole permission={PERMISSIONS.LISTINGS}><ListingsPage /></RequireRole>} />
+            <Route path="users" element={<RequireRole permission={PERMISSIONS.USERS}><UsersPage /></RequireRole>} />
+            <Route path="requests" element={<RequireRole permission={PERMISSIONS.REQUESTS}><RequestsPage /></RequireRole>} />
+            <Route path="messages" element={<RequireRole permission={PERMISSIONS.MESSAGES}><MessagesPage /></RequireRole>} />
+            <Route path="reports" element={<RequireRole permission={PERMISSIONS.REPORTS}><ReportsPage /></RequireRole>} />
+            <Route path="reviews" element={<RequireRole permission={PERMISSIONS.REVIEWS}><ReviewsPage /></RequireRole>} />
+            <Route path="team" element={<RequireRole permission={PERMISSIONS.TEAM}><TeamPage /></RequireRole>} />
+            <Route path="courier" element={<RequireRole permission={PERMISSIONS.DELIVERIES}><CourierPage /></RequireRole>} />
+            <Route path="analytics" element={<RequireRole permission={PERMISSIONS.ANALYTICS}><AnalyticsPage /></RequireRole>} />
           </Route>
 
           {/* Fallback */}

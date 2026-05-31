@@ -15,7 +15,8 @@ from pydantic import BaseModel, EmailStr, Field
 from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
-from app.api.deps.admin import get_admin_user, get_super_admin
+from app.api.deps.admin import get_super_admin, require_permission
+from app.core.admin_permissions import PERMISSION_TEAM
 from app.core.roles import ADMIN_ROLES, UserRole
 from app.db.mongodb import get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
@@ -51,8 +52,14 @@ class TeamRoleUpdateRequest(BaseModel):
 
 def _serialize_team_member(user: dict) -> dict:
     payload = serialize_user(user)
-    payload["status"] = "suspended" if user.get("is_banned") else "active"
+    if user.get("is_banned"):
+        payload["status"] = "suspended"
+    elif user.get("admin_invite_token_hash"):
+        payload["status"] = "pending"
+    else:
+        payload["status"] = "active"
     payload["last_login_at"] = user.get("last_admin_login_at")
+    payload["invite_pending"] = bool(user.get("admin_invite_token_hash"))
     return payload
 
 
@@ -104,7 +111,7 @@ def _invite_success_message(*, created_new: bool, email_sent: bool, email_error:
         )
     if created_new:
         return "Invite created, but email sending is not configured. Copy invite link manually."
-    return "Access updated, but email sending is not configured."
+    return "Invite created, but email sending is not configured. Copy invite link manually."
 
 
 async def _create_invited_staff_user(
@@ -160,7 +167,7 @@ async def _create_invited_staff_user(
 
 
 @router.get("")
-async def list_team(admin: dict = Depends(get_admin_user)):
+async def list_team(admin: dict = Depends(require_permission(PERMISSION_TEAM))):
     """List all staff members. Any admin role can view."""
     users_col = await get_users_collection_async()
     if users_col is None:
@@ -223,15 +230,25 @@ async def invite_team_member(
                 status_code=409,
                 detail="That display name is already taken. Choose a different name.",
             )
+        now = datetime.now(timezone.utc)
+        raw_token = generate_verification_token()
+        token_hash = hash_verification_token(raw_token)
+        token_expiry = now + timedelta(days=7)
         update_fields = {
             "role": role,
-            "role_updated_at": datetime.now(timezone.utc),
+            "role_updated_at": now,
             "role_updated_by": admin["id"],
             "name": display_name,
-            "name_normalized": normalize_name(display_name),
-            "updated_at": datetime.now(timezone.utc),
+            "name_normalized": normalized_name,
+            "updated_at": now,
+            "admin_invite_token_hash": token_hash,
+            "admin_invite_expires_at": token_expiry,
+            "invited_by": admin["id"],
+            "invited_at": now,
         }
         await users_col.update_one({"_id": user["_id"]}, {"$set": update_fields})
+        setup_link = build_admin_invite_link(raw_token)
+        user = await users_col.find_one({"_id": user["_id"]})
 
     await write_audit_log(
         action=AuditAction.TEAM_MEMBER_INVITED,

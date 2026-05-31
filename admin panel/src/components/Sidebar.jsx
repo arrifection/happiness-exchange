@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth, ROLES } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import { APP_NAME } from '../lib/env'
+import { PERMISSIONS } from '../lib/adminPermissions'
 import {
   LayoutDashboard,
   Package,
@@ -21,37 +22,37 @@ const navItems = [
   {
     group: 'Overview',
     items: [
-      { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, minRole: ROLES.COURIER },
-      { label: 'Analytics', to: '/analytics', icon: BarChart3, minRole: ROLES.ADMIN },
+      { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, permission: PERMISSIONS.DASHBOARD },
+      { label: 'Analytics', to: '/analytics', icon: BarChart3, permission: PERMISSIONS.ANALYTICS },
     ],
   },
   {
     group: 'Content',
     items: [
-      { label: 'Listings', to: '/listings', icon: Package, minRole: ROLES.MODERATOR },
-      { label: 'Requests', to: '/requests', icon: FileText, minRole: ROLES.MODERATOR },
-      { label: 'Messages', to: '/messages', icon: MessageSquare, minRole: ROLES.MODERATOR },
-      { label: 'Reviews', to: '/reviews', icon: Star, minRole: ROLES.MODERATOR },
+      { label: 'Listings', to: '/listings', icon: Package, permission: PERMISSIONS.LISTINGS },
+      { label: 'Requests', to: '/requests', icon: FileText, permission: PERMISSIONS.REQUESTS },
+      { label: 'Messages', to: '/messages', icon: MessageSquare, permission: PERMISSIONS.MESSAGES },
+      { label: 'Reviews', to: '/reviews', icon: Star, permission: PERMISSIONS.REVIEWS },
     ],
   },
   {
     group: 'Moderation',
     items: [
-      { label: 'Reports & Flags', to: '/reports', icon: Flag, minRole: ROLES.MODERATOR },
-      { label: 'Users', to: '/users', icon: Users, minRole: ROLES.ADMIN },
+      { label: 'Reports & Flags', to: '/reports', icon: Flag, permission: PERMISSIONS.REPORTS },
+      { label: 'Users', to: '/users', icon: Users, permission: PERMISSIONS.USERS },
     ],
   },
   {
     group: 'Operations',
     items: [
-      { label: 'Courier Coord.', to: '/courier', icon: Truck, minRole: ROLES.COURIER },
-      { label: 'Team Members', to: '/team', icon: UsersRound, minRole: ROLES.SUPER_ADMIN },
+      { label: 'Courier Coord.', to: '/courier', icon: Truck, permission: PERMISSIONS.DELIVERIES },
+      { label: 'Team Members', to: '/team', icon: UsersRound, permission: PERMISSIONS.TEAM },
     ],
   },
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, logout, hasRole } = useAuth()
+  const { user, logout, canAccess } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -63,14 +64,14 @@ export default function Sidebar({ collapsed, onToggle }) {
     super_admin: 'text-purple-700',
     admin: 'text-brand-700',
     moderator: 'text-accent-700',
-    courier: 'text-emerald-700',
+    courier: 'text-amber-700',
   }
   const roleColor = roleColors[user?.role] || 'text-surface-500'
 
   const visibleNavItems = navItems
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => hasRole(item.minRole)),
+      items: group.items.filter((item) => canAccess(item.permission)),
     }))
     .filter((group) => group.items.length > 0)
 

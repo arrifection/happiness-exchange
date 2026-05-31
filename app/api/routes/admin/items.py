@@ -7,7 +7,8 @@ DELETE /api/admin/items/{id}     — admin delete any item
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps.admin import get_moderator_or_admin
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_LISTINGS
 from app.db.mongodb import get_items_collection_async, get_requests_collection_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import parse_object_id
@@ -23,7 +24,7 @@ async def list_items_admin(
     limit: int = Query(20, ge=1, le=100),
     search: str = Query(""),
     status_filter: str = Query("", alias="status"),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_LISTINGS)),
 ):
     """List all platform items with optional search and status filter. Moderator+ required."""
     items_collection = await get_items_collection_async()
@@ -54,7 +55,7 @@ async def list_items_admin(
 @router.get("/{item_id}")
 async def get_item_admin(
     item_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_LISTINGS)),
 ):
     """Get a single item by ID. Moderator+ required."""
     items_collection = await get_items_collection_async()
@@ -75,7 +76,7 @@ async def get_item_admin(
 @router.delete("/{item_id}", status_code=204)
 async def admin_delete_item(
     item_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_LISTINGS)),
 ):
     """
     Delete any item regardless of ownership (admin override).

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useApiHealth } from '../contexts/ApiHealthContext'
+import { PERMISSIONS } from '../lib/adminPermissions'
 import StatCard from '../components/StatCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ListingDetailModal from '../components/ListingDetailModal'
@@ -22,7 +23,7 @@ import {
 const RECENT_ITEMS_COUNT = 5
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, canAccess } = useAuth()
   const { status: apiStatus, signalDataSuccess } = useApiHealth()
   const [stats, setStats]     = useState(null)
   const [recent, setRecent]   = useState([])
@@ -43,24 +44,38 @@ export default function DashboardPage() {
     setLoading(true)
     setError(null)
     try {
-      const [summaryRes, itemsRes, reportsRes] = await Promise.all([
-        analyticsApi.summary(),
-        itemsApi.list({ limit: RECENT_ITEMS_COUNT }),
-        reportsApi.list({ status: 'open', limit: 1 }),
-      ])
+      const requests = []
+      if (canAccess(PERMISSIONS.ANALYTICS)) requests.push(analyticsApi.summary())
+      if (canAccess(PERMISSIONS.LISTINGS)) requests.push(itemsApi.list({ limit: RECENT_ITEMS_COUNT }))
+      if (canAccess(PERMISSIONS.REPORTS)) requests.push(reportsApi.list({ status: 'open', limit: 1 }))
 
-      // Signal shared health context — data loaded = backend is reachable.
+      const results = await Promise.all(requests)
       signalDataSuccess()
 
-      const summary = summaryRes.data
-      setOpenReports(reportsRes.data.total ?? 0)
+      let summary = null
+      let items = []
+      let reportsTotal = 0
+      let index = 0
+      if (canAccess(PERMISSIONS.ANALYTICS)) {
+        summary = results[index]?.data
+        index += 1
+      }
+      if (canAccess(PERMISSIONS.LISTINGS)) {
+        items = Array.isArray(results[index]?.data?.items) ? results[index].data.items : []
+        index += 1
+      }
+      if (canAccess(PERMISSIONS.REPORTS)) {
+        reportsTotal = results[index]?.data?.total ?? 0
+      }
+
+      setOpenReports(canAccess(PERMISSIONS.REPORTS) ? reportsTotal : null)
       setStats({
-        totalItems:    summary.items?.total ?? 0,
-        totalUsers:    summary.users?.total ?? 0,
-        totalRequests: summary.requests?.open ?? summary.requests?.total ?? 0,
-        totalReviews:  summary.reviews?.total ?? 0,
+        totalItems: summary?.items?.total ?? null,
+        totalUsers: summary?.users?.total ?? null,
+        totalRequests: summary?.requests?.open ?? summary?.requests?.total ?? null,
+        totalReviews: summary?.reviews?.total ?? null,
       })
-      setRecent(Array.isArray(itemsRes.data.items) ? itemsRes.data.items : [])
+      setRecent(items)
     } catch (err) {
       setError(resolveApiError(err))
     } finally {
@@ -123,13 +138,22 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        <StatCard label="Total Listings" value={stats?.totalItems?.toLocaleString() ?? '—'} icon={Package} color="brand" sub="All items on platform" to="/listings" />
-        <StatCard label="Registered Users" value={stats?.totalUsers?.toLocaleString() ?? '—'} icon={Users} color="emerald" sub="Total accounts" to="/users" />
-        <StatCard label="Open Requests" value={stats?.totalRequests?.toLocaleString() ?? '—'} icon={FileText} color="amber" sub="Pending exchanges" to="/requests" />
-        <StatCard label="Reviews" value={stats?.totalReviews?.toLocaleString() ?? '—'} icon={Star} color="purple" sub="Platform feedback" to="/reviews" />
+        {canAccess(PERMISSIONS.LISTINGS) ? (
+          <StatCard label="Total Listings" value={stats?.totalItems?.toLocaleString() ?? '—'} icon={Package} color="brand" sub="All items on platform" to="/listings" />
+        ) : null}
+        {canAccess(PERMISSIONS.USERS) ? (
+          <StatCard label="Registered Users" value={stats?.totalUsers?.toLocaleString() ?? '—'} icon={Users} color="emerald" sub="Total accounts" to="/users" />
+        ) : null}
+        {canAccess(PERMISSIONS.REQUESTS) ? (
+          <StatCard label="Open Requests" value={stats?.totalRequests?.toLocaleString() ?? '—'} icon={FileText} color="amber" sub="Pending exchanges" to="/requests" />
+        ) : null}
+        {canAccess(PERMISSIONS.REVIEWS) ? (
+          <StatCard label="Reviews" value={stats?.totalReviews?.toLocaleString() ?? '—'} icon={Star} color="purple" sub="Platform feedback" to="/reviews" />
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {canAccess(PERMISSIONS.LISTINGS) ? (
         <div className="xl:col-span-2 card">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-semibold text-surface-800 flex items-center gap-2">
@@ -178,8 +202,9 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+        ) : null}
 
-        <div className="card space-y-4">
+        <div className={`card space-y-4 ${canAccess(PERMISSIONS.LISTINGS) ? '' : 'xl:col-span-3'}`}>
           <h3 className="font-semibold text-surface-800 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
             Platform Health
@@ -194,9 +219,9 @@ export default function DashboardPage() {
               },
               {
                 label: 'Open Reports',
-                value: openReports?.toLocaleString() ?? '—',
+                value: canAccess(PERMISSIONS.REPORTS) ? (openReports?.toLocaleString() ?? '—') : 'Hidden',
                 icon: AlertTriangle,
-                color: (openReports ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600',
+                color: canAccess(PERMISSIONS.REPORTS) && (openReports ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600',
               },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="flex items-center justify-between py-2 border-b border-surface-300/80 last:border-0">

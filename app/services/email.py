@@ -314,7 +314,7 @@ def send_team_invite_email(
     else:
         action_url = admin_panel_url
         action_label = "Open admin panel"
-        intro_text = "Sign in with your existing Happiness Exchange account to open the admin panel."
+        intro_text = "Open the admin panel and sign in with your staff password."
         plain_text = (
             f"Hi {recipient},\n\n"
             f"{inviter} has added you to the Happiness Exchange admin team as {role_label}.\n\n"

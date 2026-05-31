@@ -191,7 +191,8 @@ class AdminTeamTests(IsolatedAsyncioTestCase):
         body = res.json()
         self.assertIn("email sending is not configured", body["message"].lower())
         self.assertFalse(body["email_sent"])
-        self.assertIsNone(body.get("invite_link"))
+        self.assertEqual(body["member"]["status"], "pending")
+        self.assertIn("accept-invite?token=", body.get("invite_link") or "")
         promoted = self.users_col.users[str(self.target_id)]
         self.assertEqual(promoted["role"], UserRole.MODERATOR.value)
 
@@ -219,6 +220,8 @@ class AdminTeamTests(IsolatedAsyncioTestCase):
         self.assertEqual(res.status_code, 200)
         body = res.json()
         self.assertTrue(body["created_new"])
+        self.assertEqual(body["member"]["status"], "pending")
+        self.assertTrue(body["member"]["invite_pending"])
         self.assertIn("accept-invite?token=", body["invite_link"])
         self.assertIn("admin-panel-happy-exchange.vercel.app", body["invite_link"])
         created = next(

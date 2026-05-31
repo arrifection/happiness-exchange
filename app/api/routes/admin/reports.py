@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_moderator_or_admin
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_REPORTS
 from app.db.mongodb import get_db_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import parse_object_id
@@ -45,7 +46,7 @@ async def list_reports(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     status_filter: str = Query("", alias="status"),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REPORTS)),
 ):
     """List platform reports. Moderator+ required."""
     col = await _get_reports_collection()
@@ -68,7 +69,7 @@ async def list_reports(
 @router.post("", status_code=201)
 async def create_report(
     payload: ReportCreateRequest,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REPORTS)),
 ):
     """Create a new flag/report. Moderator+ required."""
     col = await _get_reports_collection()
@@ -103,7 +104,7 @@ async def create_report(
 @router.patch("/{report_id}/resolve", status_code=200)
 async def resolve_report(
     report_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REPORTS)),
 ):
     """Mark a report as resolved. Moderator+ required. Audit logged."""
     col = await _get_reports_collection()
@@ -178,7 +179,7 @@ async def resolve_report(
 @router.patch("/{report_id}/dismiss", status_code=200)
 async def dismiss_report(
     report_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REPORTS)),
 ):
     """Dismiss a report (no action taken). Moderator+ required. Audit logged."""
     col = await _get_reports_collection()

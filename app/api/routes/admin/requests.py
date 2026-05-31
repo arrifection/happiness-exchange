@@ -13,7 +13,8 @@ joining users and items collections.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import DESCENDING
 
-from app.api.deps.admin import get_moderator_or_admin
+from app.api.deps.admin import require_permission
+from app.core.admin_permissions import PERMISSION_REQUESTS
 from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
@@ -136,7 +137,7 @@ async def list_requests_admin(
     limit: int = Query(20, ge=1, le=100),
     search: str = Query("", description="Search by item title, requester name, or reason"),
     status_filter: str = Query("", alias="status", description="Filter by request status"),
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REQUESTS)),
 ):
     """
     List all platform exchange requests with enriched user/item data.
@@ -176,7 +177,7 @@ async def list_requests_admin(
 @router.get("/{request_id}")
 async def get_request_admin(
     request_id: str,
-    admin: dict = Depends(get_moderator_or_admin),
+    admin: dict = Depends(require_permission(PERMISSION_REQUESTS)),
 ):
     """
     Get a single exchange request with full enriched details.
