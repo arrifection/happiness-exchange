@@ -2,21 +2,32 @@
 Admin team management routes.
 
 GET    /api/admin/team                 — list all staff accounts
-POST   /api/admin/team/invite          — promote existing user to staff (super_admin only)
+POST   /api/admin/team/invite          — invite/create staff by email (super_admin only)
 PATCH  /api/admin/team/{user_id}/role  — change staff role (super_admin only)
 DELETE /api/admin/team/{user_id}       — demote staff to user (super_admin only)
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from pymongo import DESCENDING
+from pymongo.errors import DuplicateKeyError
 
 from app.api.deps.admin import get_admin_user, get_super_admin
+from app.core.config import settings
 from app.core.roles import ADMIN_ROLES, UserRole
 from app.db.mongodb import get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
-from app.services.auth import parse_object_id, serialize_user
+from app.services.auth import (
+    generate_verification_token,
+    hash_password,
+    hash_verification_token,
+    normalize_name,
+    parse_object_id,
+    serialize_user,
+)
+from app.services.email import EmailSendError, send_team_invite_email
 
 router = APIRouter()
 
@@ -30,7 +41,7 @@ INVITABLE_ROLES = {
 class TeamInviteRequest(BaseModel):
     email: EmailStr
     role: str
-    name: str | None = None
+    name: str = Field(min_length=2, max_length=100)
 
 
 class TeamRoleUpdateRequest(BaseModel):
@@ -78,6 +89,58 @@ def _validate_staff_role(role: str, *, allow_super_admin: bool = False) -> str:
     return role
 
 
+async def _create_invited_staff_user(
+    users_col,
+    *,
+    normalized_email: str,
+    display_name: str,
+    role: str,
+    admin: dict,
+) -> tuple[dict, str]:
+    """Create a pending staff account and return the user doc + raw invite token."""
+    normalized_name = normalize_name(display_name)
+    existing_name = await users_col.find_one({"name_normalized": normalized_name})
+    if existing_name is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="That display name is already taken. Choose a different name.",
+        )
+
+    now = datetime.now(timezone.utc)
+    raw_token = generate_verification_token()
+    token_hash = hash_verification_token(raw_token)
+    token_expiry = now + timedelta(days=7)
+    placeholder_password = hash_password(secrets.token_urlsafe(32))
+
+    user_document = {
+        "name": " ".join(display_name.strip().split()),
+        "name_normalized": normalized_name,
+        "email": normalized_email,
+        "hashed_password": placeholder_password,
+        "role": role,
+        "account_type": "staff",
+        "is_verified": True,
+        "is_banned": False,
+        "admin_invite_token_hash": token_hash,
+        "admin_invite_expires_at": token_expiry,
+        "invited_by": admin["id"],
+        "invited_at": now,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    try:
+        result = await users_col.insert_one(user_document)
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=409,
+            detail="An account with this email already exists.",
+        )
+
+    created = {**user_document, "_id": result.inserted_id}
+    return created, raw_token
+
+
 @router.get("")
 async def list_team(admin: dict = Depends(get_admin_user)):
     """List all staff members. Any admin role can view."""
@@ -101,9 +164,9 @@ async def invite_team_member(
     admin: dict = Depends(get_super_admin),
 ):
     """
-    Promote an existing user to a staff role by email.
-    Super admin only. The user must already have an account.
-    Email delivery is not configured — access is granted immediately.
+    Invite someone to the admin team by email.
+    Creates a new staff account when needed, or promotes an existing user.
+    Sends an invite email via Resend when configured.
     """
     role = _validate_staff_role(payload.role, allow_super_admin=False)
     if role not in INVITABLE_ROLES:
@@ -117,44 +180,109 @@ async def invite_team_member(
         raise HTTPException(status_code=503, detail="Database unavailable.")
 
     normalized_email = payload.email.strip().lower()
+    display_name = payload.name.strip()
     user = await users_col.find_one({"email": normalized_email})
+    setup_link = None
+    created_new = False
+
     if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"No account found with email '{normalized_email}'. "
-                "The user must sign up on the platform first."
-            ),
+        user, raw_token = await _create_invited_staff_user(
+            users_col,
+            normalized_email=normalized_email,
+            display_name=display_name,
+            role=role,
+            admin=admin,
         )
-
-    old_role = user.get("role", "user")
-    update_fields = {
-        "role": role,
-        "role_updated_at": datetime.now(timezone.utc),
-        "role_updated_by": admin["id"],
-    }
-    if payload.name and payload.name.strip():
-        update_fields["name"] = payload.name.strip()
-
-    await users_col.update_one({"_id": user["_id"]}, {"$set": update_fields})
+        setup_link = f"{settings.ADMIN_PANEL_URL.rstrip('/')}/accept-invite?token={raw_token}"
+        old_role = "none"
+        created_new = True
+    else:
+        old_role = user.get("role", "user")
+        normalized_name = normalize_name(display_name)
+        existing_name = await users_col.find_one({"name_normalized": normalized_name})
+        if existing_name is not None and str(existing_name["_id"]) != str(user["_id"]):
+            raise HTTPException(
+                status_code=409,
+                detail="That display name is already taken. Choose a different name.",
+            )
+        update_fields = {
+            "role": role,
+            "role_updated_at": datetime.now(timezone.utc),
+            "role_updated_by": admin["id"],
+            "name": display_name,
+            "name_normalized": normalize_name(display_name),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        await users_col.update_one({"_id": user["_id"]}, {"$set": update_fields})
 
     await write_audit_log(
         action=AuditAction.TEAM_MEMBER_INVITED,
         admin_user=admin,
         target_type="user",
         target_id=str(user["_id"]),
-        detail={"email": normalized_email, "from_role": old_role, "to_role": role},
+        detail={
+            "email": normalized_email,
+            "from_role": old_role,
+            "to_role": role,
+            "created_new": created_new,
+        },
     )
 
+    email_sent = False
+    email_error = None
+    recipient_name = display_name
+    inviter_name = admin.get("name") or admin.get("full_name") or admin.get("email") or "Super Admin"
+    try:
+        email_sent = send_team_invite_email(
+            to_email=normalized_email,
+            recipient_name=recipient_name,
+            inviter_name=inviter_name,
+            role=role,
+            setup_link=setup_link,
+        )
+    except EmailSendError as exc:
+        email_error = exc.message
+
     refreshed = await users_col.find_one({"_id": user["_id"]})
-    return {
-        "message": (
+    if created_new:
+        if email_sent:
+            message = (
+                f"Invite sent to '{normalized_email}'. "
+                "They can set their password from the email link to access the admin panel."
+            )
+        elif email_error:
+            message = (
+                f"Staff account created for '{normalized_email}', "
+                f"but the invite email could not be sent: {email_error}"
+            )
+        else:
+            message = (
+                f"Staff account created for '{normalized_email}'. "
+                "Email sending is not configured — share the admin panel link manually."
+            )
+    elif email_sent:
+        message = (
+            f"'{normalized_email}' now has '{role}' access. "
+            "An invitation email was sent with admin panel login instructions."
+        )
+    elif email_error:
+        message = (
+            f"'{normalized_email}' now has '{role}' access, "
+            f"but the notification email could not be sent: {email_error}"
+        )
+    else:
+        message = (
             f"'{normalized_email}' now has '{role}' access. "
             "Email sending is not configured — access was applied immediately."
-        ),
+        )
+
+    return {
+        "message": message,
         "user_id": str(user["_id"]),
         "role": role,
-        "email_sent": False,
+        "email_sent": email_sent,
+        "email_error": email_error,
+        "created_new": created_new,
         "member": _serialize_team_member(refreshed or user),
     }
 

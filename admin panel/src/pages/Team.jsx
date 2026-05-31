@@ -210,7 +210,8 @@ export default function TeamPage() {
       const res = await teamApi.invite(invite)
       setShowInvite(false)
       setInvite({ name: '', email: '', role: ROLES.MODERATOR })
-      showMessage(res.data?.message || 'Team member access granted.')
+      const tone = res.data?.email_error ? 'error' : 'success'
+      showMessage(res.data?.message || 'Team member access granted.', tone)
       await loadTeam()
     } catch (err) {
       showMessage(resolveApiError(err), 'error')
@@ -357,13 +358,15 @@ export default function TeamPage() {
               </button>
             </div>
             <p className="text-sm text-surface-500 mb-4">
-              The person must already have a Happiness Exchange account. Access is granted immediately — email sending is not configured.
+              Enter their name and email. They do not need a main-site account — a staff account is created and an invite email is sent to set their password.
             </p>
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
-                <label className="form-label">Display name (optional)</label>
+                <label className="form-label">Full name</label>
                 <input
                   type="text"
+                  required
+                  minLength={2}
                   className="form-input"
                   placeholder="Jane Admin"
                   value={invite.name}
@@ -395,7 +398,7 @@ export default function TeamPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={inviteLoading} className="btn-primary flex-1 justify-center">
-                  {inviteLoading ? 'Granting access…' : 'Grant Access'}
+                  {inviteLoading ? 'Sending invite…' : 'Send invite'}
                 </button>
                 <button type="button" onClick={() => setShowInvite(false)} className="btn-secondary flex-1 justify-center">
                   Cancel

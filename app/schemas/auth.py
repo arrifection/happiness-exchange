@@ -39,6 +39,18 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class AcceptInviteRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=128)
+    password: str = Field(min_length=8, max_length=72)
+
+
+class InvitePreviewResponse(BaseModel):
+    email: EmailStr
+    name: str
+    role: str
+    expires_at: datetime | None = None
+
+
 class VerifyEmailResponse(BaseModel):
     message: str
     status: str  # "verified" | "already_verified"

@@ -82,6 +82,117 @@ def _verification_html(verify_link: str) -> str:
     """
 
 
+ROLE_LABELS = {
+    "courier": "Courier",
+    "moderator": "Moderator",
+    "admin": "Admin",
+    "super_admin": "Super Admin",
+}
+
+
+def _post_resend_email(to_email: str, subject: str, html: str, plain_text: str) -> bool:
+    """
+    Send email via Resend.
+
+    Returns True when Resend accepts the message, False when RESEND_API_KEY is
+    not configured (dev terminal fallback). Raises EmailSendError on failure.
+    """
+    api_key = _clean_api_key(settings.RESEND_API_KEY)
+    email_from = (settings.EMAIL_FROM or "").strip()
+    normalized_to = to_email.strip().lower()
+
+    if not api_key:
+        logger.warning(
+            "RESEND_API_KEY not configured (resend_key_configured=false). "
+            "Email not sent to %s. Subject: %s",
+            normalized_to,
+            subject,
+        )
+        print(f"\n[DEV] Email to {normalized_to}\nSubject: {subject}\n{plain_text}\n")
+        return False
+
+    from_domain = parse_from_domain(email_from)
+    if from_domain and from_domain != VERIFIED_SENDER_DOMAIN:
+        logger.warning(
+            "EMAIL_FROM domain '%s' does not match verified Resend domain '%s'. "
+            "Resend may return 403. EMAIL_FROM=%s",
+            from_domain,
+            VERIFIED_SENDER_DOMAIN,
+            email_from,
+        )
+
+    payload = {
+        "from": email_from,
+        "to": [normalized_to],
+        "subject": subject,
+        "html": html,
+        "text": plain_text,
+    }
+
+    logger.info(
+        "Sending Resend email to=%s from=%s subject=%s",
+        normalized_to,
+        email_from,
+        subject,
+    )
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            response = client.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+
+        if response.is_success:
+            logger.info(
+                "Resend email accepted for %s (status=%s subject=%s)",
+                normalized_to,
+                response.status_code,
+                subject,
+            )
+            return True
+
+        body = response.text
+        logger.error(
+            "Resend API failure: status=%s to=%s from=%s subject=%s body=%s",
+            response.status_code,
+            normalized_to,
+            email_from,
+            subject,
+            body[:500],
+        )
+        raise EmailSendError(
+            _friendly_resend_error(response.status_code, body, email_from),
+            status_code=response.status_code,
+            resend_body=body,
+        )
+
+    except EmailSendError:
+        raise
+    except httpx.HTTPError as exc:
+        logger.error(
+            "Resend HTTP transport error to=%s from=%s subject=%s error=%s",
+            normalized_to,
+            email_from,
+            subject,
+            exc,
+        )
+        raise EmailSendError(f"Could not reach Resend API: {exc}") from exc
+    except Exception as exc:
+        logger.error(
+            "Unexpected email send error to=%s from=%s subject=%s error=%s",
+            normalized_to,
+            email_from,
+            subject,
+            exc,
+        )
+        raise EmailSendError(f"Unexpected email send error: {exc}") from exc
+
+
 def _friendly_resend_error(status_code: int, body: str, from_address: str) -> str:
     body_lower = (body or "").lower()
     domain = parse_from_domain(from_address)
@@ -119,98 +230,101 @@ def send_verification_email(to_email: str, token: str) -> None:
 
     Raises EmailSendError when Resend is configured but delivery fails.
     """
-    api_key = _clean_api_key(settings.RESEND_API_KEY)
-    email_from = (settings.EMAIL_FROM or "").strip()
     verify_link = f"{settings.APP_BASE_URL.rstrip('/')}/verify-email?token={token}"
-
-    if not api_key:
-        logger.warning(
-            "RESEND_API_KEY not configured (resend_key_configured=false). "
-            "Verification link for %s:\n%s",
-            to_email,
-            verify_link,
-        )
-        print(f"\n[DEV] Email verification link for {to_email}:\n{verify_link}\n")
-        return
-
-    from_domain = parse_from_domain(email_from)
-    if from_domain and from_domain != VERIFIED_SENDER_DOMAIN:
-        logger.warning(
-            "EMAIL_FROM domain '%s' does not match verified Resend domain '%s'. "
-            "Resend may return 403. EMAIL_FROM=%s",
-            from_domain,
-            VERIFIED_SENDER_DOMAIN,
-            email_from,
-        )
-
     plain_text = (
         "Please verify your email to start listing items, requesting items, "
         "chatting, and reviewing exchanges.\n\n"
         f"{verify_link}\n\n"
         "This link expires in 24 hours."
     )
-
-    payload = {
-        "from": email_from,
-        "to": [to_email.strip().lower()],
-        "subject": "Verify your Happiness Exchange account",
-        "html": _verification_html(verify_link),
-        "text": plain_text,
-    }
-
-    logger.info(
-        "Sending Resend verification email to=%s from=%s resend_key_configured=true app_base_url=%s",
+    _post_resend_email(
         to_email,
-        email_from,
-        settings.APP_BASE_URL,
+        "Verify your Happiness Exchange account",
+        _verification_html(verify_link),
+        plain_text,
     )
 
-    try:
-        with httpx.Client(timeout=15.0) as client:
-            response = client.post(
-                RESEND_API_URL,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
 
-        if response.is_success:
-            logger.info("Resend verification email accepted for %s (status=%s)", to_email, response.status_code)
-            return
+def _team_invite_html(
+    *,
+    recipient_name: str,
+    inviter_name: str,
+    role_label: str,
+    action_url: str,
+    action_label: str,
+    intro_text: str,
+) -> str:
+    return f"""
+    <html>
+      <body style="font-family: sans-serif; line-height: 1.6; color: #1f1f1f;">
+        <h2 style="color: #8b4cf6;">Admin team invitation</h2>
+        <p>Hi {recipient_name},</p>
+        <p>
+          <strong>{inviter_name}</strong> has invited you to join the Happiness Exchange admin team
+          as <strong>{role_label}</strong>.
+        </p>
+        <p>{intro_text}</p>
+        <div style="margin-top: 24px; margin-bottom: 24px;">
+            <a href="{action_url}" style="background-color: #8b4cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">{action_label}</a>
+        </div>
+        <p style="font-size: 12px; color: #68766d;">If the button above does not work, copy and paste this link into your browser:<br/>{action_url}</p>
+      </body>
+    </html>
+    """
 
-        body = response.text
-        logger.error(
-            "Resend API failure: status=%s to=%s from=%s resend_key_configured=true body=%s",
-            response.status_code,
-            to_email,
-            email_from,
-            body[:500],
+
+def send_team_invite_email(
+    *,
+    to_email: str,
+    recipient_name: str,
+    inviter_name: str,
+    role: str,
+    setup_link: str | None = None,
+) -> bool:
+    """
+    Notify a user that they were invited to the admin team.
+
+    When setup_link is provided, the email is for a newly created staff account
+    and includes a password-setup link. Otherwise it points to the admin login page.
+
+    Returns True when Resend accepts the message, False when email is not
+    configured (dev fallback). Raises EmailSendError when configured but fails.
+    """
+    role_label = ROLE_LABELS.get(role, role.replace("_", " ").title())
+    admin_panel_url = settings.ADMIN_PANEL_URL.rstrip("/")
+    recipient = recipient_name.strip() or to_email
+    inviter = inviter_name.strip() or "A super admin"
+
+    if setup_link:
+        action_url = setup_link
+        action_label = "Accept invite & set password"
+        intro_text = "Use the link below to set your password and open the admin panel. This link expires in 7 days."
+        plain_text = (
+            f"Hi {recipient},\n\n"
+            f"{inviter} has invited you to the Happiness Exchange admin team as {role_label}.\n\n"
+            f"Set your password and open the admin panel:\n{setup_link}\n\n"
+            "This link expires in 7 days."
         )
-        raise EmailSendError(
-            _friendly_resend_error(response.status_code, body, email_from),
-            status_code=response.status_code,
-            resend_body=body,
+    else:
+        action_url = admin_panel_url
+        action_label = "Open admin panel"
+        intro_text = "Sign in with your existing Happiness Exchange account to open the admin panel."
+        plain_text = (
+            f"Hi {recipient},\n\n"
+            f"{inviter} has added you to the Happiness Exchange admin team as {role_label}.\n\n"
+            f"Open the admin panel:\n{admin_panel_url}\n"
         )
 
-    except EmailSendError:
-        raise
-    except httpx.HTTPError as exc:
-        logger.error(
-            "Resend HTTP transport error to=%s from=%s resend_key_configured=true error=%s",
-            to_email,
-            email_from,
-            exc,
-        )
-        raise EmailSendError(
-            f"Could not reach Resend API: {exc}",
-        ) from exc
-    except Exception as exc:
-        logger.error(
-            "Unexpected email send error to=%s from=%s resend_key_configured=true error=%s",
-            to_email,
-            email_from,
-            exc,
-        )
-        raise EmailSendError(f"Unexpected email send error: {exc}") from exc
+    return _post_resend_email(
+        to_email,
+        "You've been invited to the Happiness Exchange admin team",
+        _team_invite_html(
+            recipient_name=recipient,
+            inviter_name=inviter,
+            role_label=role_label,
+            action_url=action_url,
+            action_label=action_label,
+            intro_text=intro_text,
+        ),
+        plain_text,
+    )

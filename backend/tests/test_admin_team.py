@@ -57,13 +57,31 @@ class FakeUsersCollection:
             for user in self.users.values():
                 if user.get("email") == email:
                     return user
+        name_normalized = query.get("name_normalized")
+        if name_normalized is not None:
+            for user in self.users.values():
+                if user.get("name_normalized") == name_normalized:
+                    return user
+        token_hash = query.get("admin_invite_token_hash")
+        if token_hash is not None:
+            for user in self.users.values():
+                if user.get("admin_invite_token_hash") == token_hash:
+                    return user
         return None
+
+    async def insert_one(self, doc):
+        oid = ObjectId()
+        stored = {**doc, "_id": oid}
+        self.users[str(oid)] = stored
+        return SimpleNamespace(inserted_id=oid)
 
     async def update_one(self, query, update):
         user = await self.find_one(query)
         if user is None:
             return SimpleNamespace(modified_count=0)
         user.update(update.get("$set", {}))
+        for key in update.get("$unset", {}):
+            user.pop(key, None)
         return SimpleNamespace(modified_count=1)
 
 
@@ -134,6 +152,7 @@ class AdminTeamTests(IsolatedAsyncioTestCase):
 
         admin_team_routes.get_users_collection_async = get_users
         admin_team_routes.write_audit_log = noop_audit
+        admin_team_routes.send_team_invite_email = lambda **kwargs: False
 
         self.app = FastAPI()
         self.app.include_router(admin_team_routes.router, prefix="/api/admin/team")
@@ -169,15 +188,48 @@ class AdminTeamTests(IsolatedAsyncioTestCase):
             "name": "Target User",
         })
         self.assertEqual(res.status_code, 200)
-        self.assertIn("email sending is not configured", res.json()["message"].lower())
+        body = res.json()
+        self.assertIn("email sending is not configured", body["message"].lower())
+        self.assertFalse(body["email_sent"])
         promoted = self.users_col.users[str(self.target_id)]
         self.assertEqual(promoted["role"], UserRole.MODERATOR.value)
+
+    def test_invite_sends_email_when_configured(self):
+        admin_team_routes.send_team_invite_email = lambda **kwargs: True
+        client = self._client_as_super_admin()
+        res = client.post("/api/admin/team/invite", json={
+            "email": "target@example.com",
+            "role": UserRole.ADMIN.value,
+            "name": "Target User",
+        })
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body["email_sent"])
+        self.assertIn("invitation email was sent", body["message"].lower())
+
+    def test_invite_creates_new_staff_account(self):
+        client = self._client_as_super_admin()
+        res = client.post("/api/admin/team/invite", json={
+            "email": "newstaff@example.com",
+            "role": UserRole.MODERATOR.value,
+            "name": "New Staff",
+        })
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body["created_new"])
+        created = next(
+            user for user in self.users_col.users.values()
+            if user.get("email") == "newstaff@example.com"
+        )
+        self.assertEqual(created["role"], UserRole.MODERATOR.value)
+        self.assertTrue(created.get("admin_invite_token_hash"))
 
     def test_cannot_invite_super_admin(self):
         client = self._client_as_super_admin()
         res = client.post("/api/admin/team/invite", json={
             "email": "target@example.com",
             "role": UserRole.SUPER_ADMIN.value,
+            "name": "Target User",
         })
         self.assertEqual(res.status_code, 400)
 

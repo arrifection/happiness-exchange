@@ -41,9 +41,11 @@ export default api
 // ── Auth endpoints ─────────────────────────────────────────────────────────────
 export const authApi = {
   // Admin panel uses its own login endpoint — rejects non-admin roles with 403
-  login:   (data) => api.post('/api/admin/auth/login', data),
-  me:      ()     => api.get('/api/me'),
-  refresh: ()     => api.post('/api/auth/refresh'),
+  login:         (data) => api.post('/api/admin/auth/login', data),
+  invitePreview: (token) => api.get('/api/admin/auth/invite-preview', { params: { token } }),
+  acceptInvite:  (data) => api.post('/api/admin/auth/accept-invite', data),
+  me:            ()     => api.get('/api/me'),
+  refresh:       ()     => api.post('/api/auth/refresh'),
 }
 
 // ── Users endpoints (Admin) ───────────────────────────────────────────────────

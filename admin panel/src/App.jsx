@@ -10,6 +10,7 @@ import AdminLayout from './layouts/AdminLayout'
 
 // Pages
 import LoginPage         from './pages/Login'
+import AcceptInvitePage  from './pages/AcceptInvite'
 import DashboardPage     from './pages/Dashboard'
 import ListingsPage      from './pages/Listings'
 import UsersPage         from './pages/Users'
@@ -30,6 +31,7 @@ export default function App() {
           <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
           {/* Protected Admin Shell */}
           <Route
