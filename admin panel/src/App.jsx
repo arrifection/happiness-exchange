@@ -46,7 +46,6 @@ export default function App() {
             <Route path="users"      element={<RequireRole requiredRole={ROLES.ADMIN}><UsersPage /></RequireRole>} />
             <Route path="requests"   element={<RequireRole requiredRole={ROLES.MODERATOR}><RequestsPage /></RequireRole>} />
             <Route path="messages" element={<RequireRole requiredRole={ROLES.MODERATOR}><MessagesPage /></RequireRole>} />
-            <Route path="messages/:conversationId" element={<RequireRole requiredRole={ROLES.MODERATOR}><MessagesPage /></RequireRole>} />
 
             {/* Moderator+ only */}
             <Route

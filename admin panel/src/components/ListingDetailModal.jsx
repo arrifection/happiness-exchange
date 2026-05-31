@@ -10,6 +10,7 @@ import {
   getListingOwnerLabel,
   getListingStatusBadgeClass,
 } from '../lib/listings'
+import MediatedChatActions from './MediatedChatActions'
 
 export default function ListingDetailModal({ itemId, fallbackItem, open, onClose }) {
   const [item, setItem] = useState(fallbackItem || null)
@@ -146,6 +147,13 @@ export default function ListingDetailModal({ itemId, fallbackItem, open, onClose
                     </p>
                   </div>
                 </div>
+
+                {(item?.status === 'reserved' || item?.status === 'completed') ? (
+                  <MediatedChatActions
+                    itemId={getListingId(item)}
+                    requestStatus="approved"
+                  />
+                ) : null}
               </div>
             </>
           )}

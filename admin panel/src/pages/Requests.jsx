@@ -3,6 +3,7 @@ import { requestsApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
 import MediatedChatActions from '../components/MediatedChatActions'
+import { useApiHealth } from '../contexts/ApiHealthContext'
 import {
   FileText, Search, Filter, RefreshCw, X, ChevronLeft, ChevronRight,
   User, Package, Calendar, MessageSquare, ExternalLink,
