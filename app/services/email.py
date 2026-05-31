@@ -62,8 +62,14 @@ def get_email_diagnostics() -> dict[str, Any]:
         "expected_sender_domain": VERIFIED_SENDER_DOMAIN,
         "sender_domain_matches_verified": domain == VERIFIED_SENDER_DOMAIN,
         "app_base_url": settings.APP_BASE_URL.rstrip("/"),
+        "admin_panel_url": settings.ADMIN_PANEL_URL.rstrip("/"),
         "resend_mode": get_resend_mode(),
     }
+
+
+def build_admin_invite_link(token: str) -> str:
+    """Build accept-invite URL on the admin panel (never the public app URL)."""
+    return f"{settings.ADMIN_PANEL_URL.rstrip('/')}/accept-invite?token={token}"
 
 
 def _verification_html(verify_link: str) -> str:

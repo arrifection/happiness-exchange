@@ -7,6 +7,7 @@ PATCH  /api/admin/team/{user_id}/role  — change staff role (super_admin only)
 DELETE /api/admin/team/{user_id}       — demote staff to user (super_admin only)
 """
 from datetime import datetime, timedelta, timezone
+import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,7 +16,6 @@ from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
 from app.api.deps.admin import get_admin_user, get_super_admin
-from app.core.config import settings
 from app.core.roles import ADMIN_ROLES, UserRole
 from app.db.mongodb import get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
@@ -27,9 +27,10 @@ from app.services.auth import (
     parse_object_id,
     serialize_user,
 )
-from app.services.email import EmailSendError, send_team_invite_email
+from app.services.email import EmailSendError, build_admin_invite_link, send_team_invite_email
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 INVITABLE_ROLES = {
     UserRole.COURIER.value,
@@ -87,6 +88,23 @@ def _validate_staff_role(role: str, *, allow_super_admin: bool = False) -> str:
             detail="Promoting to super admin is not allowed through this action.",
         )
     return role
+
+
+def _invite_success_message(*, created_new: bool, email_sent: bool, email_error: str | None) -> str:
+    if email_sent:
+        return "Invite sent successfully."
+    if email_error:
+        if created_new:
+            return (
+                f"Invite created, but the email could not be sent: {email_error} "
+                "Copy the invite link manually."
+            )
+        return (
+            f"Access updated, but the email could not be sent: {email_error}"
+        )
+    if created_new:
+        return "Invite created, but email sending is not configured. Copy invite link manually."
+    return "Access updated, but email sending is not configured."
 
 
 async def _create_invited_staff_user(
@@ -193,7 +211,7 @@ async def invite_team_member(
             role=role,
             admin=admin,
         )
-        setup_link = f"{settings.ADMIN_PANEL_URL.rstrip('/')}/accept-invite?token={raw_token}"
+        setup_link = build_admin_invite_link(raw_token)
         old_role = "none"
         created_new = True
     else:
@@ -242,39 +260,32 @@ async def invite_team_member(
         )
     except EmailSendError as exc:
         email_error = exc.message
+        logger.error(
+            "Admin team invite email failed for %s: %s",
+            normalized_email,
+            email_error,
+        )
 
-    refreshed = await users_col.find_one({"_id": user["_id"]})
-    if created_new:
-        if email_sent:
-            message = (
-                f"Invite sent to '{normalized_email}'. "
-                "They can set their password from the email link to access the admin panel."
-            )
-        elif email_error:
-            message = (
-                f"Staff account created for '{normalized_email}', "
-                f"but the invite email could not be sent: {email_error}"
+    if not email_sent:
+        if email_error:
+            logger.warning(
+                "Admin invite created for %s but Resend delivery failed.",
+                normalized_email,
             )
         else:
-            message = (
-                f"Staff account created for '{normalized_email}'. "
-                "Email sending is not configured — share the admin panel link manually."
+            logger.warning(
+                "Admin invite created for %s but email was not sent (RESEND_API_KEY not configured).",
+                normalized_email,
             )
-    elif email_sent:
-        message = (
-            f"'{normalized_email}' now has '{role}' access. "
-            "An invitation email was sent with admin panel login instructions."
-        )
-    elif email_error:
-        message = (
-            f"'{normalized_email}' now has '{role}' access, "
-            f"but the notification email could not be sent: {email_error}"
-        )
-    else:
-        message = (
-            f"'{normalized_email}' now has '{role}' access. "
-            "Email sending is not configured — access was applied immediately."
-        )
+
+    refreshed = await users_col.find_one({"_id": user["_id"]})
+    message = _invite_success_message(
+        created_new=created_new,
+        email_sent=email_sent,
+        email_error=email_error,
+    )
+    # Only expose the token link when email did not send (super-admin endpoint).
+    invite_link = setup_link if setup_link and not email_sent else None
 
     return {
         "message": message,
@@ -283,6 +294,7 @@ async def invite_team_member(
         "email_sent": email_sent,
         "email_error": email_error,
         "created_new": created_new,
+        "invite_link": invite_link,
         "member": _serialize_team_member(refreshed or user),
     }
 

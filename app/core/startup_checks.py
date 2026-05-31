@@ -19,7 +19,9 @@ def validate_production_settings() -> list[str]:
         warnings.append("JWT_SECRET_KEY is still the default value.")
 
     if is_prod and not settings.RESEND_API_KEY:
-        warnings.append("RESEND_API_KEY is missing — verification emails will fail.")
+        warnings.append(
+            "RESEND_API_KEY is missing — verification and admin invite emails will not send."
+        )
 
     if is_prod and not settings.CLOUDINARY_CLOUD_NAME:
         warnings.append("Cloudinary is not configured — image uploads will fail in production.")

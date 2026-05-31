@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   UsersRound, Plus, Mail, Shield, RefreshCw, Search, Filter,
-  MoreVertical, Eye, UserCog, UserMinus, X, Clock, CalendarDays,
+  MoreVertical, Eye, UserCog, UserMinus, X, Clock, CalendarDays, Copy, Check,
 } from 'lucide-react'
 
 import { ROLES, useAuth } from '../contexts/AuthContext'
@@ -159,6 +159,8 @@ export default function TeamPage() {
   const [showInvite, setShowInvite] = useState(false)
   const [invite, setInvite] = useState({ name: '', email: '', role: ROLES.MODERATOR })
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteResult, setInviteResult] = useState(null)
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false)
 
   const [detailMember, setDetailMember] = useState(null)
   const [roleMember, setRoleMember] = useState(null)
@@ -206,18 +208,52 @@ export default function TeamPage() {
   const handleInvite = async (e) => {
     e.preventDefault()
     setInviteLoading(true)
+    setInviteResult(null)
+    setCopiedInviteLink(false)
     try {
       const res = await teamApi.invite(invite)
-      setShowInvite(false)
-      setInvite({ name: '', email: '', role: ROLES.MODERATOR })
-      const tone = res.data?.email_error ? 'error' : 'success'
-      showMessage(res.data?.message || 'Team member access granted.', tone)
+      const data = res.data || {}
+
+      if (data.email_sent) {
+        setShowInvite(false)
+        setInvite({ name: '', email: '', role: ROLES.MODERATOR })
+        setInviteResult(null)
+        showMessage('Invite sent successfully.', 'success')
+      } else if (data.invite_link) {
+        setInviteResult({
+          message: data.message || 'Invite created, but email sending is not configured. Copy invite link manually.',
+          inviteLink: data.invite_link,
+        })
+        showMessage(data.message, data.email_error ? 'error' : 'success')
+      } else {
+        setShowInvite(false)
+        setInvite({ name: '', email: '', role: ROLES.MODERATOR })
+        showMessage(data.message || 'Team member access updated.', data.email_error ? 'error' : 'success')
+      }
       await loadTeam()
     } catch (err) {
       showMessage(resolveApiError(err), 'error')
     } finally {
       setInviteLoading(false)
     }
+  }
+
+  const copyInviteLink = async (link) => {
+    if (!link) return
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopiedInviteLink(true)
+      window.setTimeout(() => setCopiedInviteLink(false), 2000)
+    } catch {
+      showMessage('Could not copy link. Select and copy it manually.', 'error')
+    }
+  }
+
+  const closeInviteModal = () => {
+    setShowInvite(false)
+    setInviteResult(null)
+    setCopiedInviteLink(false)
+    setInvite({ name: '', email: '', role: ROLES.MODERATOR })
   }
 
   const handleChangeRole = async () => {
@@ -281,7 +317,7 @@ export default function TeamPage() {
             Refresh
           </button>
           {isSuperAdmin() ? (
-            <button type="button" onClick={(e) => { e.stopPropagation(); setShowInvite(true) }} className="btn-primary">
+            <button type="button" onClick={(e) => { e.stopPropagation(); setInviteResult(null); setShowInvite(true) }} className="btn-primary">
               <Plus className="w-4 h-4" />
               Invite Member
             </button>
@@ -353,58 +389,96 @@ export default function TeamPage() {
           <div className="card w-full max-w-md shadow-card animate-slide-in">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-semibold text-surface-800">Invite Team Member</h3>
-              <button type="button" className="btn-icon btn-ghost" onClick={() => setShowInvite(false)}>
+              <button type="button" className="btn-icon btn-ghost" onClick={closeInviteModal}>
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-surface-500 mb-4">
-              Enter their name and email. They do not need a main-site account — a staff account is created and an invite email is sent to set their password.
-            </p>
-            <form onSubmit={handleInvite} className="space-y-4">
-              <div>
-                <label className="form-label">Full name</label>
-                <input
-                  type="text"
-                  required
-                  minLength={2}
-                  className="form-input"
-                  placeholder="Jane Admin"
-                  value={invite.name}
-                  onChange={(e) => setInvite((current) => ({ ...current, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="form-label">Email address</label>
-                <input
-                  type="email"
-                  required
-                  className="form-input"
-                  placeholder="colleague@company.com"
-                  value={invite.email}
-                  onChange={(e) => setInvite((current) => ({ ...current, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="form-label">Role</label>
-                <select
-                  className="form-select"
-                  value={invite.role}
-                  onChange={(e) => setInvite((current) => ({ ...current, role: e.target.value }))}
-                >
-                  {INVITE_ROLES.map((role) => (
-                    <option key={role} value={role}>{ROLE_LABELS[role]}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={inviteLoading} className="btn-primary flex-1 justify-center">
-                  {inviteLoading ? 'Sending invite…' : 'Send invite'}
-                </button>
-                <button type="button" onClick={() => setShowInvite(false)} className="btn-secondary flex-1 justify-center">
-                  Cancel
+
+            {inviteResult ? (
+              <div className="space-y-4">
+                <div className={`rounded-lg border px-4 py-3 text-sm ${inviteResult.inviteLink ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+                  {inviteResult.message}
+                </div>
+                {inviteResult.inviteLink ? (
+                  <div className="space-y-2">
+                    <label className="form-label">Invite link</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        className="form-input text-xs"
+                        value={inviteResult.inviteLink}
+                      />
+                      <button
+                        type="button"
+                        className="btn-secondary shrink-0"
+                        onClick={() => copyInviteLink(inviteResult.inviteLink)}
+                      >
+                        {copiedInviteLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copiedInviteLink ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-surface-500">
+                      Share this link so they can set a password and sign in to the admin panel.
+                    </p>
+                  </div>
+                ) : null}
+                <button type="button" className="btn-primary w-full justify-center" onClick={closeInviteModal}>
+                  Done
                 </button>
               </div>
-            </form>
+            ) : (
+              <>
+                <p className="text-sm text-surface-500 mb-4">
+                  Enter their name and email. A staff account is created on the backend and the invite email is sent via the same Resend setup as main-site emails.
+                </p>
+                <form onSubmit={handleInvite} className="space-y-4">
+                  <div>
+                    <label className="form-label">Full name</label>
+                    <input
+                      type="text"
+                      required
+                      minLength={2}
+                      className="form-input"
+                      placeholder="Jane Admin"
+                      value={invite.name}
+                      onChange={(e) => setInvite((current) => ({ ...current, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Email address</label>
+                    <input
+                      type="email"
+                      required
+                      className="form-input"
+                      placeholder="colleague@company.com"
+                      value={invite.email}
+                      onChange={(e) => setInvite((current) => ({ ...current, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Role</label>
+                    <select
+                      className="form-select"
+                      value={invite.role}
+                      onChange={(e) => setInvite((current) => ({ ...current, role: e.target.value }))}
+                    >
+                      {INVITE_ROLES.map((role) => (
+                        <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="submit" disabled={inviteLoading} className="btn-primary flex-1 justify-center">
+                      {inviteLoading ? 'Sending invite…' : 'Send invite'}
+                    </button>
+                    <button type="button" onClick={closeInviteModal} className="btn-secondary flex-1 justify-center">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       ) : null}

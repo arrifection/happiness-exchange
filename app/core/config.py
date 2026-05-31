@@ -48,10 +48,17 @@ class Settings(BaseSettings):
     CLOUDINARY_FOLDER: str = "happiness-exchange/items"
     PUBLIC_API_BASE_URL: str = ""
 
-    # Email (Resend)
+    # Email (Resend) — shared by main-site verification and admin team invites
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "Happiness Exchange <verify@mail.happyexchange.net>"
+    EMAIL_FROM: str = Field(
+        default="Happiness Exchange <verify@mail.happyexchange.net>",
+        validation_alias=AliasChoices("EMAIL_FROM", "RESEND_FROM_EMAIL"),
+    )
     APP_BASE_URL: str = "https://www.happyexchange.net"
+    ADMIN_PANEL_URL: str = Field(
+        default="https://admin-panel-happy-exchange.vercel.app",
+        validation_alias=AliasChoices("ADMIN_PANEL_URL", "ADMIN_BASE_URL"),
+    )
     ENABLE_EMAIL_DIAGNOSTICS: bool = False
 
     # Can be overridden via env: ALLOWED_ORIGINS=https://a.vercel.app,https://b.vercel.app
@@ -119,6 +126,7 @@ class Settings(BaseSettings):
         logger.info("RESEND_API_KEY present: %s", bool(self.RESEND_API_KEY))
         logger.info("EMAIL_FROM: %s", self.EMAIL_FROM)
         logger.info("APP_BASE_URL: %s", self.APP_BASE_URL)
+        logger.info("ADMIN_PANEL_URL: %s", self.ADMIN_PANEL_URL)
         logger.info("ENABLE_EMAIL_DIAGNOSTICS: %s", self.ENABLE_EMAIL_DIAGNOSTICS)
         logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
