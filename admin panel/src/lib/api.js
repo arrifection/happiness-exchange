@@ -92,9 +92,10 @@ export const reportsApi = {
 
 // ── Team endpoints (Admin) ────────────────────────────────────────────────────
 export const teamApi = {
-  list:   ()           => api.get('/api/admin/team'),
-  invite: (data)       => api.post('/api/admin/team/invite', data),
-  remove: (id)         => api.delete(`/api/admin/team/${id}`),
+  list:       ()              => api.get('/api/admin/team'),
+  invite:     (data)          => api.post('/api/admin/team/invite', data),
+  changeRole: (id, role)      => api.patch(`/api/admin/team/${id}/role`, { role }),
+  remove:     (id)             => api.delete(`/api/admin/team/${id}`),
 }
 
 // ── Analytics endpoints (Admin) ───────────────────────────────────────────────

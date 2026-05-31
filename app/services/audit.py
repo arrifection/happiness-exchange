@@ -43,6 +43,7 @@ class AuditAction:
     # Team
     TEAM_MEMBER_INVITED = "team.member_invited"
     TEAM_MEMBER_REMOVED = "team.member_removed"
+    TEAM_MEMBER_ROLE_CHANGED = "team.member_role_changed"
 
     # Auth
     ADMIN_LOGIN    = "auth.admin_login"

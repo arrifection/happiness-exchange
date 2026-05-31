@@ -1,12 +1,8 @@
 """
 Admin-only login endpoint.
-
-POST /api/admin/auth/login
-- Accepts email + password (same credentials as public login)
-- Rejects any user whose role is not in ADMIN_ROLES
-- Returns the same TokenResponse shape as the public login
-- Logs the admin login event to the audit log
 """
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException, Request, status
 
 from app.core.slowapi_limiter import limiter
@@ -62,6 +58,11 @@ async def admin_login(request: Request, payload: LoginRequest):
         )
 
     token = create_access_token(user_response["id"], user_response["email"], user_role)
+
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"last_admin_login_at": datetime.now(timezone.utc)}},
+    )
 
     # Fire-and-forget audit log
     await write_audit_log(
