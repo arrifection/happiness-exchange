@@ -1,8 +1,8 @@
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect } from 'react'
-import { statusApi } from '../lib/api'
 import NotificationBell from './NotificationBell'
+import { fetchBackendHealthStatus } from '../lib/backendHealth'
 
 const routeLabels = {
   '/dashboard':  'Dashboard',
@@ -25,17 +25,19 @@ export default function TopBar() {
   const pageTitle = routeLabels[location.pathname] || 'Admin Panel'
 
   useEffect(() => {
+    let cancelled = false
+
     const checkStatus = async () => {
-      try {
-        await statusApi.check()
-        setApiStatus('online')
-      } catch {
-        setApiStatus('offline')
-      }
+      const next = await fetchBackendHealthStatus()
+      if (!cancelled) setApiStatus(next)
     }
+
     checkStatus()
     const interval = setInterval(checkStatus, 30_000)
-    return () => clearInterval(interval)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [])
 
   return (

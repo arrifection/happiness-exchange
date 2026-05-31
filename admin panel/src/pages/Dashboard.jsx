@@ -2,12 +2,22 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import StatCard from '../components/StatCard'
+import ConfirmDialog from '../components/ConfirmDialog'
+import ListingDetailModal from '../components/ListingDetailModal'
+import ListingThumbnail from '../components/ListingThumbnail'
 import { LoadingSpinner, ErrorState } from '../components/States'
 import {
-  Package, Users, FileText, Star, TrendingUp, CheckCircle, AlertTriangle,
+  Package, Users, FileText, Star, TrendingUp, CheckCircle, AlertTriangle, Eye, Trash2,
 } from 'lucide-react'
-import { analyticsApi, itemsApi, reportsApi, statusApi } from '../lib/api'
+import { analyticsApi, itemsApi, reportsApi } from '../lib/api'
+import { fetchBackendHealthStatus } from '../lib/backendHealth'
 import { resolveApiError } from '../lib/backend'
+import {
+  formatListingDate,
+  getListingId,
+  getListingOwnerLabel,
+  getListingStatusBadgeClass,
+} from '../lib/listings'
 
 const RECENT_ITEMS_COUNT = 5
 
@@ -18,40 +28,67 @@ export default function DashboardPage() {
   const [health, setHealth]   = useState({ api: 'checking', openReports: null })
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
+  const [toast, setToast]     = useState('')
+  const [viewItem, setViewItem] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const showToast = (message) => {
+    setToast(message)
+    window.setTimeout(() => setToast(''), 4000)
+  }
+
+  const loadDashboard = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [summaryRes, itemsRes, reportsRes] = await Promise.all([
+        analyticsApi.summary(),
+        itemsApi.list({ limit: RECENT_ITEMS_COUNT }),
+        reportsApi.list({ status: 'open', limit: 1 }),
+      ])
+
+      const apiStatus = await fetchBackendHealthStatus({ dataRequestSucceeded: true })
+
+      const summary = summaryRes.data
+      setHealth({ api: apiStatus, openReports: reportsRes.data.total ?? 0 })
+      setStats({
+        totalItems:    summary.items?.total ?? 0,
+        totalUsers:    summary.users?.total ?? 0,
+        totalRequests: summary.requests?.open ?? summary.requests?.total ?? 0,
+        totalReviews:  summary.reviews?.total ?? 0,
+      })
+      setRecent(Array.isArray(itemsRes.data.items) ? itemsRes.data.items : [])
+    } catch (err) {
+      const apiStatus = await fetchBackendHealthStatus({ dataRequestSucceeded: false })
+      setHealth((current) => ({ ...current, api: apiStatus }))
+      setError(resolveApiError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const [summaryRes, itemsRes, reportsRes] = await Promise.all([
-          analyticsApi.summary(),
-          itemsApi.list({ limit: RECENT_ITEMS_COUNT }),
-          reportsApi.list({ status: 'open', limit: 1 }),
-        ])
-
-        let apiStatus = 'online'
-        try {
-          await statusApi.check()
-        } catch {
-          apiStatus = 'offline'
-        }
-
-        const summary = summaryRes.data
-        setHealth({ api: apiStatus, openReports: reportsRes.data.total ?? 0 })
-        setStats({
-          totalItems:    summary.items?.total ?? 0,
-          totalUsers:    summary.users?.total ?? 0,
-          totalRequests: summary.requests?.open ?? summary.requests?.total ?? 0,
-          totalReviews:  summary.reviews?.total ?? 0,
-        })
-        setRecent(Array.isArray(itemsRes.data.items) ? itemsRes.data.items : [])
-      } catch (err) {
-        setError(resolveApiError(err))
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStats()
+    loadDashboard()
   }, [])
+
+  const handleDeleteListing = async () => {
+    const itemId = getListingId(deleteTarget)
+    if (!itemId) return
+
+    setDeleteLoading(true)
+    try {
+      await itemsApi.delete(itemId)
+      setRecent((current) => current.filter((item) => getListingId(item) !== itemId))
+      setStats((current) => current ? { ...current, totalItems: Math.max(0, (current.totalItems || 0) - 1) } : current)
+      showToast('Listing deleted successfully.')
+      setDeleteTarget(null)
+    } catch (err) {
+      showToast(resolveApiError(err, 'Delete failed.'))
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   const greeting = (() => {
     const h = new Date().getHours()
@@ -67,10 +104,16 @@ export default function DashboardPage() {
     'Admin'
 
   if (loading) return <LoadingSpinner message="Loading dashboard…" />
-  if (error)   return <ErrorState message={error} onRetry={() => window.location.reload()} />
+  if (error)   return <ErrorState message={error} onRetry={loadDashboard} />
 
   return (
     <div className="animate-slide-in">
+      {toast ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          {toast}
+        </div>
+      ) : null}
+
       <div className="page-header">
         <h2 className="page-title">
           {greeting},{' '}
@@ -80,10 +123,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-        <StatCard label="Total Listings" value={stats?.totalItems?.toLocaleString() ?? '—'} icon={Package} color="brand" sub="All items on platform" />
-        <StatCard label="Registered Users" value={stats?.totalUsers?.toLocaleString() ?? '—'} icon={Users} color="emerald" sub="Total accounts" />
-        <StatCard label="Open Requests" value={stats?.totalRequests?.toLocaleString() ?? '—'} icon={FileText} color="amber" sub="Pending exchanges" />
-        <StatCard label="Reviews" value={stats?.totalReviews?.toLocaleString() ?? '—'} icon={Star} color="purple" sub="Platform feedback" />
+        <StatCard label="Total Listings" value={stats?.totalItems?.toLocaleString() ?? '—'} icon={Package} color="brand" sub="All items on platform" to="/listings" />
+        <StatCard label="Registered Users" value={stats?.totalUsers?.toLocaleString() ?? '—'} icon={Users} color="emerald" sub="Total accounts" to="/users" />
+        <StatCard label="Open Requests" value={stats?.totalRequests?.toLocaleString() ?? '—'} icon={FileText} color="amber" sub="Pending exchanges" to="/requests" />
+        <StatCard label="Reviews" value={stats?.totalReviews?.toLocaleString() ?? '—'} icon={Star} color="purple" sub="Platform feedback" to="/reviews" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -99,18 +142,37 @@ export default function DashboardPage() {
             <p className="text-surface-500 text-sm py-6 text-center">No listings yet.</p>
           ) : (
             <div className="space-y-3">
-              {recent.map((item, i) => (
-                <div key={item._id || item.id || i} className="flex items-center gap-4 py-2 border-b border-surface-300/80 last:border-0">
-                  <div className="w-9 h-9 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
-                    <Package className="w-4 h-4 text-brand-600" />
-                  </div>
+              {recent.map((item) => (
+                <div key={getListingId(item)} className="flex items-center gap-4 rounded-xl border border-surface-300/80 px-3 py-3">
+                  <ListingThumbnail item={item} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-surface-800 truncate">{item.title || item.name || 'Untitled'}</p>
-                    <p className="text-xs text-surface-500 truncate">{item.category || 'Uncategorized'}</p>
+                    <p className="text-xs text-surface-500 truncate">
+                      {item.category || 'Uncategorized'} · {getListingOwnerLabel(item)}
+                    </p>
+                    <p className="text-[11px] text-surface-400 mt-0.5">{formatListingDate(item.created_at)}</p>
                   </div>
-                  <span className={`badge ${item.status === 'active' ? 'badge-green' : item.status === 'pending' ? 'badge-yellow' : 'badge-gray'}`}>
+                  <span className={`badge ${getListingStatusBadgeClass(item.status)}`}>
                     {item.status || 'unknown'}
                   </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="btn-icon btn-ghost"
+                      title="View listing"
+                      onClick={() => setViewItem(item)}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon btn-danger"
+                      title="Delete listing"
+                      onClick={() => setDeleteTarget(item)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -148,6 +210,24 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <ListingDetailModal
+        open={Boolean(viewItem)}
+        itemId={getListingId(viewItem)}
+        fallbackItem={viewItem}
+        onClose={() => setViewItem(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete listing?"
+        message={`This will permanently remove "${deleteTarget?.title || 'this listing'}" and its related requests.`}
+        confirmLabel="Delete listing"
+        danger
+        loading={deleteLoading}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteListing}
+      />
     </div>
   )
 }

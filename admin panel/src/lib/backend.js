@@ -1,5 +1,8 @@
 export const BACKEND_ERROR_MESSAGE = 'Unable to connect to backend.'
 
+/** Trailing slash avoids HF 307 redirect to http:// (breaks HTTPS admin panel). */
+export const STATUS_ENDPOINT = '/api/status/'
+
 export function isBackendUnreachable(error) {
   if (!error) return false
   if (error.response) return false

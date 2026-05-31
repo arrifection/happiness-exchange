@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_BASE_URL } from './env'
+import { STATUS_ENDPOINT } from './backend'
 
 const BASE_URL = API_BASE_URL
 
@@ -132,5 +133,6 @@ export const deliveriesApi = {
 
 // ── Status endpoint ────────────────────────────────────────────────────────────
 export const statusApi = {
-  check: () => api.get('/api/status'),
+  // Trailing slash avoids HF 307 redirect to http:// (breaks HTTPS admin panel).
+  check: () => api.get(STATUS_ENDPOINT, { timeout: 15000 }),
 }

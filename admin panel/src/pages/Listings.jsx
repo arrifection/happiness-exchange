@@ -2,9 +2,18 @@ import { useState, useEffect, useCallback } from 'react'
 import { itemsApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
+import ConfirmDialog from '../components/ConfirmDialog'
+import ListingDetailModal from '../components/ListingDetailModal'
+import ListingThumbnail from '../components/ListingThumbnail'
+import {
+  formatListingDate,
+  getListingId,
+  getListingOwnerLabel,
+  getListingStatusBadgeClass,
+} from '../lib/listings'
 import { Package, Search, Filter, Trash2, CheckCircle, RefreshCw, Eye } from 'lucide-react'
 
-const STATUS_OPTIONS = ['all', 'active', 'pending', 'expired', 'donated']
+const STATUS_OPTIONS = ['all', 'active', 'available', 'pending', 'reserved', 'completed', 'expired', 'donated']
 
 export default function ListingsPage() {
   const [items, setItems]     = useState([])
@@ -14,7 +23,16 @@ export default function ListingsPage() {
   const [search, setSearch]   = useState('')
   const [status, setStatus]   = useState('all')
   const [page, setPage]       = useState(1)
+  const [toast, setToast]     = useState('')
+  const [viewItem, setViewItem] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const limit = 20
+
+  const showToast = (message) => {
+    setToast(message)
+    window.setTimeout(() => setToast(''), 4000)
+  }
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -36,22 +54,30 @@ export default function ListingsPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems])
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this listing? This cannot be undone.')) return
+  const handleDelete = async () => {
+    const itemId = getListingId(deleteTarget)
+    if (!itemId) return
+
+    setDeleteLoading(true)
     try {
-      await itemsApi.delete(id)
+      await itemsApi.delete(itemId)
+      showToast('Listing deleted successfully.')
+      setDeleteTarget(null)
       fetchItems()
     } catch (err) {
-      alert(err.response?.data?.detail || 'Delete failed.')
+      showToast(resolveApiError(err, 'Delete failed.'))
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
   const handleApprove = async (id) => {
     try {
       await itemsApi.approve(id)
+      showToast('Listing approved.')
       fetchItems()
     } catch (err) {
-      alert(err.response?.data?.detail || 'Approval failed.')
+      showToast(resolveApiError(err, 'Approval failed.'))
     }
   }
 
@@ -59,6 +85,12 @@ export default function ListingsPage() {
 
   return (
     <div className="animate-slide-in">
+      {toast ? (
+        <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${toast.includes('failed') || toast.includes('Unable') ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+          {toast}
+        </div>
+      ) : null}
+
       <div className="page-header flex items-start justify-between">
         <div>
           <h2 className="page-title">Listings Management</h2>
@@ -70,7 +102,6 @@ export default function ListingsPage() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="card mb-5">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
@@ -98,7 +129,6 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
           <LoadingSpinner message="Loading listings…" />
@@ -112,7 +142,7 @@ export default function ListingsPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Title</th>
+                    <th>Listing</th>
                     <th>Category</th>
                     <th>Owner</th>
                     <th>Status</th>
@@ -121,57 +151,68 @@ export default function ListingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
-                    <tr key={item._id || item.id}>
-                      <td className="font-medium text-surface-800 max-w-[200px] truncate">
-                        {item.title || item.name || '—'}
-                      </td>
-                      <td>
-                        <span className="badge badge-blue">{item.category || '—'}</span>
-                      </td>
-                      <td className="text-surface-600 text-xs font-mono">
-                        {item.owner_id || item.user_id || '—'}
-                      </td>
-                      <td>
-                        <span className={`badge ${
-                          item.status === 'active'  ? 'badge-green'  :
-                          item.status === 'pending' ? 'badge-yellow' :
-                          item.status === 'donated' ? 'badge-blue'   :
-                          'badge-gray'
-                        }`}>
-                          {item.status || '—'}
-                        </span>
-                      </td>
-                      <td className="text-surface-500 text-xs">
-                        {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
-                          {item.status === 'pending' && (
+                  {items.map((item) => {
+                    const itemId = getListingId(item)
+                    return (
+                      <tr key={itemId}>
+                        <td>
+                          <div className="flex items-center gap-3 min-w-[220px]">
+                            <ListingThumbnail item={item} />
+                            <div className="min-w-0">
+                              <p className="font-medium text-surface-800 truncate">{item.title || item.name || '—'}</p>
+                              <p className="text-xs text-surface-500 truncate">{item.location_display || item.city || '—'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="badge badge-blue">{item.category || '—'}</span>
+                        </td>
+                        <td className="text-surface-600 text-xs">
+                          {getListingOwnerLabel(item)}
+                        </td>
+                        <td>
+                          <span className={`badge ${getListingStatusBadgeClass(item.status)}`}>
+                            {item.status || '—'}
+                          </span>
+                        </td>
+                        <td className="text-surface-500 text-xs">
+                          {formatListingDate(item.created_at)}
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={() => handleApprove(item._id || item.id)}
-                              className="btn-icon btn-success"
-                              title="Approve"
+                              type="button"
+                              onClick={() => setViewItem(item)}
+                              className="btn-icon btn-ghost"
+                              title="View"
                             >
-                              <CheckCircle className="w-3.5 h-3.5" />
+                              <Eye className="w-3.5 h-3.5" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(item._id || item.id)}
-                            className="btn-icon btn-danger"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {item.status === 'pending' && (
+                              <button
+                                onClick={() => handleApprove(itemId)}
+                                className="btn-icon btn-success"
+                                title="Approve"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setDeleteTarget(item)}
+                              className="btn-icon btn-danger"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-surface-300">
                 <p className="text-xs text-surface-500">
@@ -198,6 +239,24 @@ export default function ListingsPage() {
           </>
         )}
       </div>
+
+      <ListingDetailModal
+        open={Boolean(viewItem)}
+        itemId={getListingId(viewItem)}
+        fallbackItem={viewItem}
+        onClose={() => setViewItem(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete listing?"
+        message={`This will permanently remove "${deleteTarget?.title || 'this listing'}" and its related requests.`}
+        confirmLabel="Delete listing"
+        danger
+        loading={deleteLoading}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-export default function StatCard({ label, value, icon: Icon, trend, sub, color = 'brand' }) {
+export default function StatCard({ label, value, icon: Icon, trend, sub, color = 'brand', to }) {
   const colorMap = {
     brand:   { bg: 'bg-brand-50',   icon: 'text-brand-600',   ring: 'ring-brand-200' },
     emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', ring: 'ring-emerald-200' },
@@ -13,8 +14,8 @@ export default function StatCard({ label, value, icon: Icon, trend, sub, color =
   const isTrendUp   = trend?.startsWith('+')
   const isTrendDown = trend?.startsWith('-')
 
-  return (
-    <div className="stat-card">
+  const body = (
+    <>
       <div className="flex items-start justify-between mb-4">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${c.bg} ${c.ring}`}>
           {Icon && <Icon className={`w-5 h-5 ${c.icon}`} />}
@@ -37,6 +38,19 @@ export default function StatCard({ label, value, icon: Icon, trend, sub, color =
         <p className="text-sm font-medium text-surface-600 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-surface-500 mt-1">{sub}</p>}
       </div>
-    </div>
+    </>
   )
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="stat-card stat-card-link block focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2"
+      >
+        {body}
+      </Link>
+    )
+  }
+
+  return <div className="stat-card">{body}</div>
 }
