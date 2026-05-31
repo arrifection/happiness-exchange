@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ApiHealthProvider } from './contexts/ApiHealthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequireRole from './components/RequireRole'
 import { ROLES } from './contexts/AuthContext'
@@ -23,9 +24,10 @@ import MessagesPage      from './pages/Messages'
 export default function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <BrowserRouter>
-        <Routes>
+      <ApiHealthProvider>
+        <NotificationProvider>
+          <BrowserRouter>
+          <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
 
@@ -66,8 +68,9 @@ export default function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </BrowserRouter>
-      </NotificationProvider>
+        </BrowserRouter>
+        </NotificationProvider>
+      </ApiHealthProvider>
     </AuthProvider>
   )
 }

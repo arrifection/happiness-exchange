@@ -1,8 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useState, useEffect } from 'react'
+import { useApiHealth } from '../contexts/ApiHealthContext'
 import NotificationBell from './NotificationBell'
-import { fetchBackendHealthStatus } from '../lib/backendHealth'
 
 const routeLabels = {
   '/dashboard':  'Dashboard',
@@ -20,25 +19,11 @@ const routeLabels = {
 export default function TopBar() {
   const { user } = useAuth()
   const location = useLocation()
-  const [apiStatus, setApiStatus] = useState('checking')
+  // Read shared backend health status — set by ApiHealthContext polling
+  // and immediately updated when any page successfully loads data.
+  const { status: apiStatus } = useApiHealth()
 
   const pageTitle = routeLabels[location.pathname] || 'Admin Panel'
-
-  useEffect(() => {
-    let cancelled = false
-
-    const checkStatus = async () => {
-      const next = await fetchBackendHealthStatus()
-      if (!cancelled) setApiStatus(next)
-    }
-
-    checkStatus()
-    const interval = setInterval(checkStatus, 30_000)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [])
 
   return (
     <header className="h-16 bg-white/90 backdrop-blur-sm border-b border-surface-300 flex items-center justify-between px-6 sticky top-0 z-30 shadow-soft">

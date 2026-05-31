@@ -3,6 +3,20 @@ Admin analytics routes.
 
 GET /api/admin/analytics/summary  — platform-wide counts
 GET /api/admin/analytics/audit    — recent audit log entries
+
+Item statuses in use:
+  available  → active (open for requests)
+  reserved   → active (request approved, awaiting delivery)
+  completed  → completed exchange
+  removed/deleted docs should not appear in counts
+
+Request statuses in use:
+  pending    → open (awaiting owner decision)
+  approved   → in-progress (awaiting delivery/completion)
+  completed  → completed exchange
+  rejected   → closed without exchange
+
+Completion rate = completed_requests / total_requests * 100
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo import DESCENDING
@@ -32,13 +46,25 @@ async def analytics_summary(admin: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=503, detail="Database unavailable.")
 
     total_users     = await users_col.count_documents({})
-    total_items     = await items_col.count_documents({})
-    active_items    = await items_col.count_documents({"status": "active"})
-    completed_items = await items_col.count_documents({"status": "completed"})
-    total_requests  = await requests_col.count_documents({})
-    open_requests   = await requests_col.count_documents({"status": "pending"})
-    total_reviews   = await reviews_col.count_documents({})
     banned_users    = await users_col.count_documents({"is_banned": True})
+
+    total_items     = await items_col.count_documents({})
+    # "Active" = listings that are open for exchanges.
+    # Items use "available" (open for requests) and "reserved" (request approved,
+    # awaiting delivery). Both count as "active" from an admin perspective.
+    active_items    = await items_col.count_documents(
+        {"status": {"$in": ["available", "reserved"]}}
+    )
+    completed_items = await items_col.count_documents({"status": "completed"})
+
+    total_requests     = await requests_col.count_documents({})
+    # "Open" = requests still awaiting a decision from the item owner.
+    open_requests      = await requests_col.count_documents({"status": "pending"})
+    # "Completed" = exchanges that were fully completed.
+    # Completion rate = completed_requests / total_requests * 100
+    completed_requests = await requests_col.count_documents({"status": "completed"})
+
+    total_reviews = await reviews_col.count_documents({})
 
     return {
         "users": {
@@ -51,8 +77,9 @@ async def analytics_summary(admin: dict = Depends(get_admin_user)):
             "completed": completed_items,
         },
         "requests": {
-            "total": total_requests,
-            "open":  open_requests,
+            "total":     total_requests,
+            "open":      open_requests,
+            "completed": completed_requests,
         },
         "reviews": {
             "total": total_reviews,

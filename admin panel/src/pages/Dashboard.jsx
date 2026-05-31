@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useApiHealth } from '../contexts/ApiHealthContext'
 import StatCard from '../components/StatCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ListingDetailModal from '../components/ListingDetailModal'
@@ -10,7 +11,6 @@ import {
   Package, Users, FileText, Star, TrendingUp, CheckCircle, AlertTriangle, Eye, Trash2,
 } from 'lucide-react'
 import { analyticsApi, itemsApi, reportsApi } from '../lib/api'
-import { fetchBackendHealthStatus } from '../lib/backendHealth'
 import { resolveApiError } from '../lib/backend'
 import {
   formatListingDate,
@@ -23,9 +23,10 @@ const RECENT_ITEMS_COUNT = 5
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const { status: apiStatus, signalDataSuccess } = useApiHealth()
   const [stats, setStats]     = useState(null)
   const [recent, setRecent]   = useState([])
-  const [health, setHealth]   = useState({ api: 'checking', openReports: null })
+  const [openReports, setOpenReports] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [toast, setToast]     = useState('')
@@ -48,10 +49,11 @@ export default function DashboardPage() {
         reportsApi.list({ status: 'open', limit: 1 }),
       ])
 
-      const apiStatus = await fetchBackendHealthStatus({ dataRequestSucceeded: true })
+      // Signal shared health context — data loaded = backend is reachable.
+      signalDataSuccess()
 
       const summary = summaryRes.data
-      setHealth({ api: apiStatus, openReports: reportsRes.data.total ?? 0 })
+      setOpenReports(reportsRes.data.total ?? 0)
       setStats({
         totalItems:    summary.items?.total ?? 0,
         totalUsers:    summary.users?.total ?? 0,
@@ -60,8 +62,6 @@ export default function DashboardPage() {
       })
       setRecent(Array.isArray(itemsRes.data.items) ? itemsRes.data.items : [])
     } catch (err) {
-      const apiStatus = await fetchBackendHealthStatus({ dataRequestSucceeded: false })
-      setHealth((current) => ({ ...current, api: apiStatus }))
       setError(resolveApiError(err))
     } finally {
       setLoading(false)
@@ -188,15 +188,15 @@ export default function DashboardPage() {
             {[
               {
                 label: 'API Status',
-                value: health.api === 'online' ? 'Online' : health.api === 'offline' ? 'Offline' : 'Checking…',
+                value: apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Checking…',
                 icon: CheckCircle,
-                color: health.api === 'online' ? 'text-emerald-600' : health.api === 'offline' ? 'text-red-600' : 'text-accent-600',
+                color: apiStatus === 'online' ? 'text-emerald-600' : apiStatus === 'offline' ? 'text-red-600' : 'text-accent-600',
               },
               {
                 label: 'Open Reports',
-                value: health.openReports?.toLocaleString() ?? '—',
+                value: openReports?.toLocaleString() ?? '—',
                 icon: AlertTriangle,
-                color: (health.openReports ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600',
+                color: (openReports ?? 0) > 0 ? 'text-red-600' : 'text-emerald-600',
               },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="flex items-center justify-between py-2 border-b border-surface-300/80 last:border-0">
