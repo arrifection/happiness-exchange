@@ -31,9 +31,11 @@ from app.api.routes.admin.users     import router as admin_users_router
 from app.api.routes.admin.items     import router as admin_items_router
 from app.api.routes.admin.reviews   import router as admin_reviews_router
 from app.api.routes.admin.reports   import router as admin_reports_router
+from app.api.routes.admin.requests  import router as admin_requests_router
 from app.api.routes.admin.analytics import router as admin_analytics_router
 from app.api.routes.admin.team      import router as admin_team_router
 from app.api.routes.admin.deliveries import router as admin_deliveries_router
+from app.api.routes.admin.conversations import router as admin_conversations_router
 from app.core.config import settings
 from app.core.middleware import RequestLoggingMiddleware
 from app.core.startup_checks import log_production_warnings
@@ -100,9 +102,11 @@ app.include_router(admin_users_router,     prefix="/api/admin/users",     tags=[
 app.include_router(admin_items_router,     prefix="/api/admin/items",     tags=["Admin · Items"])
 app.include_router(admin_reviews_router,   prefix="/api/admin/reviews",   tags=["Admin · Reviews"])
 app.include_router(admin_reports_router,   prefix="/api/admin/reports",   tags=["Admin · Reports"])
+app.include_router(admin_requests_router,  prefix="/api/admin/requests",  tags=["Admin · Requests"])
 app.include_router(admin_analytics_router, prefix="/api/admin/analytics", tags=["Admin · Analytics"])
 app.include_router(admin_team_router,      prefix="/api/admin/team",      tags=["Admin · Team"])
 app.include_router(admin_deliveries_router, prefix="/api/admin",          tags=["Admin · Deliveries"])
+app.include_router(admin_conversations_router, prefix="/api/admin/conversations", tags=["Admin · Conversations"])
 
 # ── Diagnostic endpoint ───────────────────────────────────────────────────────
 # SAFE: never returns MONGODB_URI, password, or any secret value.

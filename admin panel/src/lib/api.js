@@ -67,11 +67,12 @@ export const itemsApi = {
   approve: (id)    => api.post(`/api/admin/items/${id}/approve`),
 }
 
-// ── Requests endpoints (still public — no admin-specific actions yet) ──────────
+// ── Requests endpoints (Admin) ────────────────────────────────────────────────
+// Calls /api/admin/requests — lists ALL platform requests with enriched data.
+// Moderator+ required.
 export const requestsApi = {
-  list:    (params) => api.get('/api/requests', { params }),
-  getById: (id)     => api.get(`/api/requests/${id}`),
-  update:  (id, d) => api.put(`/api/requests/${id}`, d),
+  list:    (params) => api.get('/api/admin/requests', { params }),
+  getById: (id)     => api.get(`/api/admin/requests/${id}`),
 }
 
 // ── Reviews endpoints (Admin) ─────────────────────────────────────────────────
@@ -104,9 +105,14 @@ export const analyticsApi = {
 
 // ── Conversations endpoints ────────────────────────────────────────────────────
 export const conversationsApi = {
-  list: () => api.get('/api/conversations/my'),
   messages: (id) => api.get(`/api/conversations/${id}/messages`),
   sendMessage: (id, data) => api.post(`/api/conversations/${id}/message`, data),
+}
+
+// ── Admin mediated messaging ───────────────────────────────────────────────────
+export const adminConversationsApi = {
+  listExchanges: (params) => api.get('/api/admin/conversations', { params }),
+  repair: (requestId) => api.post(`/api/admin/conversations/${requestId}/repair`),
 }
 
 // ── Notifications endpoints ──────────────────────────────────────────────────
