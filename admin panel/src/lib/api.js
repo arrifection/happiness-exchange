@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { API_BASE_URL } from './env'
 import { STATUS_ENDPOINT } from './backend'
+import { isPublicAdminPath, notifyAuthCleared } from './authEvents'
 
 const BASE_URL = API_BASE_URL
 
@@ -30,7 +31,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_user')
-      window.location.href = '/login'
+      notifyAuthCleared()
+      if (!isPublicAdminPath()) {
+        const next = `${window.location.pathname}${window.location.search}`
+        window.location.replace(`/login?next=${encodeURIComponent(next)}`)
+      }
     }
     return Promise.reject(error)
   },

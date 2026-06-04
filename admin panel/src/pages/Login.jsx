@@ -1,30 +1,41 @@
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { APP_NAME } from '../lib/env'
+import { SessionLoadingScreen } from '../components/BootFallback'
 import { Shield, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
-  const from = location.state?.from?.pathname || '/dashboard'
+  const params = new URLSearchParams(location.search)
+  const from = location.state?.from?.pathname || params.get('next') || '/dashboard'
 
-  const [form, setForm]       = useState({ email: '', password: '' })
-  const [showPw, setShowPw]   = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [form, setForm] = useState({ email: '', password: '' })
+  const [showPw, setShowPw] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate(from, { replace: true })
+    }
+  }, [loading, isAuthenticated, from, navigate])
+
+  if (loading) {
+    return <SessionLoadingScreen />
+  }
 
   if (isAuthenticated) {
-    navigate(from, { replace: true })
-    return null
+    return <Navigate to={from} replace />
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setSubmitting(true)
     try {
       await login(form.email, form.password)
       navigate(from, { replace: true })
@@ -35,7 +46,7 @@ export default function LoginPage() {
         'Invalid credentials. Please try again.'
       )
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -56,12 +67,12 @@ export default function LoginPage() {
             <p className="text-sm text-surface-500 mt-1">{APP_NAME}</p>
           </div>
 
-          {error && (
+          {error ? (
             <div className="mb-5 flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 animate-fade-in">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -103,10 +114,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={submitting}
               className="btn-primary w-full justify-center py-2.5 text-base mt-2"
             >
-              {loading ? (
+              {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Signing in…

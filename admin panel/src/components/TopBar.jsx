@@ -13,6 +13,7 @@ const routeLabels = {
   '/users':      'Users Management',
   '/courier':    'Courier Coordination',
   '/team':       'Team Members',
+  '/messages':   'Messages',
   '/settings':   'Settings',
 }
 

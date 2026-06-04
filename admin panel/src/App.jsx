@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ApiHealthProvider } from './contexts/ApiHealthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import RequireRole from './components/RequireRole'
-import { PERMISSIONS } from './lib/adminPermissions'
+import { PERMISSIONS, defaultRouteForRole } from './lib/adminPermissions'
 import { NotificationProvider } from './contexts/NotificationContext'
 // Layouts
 import AdminLayout from './layouts/AdminLayout'
@@ -21,6 +21,13 @@ import TeamPage          from './pages/Team'
 import CourierPage       from './pages/Courier'
 import AnalyticsPage     from './pages/Analytics'
 import MessagesPage      from './pages/Messages'
+
+function RootRedirect() {
+  const { user, loading, isAuthenticated } = useAuth()
+  if (loading) return null
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return <Navigate to={defaultRouteForRole(user?.role)} replace />
+}
 
 export default function App() {
   return (
@@ -42,7 +49,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<RootRedirect />} />
             <Route path="dashboard" element={<RequireRole permission={PERMISSIONS.DASHBOARD}><DashboardPage /></RequireRole>} />
             <Route path="listings" element={<RequireRole permission={PERMISSIONS.LISTINGS}><ListingsPage /></RequireRole>} />
             <Route path="users" element={<RequireRole permission={PERMISSIONS.USERS}><UsersPage /></RequireRole>} />
@@ -56,7 +63,7 @@ export default function App() {
           </Route>
 
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
         </BrowserRouter>
         </NotificationProvider>

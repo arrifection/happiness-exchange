@@ -1,33 +1,17 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Loader2 } from 'lucide-react'
+import { SessionLoadingScreen } from './BootFallback'
 
-/**
- * ProtectedRoute — wraps any route that requires authentication.
- * Optionally enforces a minimum role level.
- *
- * @param {object} props
- * @param {React.ReactNode} props.children
- * @param {string} [props.requiredRole] — one of ROLES values
- * @param {string} [props.redirectTo='/login']
- */
 export default function ProtectedRoute({
   children,
   requiredRole,
   redirectTo = '/login',
 }) {
-  const { isAuthenticated, loading, hasRole, user } = useAuth()
+  const { isAuthenticated, loading, bootTimedOut, hasRole, user } = useAuth()
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-surface-100 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-          <p className="text-surface-500 text-sm">Verifying session…</p>
-        </div>
-      </div>
-    )
+    return <SessionLoadingScreen timedOut={bootTimedOut} />
   }
 
   if (!isAuthenticated) {
@@ -46,6 +30,7 @@ export default function ProtectedRoute({
             <span className="text-accent-600 font-mono font-medium">{requiredRole}</span>.
           </p>
           <button
+            type="button"
             className="btn-secondary"
             onClick={() => window.history.back()}
           >
