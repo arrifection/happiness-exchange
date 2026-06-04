@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 
 import { adminConversationsApi, conversationsApi } from '../lib/api'
+import { isAdminMessage, messageSenderLabel } from '../lib/messageSender'
 import { resolveApiError } from '../lib/backend'
 import { buildMessagesUrl, chatConversationId } from '../lib/messagesNavigation'
 import { EmptyState, ErrorState, LoadingSpinner } from '../components/States'
@@ -420,7 +421,16 @@ export default function MessagesPage() {
                         <p className="text-sm text-surface-500 text-center py-8">No messages yet. Start the conversation.</p>
                       ) : (
                         messages.map((msg) => {
-                          const isAdminSide = msg.sender_id !== activeChat?.member_id
+                          const identityContext = {
+                            currentUserId: undefined,
+                            memberId: activeChat?.member_id,
+                            adminId: activeChat?.admin_id,
+                          }
+                          const isAdminSide = isAdminMessage(msg, identityContext)
+                          const senderLabel = messageSenderLabel(msg, {
+                            ...identityContext,
+                            viewerRole: 'admin',
+                          })
                           return (
                             <div key={msg.id} className={`flex ${isAdminSide ? 'justify-end' : 'justify-start'}`}>
                               <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
@@ -430,11 +440,11 @@ export default function MessagesPage() {
                               }`}>
                                 {!isAdminSide ? (
                                   <p className="text-[10px] font-bold uppercase tracking-wide mb-1 opacity-70">
-                                    {msg.sender_name}
+                                    {senderLabel}
                                   </p>
                                 ) : (
                                   <p className="text-[10px] font-bold uppercase tracking-wide mb-1 text-brand-100">
-                                    Happiness Exchange Admin
+                                    {senderLabel}
                                   </p>
                                 )}
                                 <p className="whitespace-pre-wrap">{msg.text}</p>

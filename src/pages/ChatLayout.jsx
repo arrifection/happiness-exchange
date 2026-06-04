@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
+import { isOwnMessage, messageSenderLabel } from '../lib/messageSender.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
 
@@ -546,7 +547,13 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
     }
 
     return messages.map((msg, i) => {
-      const isMe = msg.sender_id === currentUser?.id
+      const identityContext = {
+        currentUserId: currentUser?.id,
+        memberId: activeConv?.member_id,
+        adminId: activeConv?.admin_id,
+      }
+      const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })
+      const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole: 'user' })
       const showSep = shouldShowDateSeparator(messages, i)
 
       return (
@@ -562,6 +569,11 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
           ) : null}
           <div className={`mb-2 flex ${isMe ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex max-w-full flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+              {!isMe && senderLabel ? (
+                <span className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-he-soft/70">
+                  {senderLabel}
+                </span>
+              ) : null}
               <div className={`he-chat-bubble ${isMe ? 'he-chat-bubble--mine' : 'he-chat-bubble--theirs'}`}>
                 {msg.message_type === 'image' && msg.image_url ? (
                   <img

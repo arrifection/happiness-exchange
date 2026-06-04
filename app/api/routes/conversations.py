@@ -17,7 +17,14 @@ from app.services.conversations import (
     is_admin_mediated,
     user_is_participant,
 )
-from app.services.display_names import resolve_user_display_name, sanitize_display_name
+from app.services.display_names import sanitize_display_name
+from app.services.message_identity import (
+    RECEIVER_ROLE_ADMIN,
+    RECEIVER_ROLE_USER,
+    build_message_identity,
+    resolve_admin_receiver_id,
+    serialize_message_fields,
+)
 from app.services.notifications import create_notification
 from app.services.cloudinary import (
     CloudinaryConfigError,
@@ -94,19 +101,9 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
     return base
 
 
-def serialize_message(doc: dict) -> dict:
+def serialize_message(doc: dict, *, conv: dict | None = None, current_user: dict | None = None) -> dict:
     """Convert a MongoDB message document to API response shape."""
-    return {
-        "id": str(doc["_id"]),
-        "conversation_id": doc["conversation_id"],
-        "sender_id": doc["sender_id"],
-        "sender_name": sanitize_display_name(doc.get("sender_name"), fallback="User"),
-        "text": doc["text"],
-        "message_type": doc.get("message_type", "text"),
-        "image_url": doc.get("image_url"),
-        "created_at": doc["created_at"],
-        "read": doc.get("read", False),
-    }
+    return serialize_message_fields(doc, conv=conv, current_user=current_user)
 
 
 def _conversation_list_query(current_user: dict) -> dict:
@@ -303,7 +300,7 @@ async def list_messages(
 
     cursor = messages_col.find({"conversation_id": conversation_id}).sort("created_at", 1)
     docs = await cursor.to_list(length=500)
-    return [serialize_message(doc) for doc in docs]
+    return [serialize_message(doc, conv=conv, current_user=current_user) for doc in docs]
 
 
 @router.post("/conversations/{conversation_id}/message", response_model=MessageResponse)
@@ -331,12 +328,30 @@ async def send_message(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
     user_id = current_user["id"]
+    user_role = current_user.get("role", "user")
     _require_participant(conv, user_id, current_user=current_user)
 
-    if user_id == conv.get("member_id"):
-        other_id = conv.get("admin_id")
+    member_id = conv.get("member_id")
+    admin_id = conv.get("admin_id")
+
+    if user_id == member_id:
+        other_id = admin_id
+        receiver_id = await resolve_admin_receiver_id(
+            messages_col,
+            conversation_id=conversation_id,
+            fallback_admin_id=admin_id or "",
+            member_id=member_id or "",
+        )
+        receiver_role = RECEIVER_ROLE_ADMIN
     else:
-        other_id = conv.get("member_id")
+        if not is_admin_role(user_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin staff can send messages to members in this thread.",
+            )
+        other_id = member_id
+        receiver_id = member_id or ""
+        receiver_role = RECEIVER_ROLE_USER
 
     if not other_id:
         raise HTTPException(status_code=400, detail="Invalid conversation participants.")
@@ -365,16 +380,28 @@ async def send_message(
         if any(bad_word in text_lower for bad_word in profane_words):
             raise HTTPException(status_code=400, detail="Your message contains prohibited language.")
 
-    sender_name = resolve_user_display_name(current_user, fallback="User")
-    if user_id != conv.get("member_id"):
-        sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
-    else:
-        sender_name = sanitize_display_name(sender_name, fallback="User")
+    try:
+        identity = build_message_identity(
+            conv=conv,
+            current_user=current_user,
+            receiver_id=receiver_id,
+            receiver_role=receiver_role,
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin staff can send messages to members in this thread.",
+        )
+
+    sender_name = identity["sender_name"]
 
     msg_doc = {
         "conversation_id": conversation_id,
-        "sender_id": user_id,
-        "sender_name": sender_name,
+        "sender_id": identity["sender_id"],
+        "sender_role": identity["sender_role"],
+        "sender_name": identity["sender_name"],
+        "receiver_id": identity["receiver_id"],
+        "receiver_role": identity["receiver_role"],
         "text": payload.text.strip() if payload.text else "",
         "message_type": payload.message_type,
         "image_url": payload.image_url,
@@ -407,7 +434,7 @@ async def send_message(
     )
 
     created_msg = await messages_col.find_one({"_id": result.inserted_id})
-    return serialize_message(created_msg)
+    return serialize_message(created_msg, conv=conv, current_user=current_user)
 
 
 @router.post("/conversations/{conversation_id}/report", response_model=dict)

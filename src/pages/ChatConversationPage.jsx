@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { isOwnMessage, messageSenderLabel } from '../lib/messageSender.js'
 
 function formatMsgTime(dateStr) {
   if (!dateStr) return ''
@@ -188,7 +189,13 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
         )}
 
         {messages.map((msg, i) => {
-          const isMe = msg.sender_id === currentUser?.id
+          const identityContext = {
+            currentUserId: currentUser?.id,
+            memberId: conversation?.member_id,
+            adminId: conversation?.admin_id,
+          }
+          const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })
+          const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole: 'user' })
           const showSep = shouldShowDateSeparator(messages, i)
 
           return (
@@ -205,7 +212,7 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
               <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
                 {!isMe && (
                   <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b4cf6]/30 to-[#c084fc]/30 text-[10px] font-bold text-[#8b4cf6] self-end">
-                    {getInitials(msg.sender_name)}
+                    {getInitials(senderLabel)}
                   </div>
                 )}
                 <div className={`group max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>

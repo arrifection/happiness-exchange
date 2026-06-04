@@ -36,7 +36,10 @@ class MessageResponse(BaseModel):
     id: str
     conversation_id: str
     sender_id: str
+    sender_role: str
     sender_name: str
+    receiver_id: str = ""
+    receiver_role: str = ""
     text: str
     message_type: str = "text"
     image_url: str | None = None
