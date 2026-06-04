@@ -41,8 +41,4 @@ export function isAdminMessage(msg) {
   return inferSenderRole(msg) === 'admin'
 }
 
-export function resolveMemberId(conversation, currentUserId) {
-  if (conversation?.member_id) return String(conversation.member_id)
-  if (conversation?.chat_type && currentUserId) return String(currentUserId)
-  return undefined
-}
+export { resolveMemberId } from './staffRoles.js'

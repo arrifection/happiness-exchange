@@ -107,9 +107,9 @@
 
 .he-chat-bubble--theirs {
   border-bottom-left-radius: 0.25rem;
-  border: 1px solid var(--he-border, #efe8da);
-  background: var(--he-elevated, #fff);
-  color: var(--he-ink, #1f1f1f);
+  border: 1px solid var(--color-he-border, #efe8da);
+  background: var(--color-he-elevated, #fff);
+  color: var(--color-he-ink, #1f1f1f);
 }
 
 .he-chat-input-bar {

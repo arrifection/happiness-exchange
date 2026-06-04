@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
 import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
-import { isStaffViewerRole } from '../lib/staffRoles.js'
+import { canReplyInConversation, isStaffViewerRole, resolveViewerRole } from '../lib/staffRoles.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
 
@@ -578,7 +578,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
         memberId: resolveMemberId(activeConv, currentUser?.id),
         adminId: activeConv?.admin_id,
       }
-      const viewerRole = isStaffViewerRole(currentUser?.role) ? 'admin' : 'user'
+      const viewerRole = resolveViewerRole(currentUser, activeConv)
       const isMe = isOwnMessage(msg, { ...identityContext, viewerRole })
       const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole })
       const showSep = shouldShowDateSeparator(messages, i)
@@ -609,7 +609,9 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
                     className="max-h-64 w-full max-w-full cursor-pointer object-cover hover:opacity-95"
                   />
                 ) : (
-                  <div className="whitespace-pre-wrap px-4 py-2.5">{msg.text}</div>
+                  <div className={`whitespace-pre-wrap px-4 py-2.5 ${isMe ? 'text-white' : 'text-he-ink'}`}>
+                    {msg.text || ''}
+                  </div>
                 )}
               </div>
               <div className="mt-1 flex items-center gap-1 px-1">
@@ -647,6 +649,21 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
 
   function renderInputBar() {
     if (!activeConv) return null
+
+    const canReply = canReplyInConversation(currentUser, activeConv)
+    const staffBrowsing = !canReply && isStaffViewerRole(currentUser?.role)
+
+    if (staffBrowsing) {
+      return (
+        <div className="he-chat-input-bar">
+          <p className="w-full py-2 text-center text-sm text-he-muted">
+            Admin staff should reply from the{' '}
+            <span className="font-semibold text-he-purple">admin panel Messages</span>
+            {' '}page — not here.
+          </p>
+        </div>
+      )
+    }
 
     return (
       <form onSubmit={handleSend} className="he-chat-input-bar">

@@ -175,7 +175,7 @@ def serialize_message_fields(
         "sender_name": sanitize_display_name(doc.get("sender_name"), fallback="User"),
         "receiver_id": doc.get("receiver_id") or "",
         "receiver_role": receiver_role or "",
-        "text": doc["text"],
+        "text": doc.get("text") or doc.get("body") or "",
         "message_type": doc.get("message_type", "text"),
         "image_url": doc.get("image_url"),
         "created_at": doc["created_at"],
