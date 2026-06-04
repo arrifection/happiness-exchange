@@ -37,6 +37,7 @@ class MessageResponse(BaseModel):
     conversation_id: str
     sender_id: str
     sender_role: str
+    message_source: str = ""
     sender_name: str
     receiver_id: str = ""
     receiver_role: str = ""

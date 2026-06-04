@@ -16,9 +16,11 @@ from app.schemas.conversations import SendMessageRequest
 from app.services.auth import parse_object_id
 from app.services.conversations import is_admin_mediated
 from app.services.message_identity import (
+    MESSAGE_SOURCE_ADMIN_PANEL,
+    MESSAGE_SOURCE_MEMBER_REPLY,
     RECEIVER_ROLE_ADMIN,
     RECEIVER_ROLE_USER,
-    _ids_match,
+    ids_match,
     build_message_identity,
     resolve_admin_receiver_id,
     serialize_message_fields,
@@ -35,7 +37,7 @@ def _require_admin_mediated_participant(conv: dict, user_id: str, *, current_use
     member_id = conv.get("member_id")
     admin_id = conv.get("admin_id")
     role = current_user.get("role", "user")
-    if user_id in (member_id, admin_id):
+    if ids_match(user_id, member_id) or ids_match(user_id, admin_id):
         return
     if is_admin_role(role):
         return
@@ -86,7 +88,7 @@ async def send_conversation_message(
         other_id = member_id
         receiver_id = member_id or ""
         receiver_role = RECEIVER_ROLE_USER
-    elif _ids_match(user_id, member_id):
+    elif ids_match(user_id, member_id):
         other_id = admin_id
         receiver_id = await resolve_admin_receiver_id(
             messages_col,
@@ -147,10 +149,13 @@ async def send_conversation_message(
 
     sender_name = identity["sender_name"]
 
+    message_source = MESSAGE_SOURCE_ADMIN_PANEL if force_admin_sender else MESSAGE_SOURCE_MEMBER_REPLY
+
     msg_doc = {
         "conversation_id": conversation_id,
         "sender_id": identity["sender_id"],
         "sender_role": identity["sender_role"],
+        "message_source": message_source,
         "sender_name": identity["sender_name"],
         "receiver_id": identity["receiver_id"],
         "receiver_role": identity["receiver_role"],

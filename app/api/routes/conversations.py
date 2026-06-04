@@ -18,6 +18,7 @@ from app.services.conversations import (
     user_is_participant,
 )
 from app.services.conversation_messages import send_conversation_message
+from app.services.conversations import ids_match
 from app.services.display_names import sanitize_display_name
 from app.services.message_identity import serialize_message_fields
 from app.services.cloudinary import (
@@ -57,7 +58,7 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
         "typing_status": doc.get("typing_status", {}),
         "chat_type": doc.get("chat_type"),
         "member_role": doc.get("member_role"),
-        "admin_id": doc.get("admin_id"),
+        "admin_id": str(doc.get("admin_id") or ""),
         "admin_name": doc.get("admin_name"),
         "member_id": str(doc.get("member_id") or ""),
         "member_name": doc.get("member_name"),
@@ -78,7 +79,7 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
             base["counterpart_name"] = member_name
             base["role_label"] = role_label
             base["list_title"] = f"{role_label}: {member_name} — {item_title}"
-        elif current_user_id == doc.get("member_id"):
+        elif ids_match(current_user_id, doc.get("member_id")):
             base["counterpart_id"] = doc.get("admin_id")
             base["counterpart_name"] = admin_display
             base["list_title"] = f"{admin_display} — {item_title}"

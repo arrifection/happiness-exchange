@@ -12,6 +12,12 @@ from app.core.roles import UserRole
 from app.services.auth import parse_object_id
 from app.services.display_names import resolve_user_display_name, sanitize_display_name
 
+
+def ids_match(a, b) -> bool:
+    if a is None or b is None or a == "" or b == "":
+        return False
+    return str(a) == str(b)
+
 logger = logging.getLogger(__name__)
 
 ADMIN_DISPLAY_NAME = "Happiness Exchange Admin"
@@ -56,7 +62,7 @@ def user_is_participant(conv: dict, user_id: str) -> bool:
     if not is_admin_mediated(conv):
         return False
     admin_id, member_id = conversation_participant_ids(conv)
-    return user_id in (admin_id, member_id)
+    return ids_match(user_id, admin_id) or ids_match(user_id, member_id)
 
 
 def get_other_participant_id(conv: dict, user_id: str) -> str:
@@ -89,10 +95,10 @@ async def ensure_admin_mediated_conversations(
 
     admin_id = str(admin["_id"])
     admin_name = resolve_user_display_name(admin, fallback=ADMIN_DISPLAY_NAME)
-    owner_id = request["owner_id"]
-    requester_id = request["requester_id"]
+    owner_id = str(request.get("owner_id", ""))
+    requester_id = str(request.get("requester_id", ""))
     item_title = request.get("item_title") or (item or {}).get("title", "")
-    item_id = request["item_id"]
+    item_id = str(request.get("item_id", ""))
 
     owner_name = sanitize_display_name(
         request.get("owner_name")

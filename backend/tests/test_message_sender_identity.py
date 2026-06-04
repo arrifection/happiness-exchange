@@ -204,6 +204,26 @@ class MessageIdentityUnitTests(IsolatedAsyncioTestCase):
         self.assertEqual(serialized["sender_role"], SENDER_ROLE_USER)
         self.assertEqual(serialized["sender_name"], "Lister Person")
 
+    def test_legacy_wrong_admin_role_corrected_when_sender_is_member(self):
+        conv = {
+            "chat_type": "admin_receiver",
+            "member_id": "member-1",
+            "admin_id": "platform-admin",
+        }
+        doc = {
+            "_id": ObjectId(),
+            "sender_id": "member-1",
+            "sender_role": SENDER_ROLE_ADMIN,
+            "sender_name": "sarah",
+            "conversation_id": "conv-1",
+            "text": "ok",
+            "created_at": datetime.now(timezone.utc),
+        }
+
+        serialized = serialize_message_fields(doc, conv=conv)
+        self.assertEqual(serialized["sender_role"], SENDER_ROLE_USER)
+        self.assertEqual(serialized["sender_name"], "sarah")
+
 
 class MessageSendRouteTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -289,6 +309,7 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
         payload = res.json()
         self.assertEqual(payload["sender_id"], self.staff_admin_id)
         self.assertEqual(payload["sender_role"], SENDER_ROLE_ADMIN)
+        self.assertEqual(payload["message_source"], "admin_panel")
         self.assertEqual(payload["sender_name"], "Happiness Exchange Admin")
         self.assertEqual(payload["receiver_id"], self.member_id)
         self.assertEqual(payload["receiver_role"], "user")
@@ -307,6 +328,7 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
         payload = res.json()
         self.assertEqual(payload["sender_id"], self.staff_admin_id)
         self.assertEqual(payload["sender_role"], SENDER_ROLE_ADMIN)
+        self.assertEqual(payload["message_source"], "admin_panel")
         self.assertEqual(payload["sender_name"], "Happiness Exchange Admin")
 
     async def test_public_endpoint_rejects_non_member_admin_send(self):
@@ -345,5 +367,6 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
         payload = res.json()
         self.assertEqual(payload["sender_id"], self.member_id)
         self.assertEqual(payload["sender_role"], SENDER_ROLE_USER)
+        self.assertEqual(payload["message_source"], "member_reply")
         self.assertEqual(payload["receiver_id"], self.staff_admin_id)
         self.assertEqual(payload["receiver_role"], "admin")

@@ -3,24 +3,20 @@
 from __future__ import annotations
 
 from app.core.roles import is_admin_role
-from app.services.conversations import ADMIN_DISPLAY_NAME, is_admin_mediated
+from app.services.conversations import ADMIN_DISPLAY_NAME, ids_match, is_admin_mediated
 from app.services.display_names import resolve_user_display_name, sanitize_display_name
 
 SENDER_ROLE_ADMIN = "admin"
 SENDER_ROLE_USER = "user"
 RECEIVER_ROLE_ADMIN = "admin"
 RECEIVER_ROLE_USER = "user"
+MESSAGE_SOURCE_ADMIN_PANEL = "admin_panel"
+MESSAGE_SOURCE_MEMBER_REPLY = "member_reply"
 
 _ADMIN_SENDER_NAME_MARKERS = frozenset({
     "happiness exchange admin",
     "happiness exchange support",
 })
-
-
-def _ids_match(a, b) -> bool:
-    if a is None or b is None or a == "" or b == "":
-        return False
-    return str(a) == str(b)
 
 
 def is_admin_sender_name(name: str | None) -> bool:
@@ -52,19 +48,19 @@ def infer_sender_role(
     if conv and is_admin_mediated(conv):
         member_id = conv.get("member_id", "")
         admin_id = conv.get("admin_id", "")
-        if _ids_match(sender_id, member_id):
+        if ids_match(sender_id, member_id):
             return SENDER_ROLE_USER
-        if _ids_match(sender_id, admin_id):
+        if ids_match(sender_id, admin_id):
             return SENDER_ROLE_ADMIN
-        if member_id and sender_id and not _ids_match(sender_id, member_id):
+        if member_id and sender_id and not ids_match(sender_id, member_id):
             return SENDER_ROLE_ADMIN
 
     if current_user:
-        if is_admin_role(current_user.get("role", "user")) and _ids_match(sender_id, current_user.get("id")):
-            if conv and is_admin_mediated(conv) and _ids_match(sender_id, conv.get("member_id")):
+        if is_admin_role(current_user.get("role", "user")) and ids_match(sender_id, current_user.get("id")):
+            if conv and is_admin_mediated(conv) and ids_match(sender_id, conv.get("member_id")):
                 return SENDER_ROLE_USER
             return SENDER_ROLE_ADMIN
-        if _ids_match(sender_id, current_user.get("id")):
+        if ids_match(sender_id, current_user.get("id")):
             return SENDER_ROLE_USER
 
     return SENDER_ROLE_USER
@@ -121,7 +117,7 @@ def build_message_identity(
             raise ValueError("non_admin_non_member_sender")
         sender_role = SENDER_ROLE_ADMIN
         sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
-    elif _ids_match(user_id, member_id):
+    elif ids_match(user_id, member_id):
         sender_role = SENDER_ROLE_USER
         sender_name = sanitize_display_name(
             resolve_user_display_name(current_user, fallback="User"),
@@ -149,8 +145,18 @@ def serialize_message_fields(
     current_user: dict | None = None,
 ) -> dict:
     """Convert a MongoDB message document to API response shape."""
+    message_source = doc.get("message_source") or ""
     stored = doc.get("sender_role")
-    if stored in (SENDER_ROLE_ADMIN, SENDER_ROLE_USER):
+    member_id = (conv or {}).get("member_id", "")
+    sender_id = doc.get("sender_id", "")
+
+    if message_source == MESSAGE_SOURCE_MEMBER_REPLY:
+        sender_role = SENDER_ROLE_USER
+    elif message_source == MESSAGE_SOURCE_ADMIN_PANEL:
+        sender_role = SENDER_ROLE_ADMIN
+    elif member_id and ids_match(sender_id, member_id):
+        sender_role = SENDER_ROLE_USER
+    elif stored in (SENDER_ROLE_ADMIN, SENDER_ROLE_USER):
         sender_role = stored
         if stored == SENDER_ROLE_USER and is_admin_sender_name(doc.get("sender_name")):
             sender_role = SENDER_ROLE_ADMIN
@@ -163,8 +169,9 @@ def serialize_message_fields(
     return {
         "id": str(doc["_id"]),
         "conversation_id": doc["conversation_id"],
-        "sender_id": doc["sender_id"],
+        "sender_id": str(doc.get("sender_id") or ""),
         "sender_role": sender_role,
+        "message_source": message_source,
         "sender_name": sanitize_display_name(doc.get("sender_name"), fallback="User"),
         "receiver_id": doc.get("receiver_id") or "",
         "receiver_role": receiver_role or "",
