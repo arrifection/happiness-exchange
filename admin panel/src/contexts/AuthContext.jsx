@@ -3,20 +3,9 @@ import { authApi } from '../lib/api'
 import { BACKEND_ERROR_MESSAGE, isBackendUnreachable } from '../lib/backend'
 import { canAccess as roleCanAccess } from '../lib/adminPermissions'
 import { AUTH_CLEARED_EVENT } from '../lib/authEvents'
+import { ROLES, ROLE_HIERARCHY } from '../lib/roles'
 
-export const ROLES = {
-  SUPER_ADMIN: 'super_admin',
-  ADMIN:       'admin',
-  MODERATOR:   'moderator',
-  COURIER:     'courier',
-}
-
-const ROLE_HIERARCHY = {
-  [ROLES.SUPER_ADMIN]: 4,
-  [ROLES.ADMIN]:       3,
-  [ROLES.MODERATOR]:   2,
-  [ROLES.COURIER]:     1,
-}
+export { ROLES } from '../lib/roles'
 
 const AUTH_BOOT_TIMEOUT_MS = 8000
 

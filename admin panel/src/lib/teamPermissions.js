@@ -1,4 +1,4 @@
-import { ROLES } from '../contexts/AuthContext'
+import { ROLES } from './roles'
 
 export const ROLE_LABELS = {
   [ROLES.SUPER_ADMIN]: 'Super Admin',

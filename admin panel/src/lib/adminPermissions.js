@@ -1,4 +1,4 @@
-import { ROLES } from '../contexts/AuthContext'
+import { ROLES } from './roles'
 
 export const PERMISSIONS = {
   DASHBOARD: 'dashboard',
