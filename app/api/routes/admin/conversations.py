@@ -22,7 +22,7 @@ from app.db.mongodb import (
 )
 from app.schemas.conversations import MessageResponse, SendMessageRequest
 from app.services.auth import parse_object_id
-from app.services.conversation_messages import send_conversation_message
+from app.services.conversation_messages import delete_conversation_message, send_conversation_message
 from app.services.conversations import (
     CHAT_ADMIN_LISTER,
     CHAT_ADMIN_RECEIVER,
@@ -356,4 +356,21 @@ async def send_admin_conversation_message(
         payload=payload,
         current_user=admin,
         force_admin_sender=True,
+    )
+
+
+@router.delete("/{conversation_id}/messages/{message_id}", response_model=dict)
+async def delete_admin_conversation_message(
+    conversation_id: str,
+    message_id: str,
+    admin: dict = Depends(require_permission(PERMISSION_MESSAGES)),
+):
+    """Delete any message in an admin-mediated thread (moderation)."""
+    if not admin.get("is_verified"):
+        raise HTTPException(status_code=403, detail="You must verify your email to perform this action.")
+    return await delete_conversation_message(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        current_user=admin,
+        staff_may_delete_any=True,
     )

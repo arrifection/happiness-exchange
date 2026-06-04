@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  MessageSquare, Send, RefreshCw, Package, User, Wrench, Search, Filter,
+  MessageSquare, Send, RefreshCw, Package, User, Wrench, Search, Filter, Trash2,
 } from 'lucide-react'
 
 import { adminConversationsApi, conversationsApi } from '../lib/api'
-import { isAdminMessage, messageSenderLabel } from '../lib/messageSender'
 import { resolveApiError } from '../lib/backend'
 import { buildMessagesUrl, chatConversationId } from '../lib/messagesNavigation'
 import { EmptyState, ErrorState, LoadingSpinner } from '../components/States'
@@ -96,6 +95,7 @@ export default function MessagesPage() {
   const [sendError, setSendError] = useState('')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [deletingMessageId, setDeletingMessageId] = useState('')
 
   const selectedExchange = useMemo(
     () => exchanges.find((ex) => ex.request_id === selectedRequestId) || null,
@@ -180,6 +180,23 @@ export default function MessagesPage() {
       setListError(resolveApiError(err, 'Could not repair chats.'))
     } finally {
       setRepairingId('')
+    }
+  }
+
+  async function handleDeleteMessage(messageId) {
+    if (!activeConversationId || !messageId || deletingMessageId) return
+    if (!window.confirm('Delete this message?')) return
+
+    setDeletingMessageId(messageId)
+    setSendError('')
+    try {
+      await adminConversationsApi.deleteMessage(activeConversationId, messageId)
+      setMessages((prev) => prev.filter((m) => m.id !== messageId))
+      await loadExchanges()
+    } catch (err) {
+      setSendError(resolveApiError(err, 'Could not delete message.'))
+    } finally {
+      setDeletingMessageId('')
     }
   }
 
@@ -421,34 +438,38 @@ export default function MessagesPage() {
                         <p className="text-sm text-surface-500 text-center py-8">No messages yet. Start the conversation.</p>
                       ) : (
                         messages.map((msg) => {
-                          const identityContext = {
-                            currentUserId: undefined,
-                            memberId: activeChat?.member_id,
-                            adminId: activeChat?.admin_id,
-                          }
-                          const isAdminSide = isAdminMessage(msg, identityContext)
-                          const senderLabel = messageSenderLabel(msg, {
-                            ...identityContext,
-                            viewerRole: 'admin',
-                          })
+                          const isAdminMessage = msg.message_source === 'admin_panel' || msg.sender_role === 'admin'
+                          const senderLabel = isAdminMessage ? 'You' : (msg.sender_name || 'Member')
                           return (
-                            <div key={msg.id} className={`flex ${isAdminSide ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                                isAdminSide
+                            <div key={msg.id} className={`group flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`relative max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
+                                isAdminMessage
                                   ? 'bg-brand-600 text-white rounded-br-md'
                                   : 'bg-white border border-surface-300 text-surface-800 rounded-bl-md'
                               }`}>
-                                {!isAdminSide ? (
-                                  <p className="text-[10px] font-bold uppercase tracking-wide mb-1 opacity-70">
-                                    {senderLabel}
-                                  </p>
-                                ) : (
-                                  <p className="text-[10px] font-bold uppercase tracking-wide mb-1 text-brand-100">
-                                    {senderLabel}
-                                  </p>
-                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  disabled={deletingMessageId === msg.id}
+                                  className={`absolute top-2 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-40 ${
+                                    isAdminMessage ? 'left-2 text-brand-100 hover:text-white' : 'right-2 text-surface-400 hover:text-red-600'
+                                  }`}
+                                  aria-label="Delete message"
+                                  title="Delete message"
+                                >
+                                  {deletingMessageId === msg.id ? (
+                                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${
+                                  isAdminMessage ? 'text-brand-100' : 'opacity-70'
+                                }`}>
+                                  {senderLabel}
+                                </p>
                                 <p className="whitespace-pre-wrap">{msg.text}</p>
-                                <p className={`text-[10px] mt-1 ${isAdminSide ? 'text-brand-100' : 'text-surface-400'}`}>
+                                <p className={`text-[10px] mt-1 ${isAdminMessage ? 'text-brand-100' : 'text-surface-400'}`}>
                                   {formatTime(msg.created_at)}
                                 </p>
                               </div>

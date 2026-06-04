@@ -193,3 +193,137 @@ async def send_conversation_message(
 
     created_msg = await messages_col.find_one({"_id": result.inserted_id})
     return serialize_message_fields(created_msg, conv=conv, current_user=current_user)
+
+
+def _can_delete_message(
+    msg: dict,
+    conv: dict,
+    user_id: str,
+    user_role: str,
+    *,
+    staff_may_delete_any: bool,
+) -> None:
+    if staff_may_delete_any:
+        if not is_admin_role(user_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admin staff can delete messages from the admin panel.",
+            )
+        return
+
+    member_id = conv.get("member_id", "")
+    message_source = msg.get("message_source", "")
+    sender_role = msg.get("sender_role", "")
+
+    if is_admin_role(user_role):
+        if message_source != MESSAGE_SOURCE_ADMIN_PANEL and sender_role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only delete admin messages you sent.",
+            )
+        return
+
+    if not ids_match(user_id, member_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own messages.",
+        )
+
+    if message_source != MESSAGE_SOURCE_MEMBER_REPLY and sender_role != "user":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own messages.",
+        )
+
+    if not ids_match(msg.get("sender_id"), user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own messages.",
+        )
+
+
+async def _refresh_conversation_last_message(
+    conversations_col,
+    messages_col,
+    *,
+    conv_oid,
+    conversation_id: str,
+) -> None:
+    last = await messages_col.find_one(
+        {"conversation_id": conversation_id},
+        sort=[("created_at", -1)],
+    )
+    if last is None:
+        await conversations_col.update_one(
+            {"_id": conv_oid},
+            {"$set": {"last_message_at": None, "last_message_text": None}},
+        )
+        return
+
+    last_text = (last.get("text") or "").strip()[:100]
+    if not last_text:
+        last_text = "Sent an image" if last.get("message_type") == "image" else ""
+    await conversations_col.update_one(
+        {"_id": conv_oid},
+        {
+            "$set": {
+                "last_message_at": last.get("created_at"),
+                "last_message_text": last_text or None,
+            },
+        },
+    )
+
+
+async def delete_conversation_message(
+    *,
+    conversation_id: str,
+    message_id: str,
+    current_user: dict,
+    staff_may_delete_any: bool = False,
+) -> dict:
+    """Delete a message; members delete own replies, staff delete via admin panel or own admin msgs."""
+    conversations_col = await get_conversations_collection_async()
+    messages_col = await get_messages_collection_async()
+    if conversations_col is None or messages_col is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    conv_oid = parse_object_id(conversation_id)
+    if conv_oid is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid conversation id.")
+
+    msg_oid = parse_object_id(message_id)
+    if msg_oid is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid message id.")
+
+    conv = await conversations_col.find_one({"_id": conv_oid})
+    if conv is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
+
+    user_id = current_user["id"]
+    user_role = current_user.get("role", "user")
+    _require_admin_mediated_participant(conv, user_id, current_user=current_user)
+
+    msg = await messages_col.find_one({"_id": msg_oid, "conversation_id": conversation_id})
+    if msg is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found.")
+
+    _can_delete_message(
+        msg,
+        conv,
+        user_id,
+        user_role,
+        staff_may_delete_any=staff_may_delete_any,
+    )
+
+    await messages_col.delete_one({"_id": msg_oid})
+    await _refresh_conversation_last_message(
+        conversations_col,
+        messages_col,
+        conv_oid=conv_oid,
+        conversation_id=conversation_id,
+    )
+
+    return {"status": "ok", "message": "Message deleted."}

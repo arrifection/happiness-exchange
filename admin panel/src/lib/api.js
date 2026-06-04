@@ -114,6 +114,8 @@ export const analyticsApi = {
 // ── Conversations endpoints ────────────────────────────────────────────────────
 export const conversationsApi = {
   messages: (id) => api.get(`/api/conversations/${id}/messages`),
+  deleteMessage: (conversationId, messageId) =>
+    api.delete(`/api/conversations/${conversationId}/messages/${messageId}`),
 }
 
 // ── Admin mediated messaging ───────────────────────────────────────────────────
@@ -122,6 +124,8 @@ export const adminConversationsApi = {
   repair: (requestId) => api.post(`/api/admin/conversations/${requestId}/repair`),
   sendMessage: (conversationId, data) =>
     api.post(`/api/admin/conversations/${conversationId}/message`, data),
+  deleteMessage: (conversationId, messageId) =>
+    api.delete(`/api/admin/conversations/${conversationId}/messages/${messageId}`),
 }
 
 // ── Notifications endpoints ──────────────────────────────────────────────────

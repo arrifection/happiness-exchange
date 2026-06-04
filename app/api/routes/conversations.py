@@ -17,7 +17,7 @@ from app.services.conversations import (
     is_admin_mediated,
     user_is_participant,
 )
-from app.services.conversation_messages import send_conversation_message
+from app.services.conversation_messages import delete_conversation_message, send_conversation_message
 from app.services.conversations import ids_match
 from app.services.display_names import sanitize_display_name
 from app.services.message_identity import serialize_message_fields
@@ -310,6 +310,21 @@ async def send_message(
         payload=payload,
         current_user=current_user,
         force_admin_sender=False,
+    )
+
+
+@router.delete("/conversations/{conversation_id}/messages/{message_id}", response_model=dict)
+async def delete_message(
+    conversation_id: str,
+    message_id: str,
+    current_user: dict = Depends(get_verified_user),
+):
+    """Delete a message the caller is allowed to remove."""
+    return await delete_conversation_message(
+        conversation_id=conversation_id,
+        message_id=message_id,
+        current_user=current_user,
+        staff_may_delete_any=False,
     )
 
 

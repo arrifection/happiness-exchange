@@ -122,6 +122,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
   const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [deletingMessageId, setDeletingMessageId] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState('')
 
@@ -237,6 +238,30 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
       setError('Could not load messages. Pull to refresh by reopening the chat.')
     } finally {
       setLoadingMsgs(false)
+    }
+  }
+
+  async function handleDeleteMessage(messageId) {
+    if (!conversationId || !messageId || deletingMessageId) return
+    if (!window.confirm('Delete this message?')) return
+
+    setDeletingMessageId(messageId)
+    setError('')
+    try {
+      const res = await fetch(`${apiBase}/api/conversations/${conversationId}/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== messageId))
+      } else {
+        setError(data?.detail || 'Could not delete message.')
+      }
+    } catch {
+      setError('Connection error.')
+    } finally {
+      setDeletingMessageId('')
     }
   }
 
@@ -546,14 +571,17 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
       )
     }
 
+    const ADMIN_ROLES = ['admin', 'super_admin', 'moderator']
+
     return messages.map((msg, i) => {
       const identityContext = {
         currentUserId: currentUser?.id,
         memberId: resolveMemberId(activeConv, currentUser?.id),
         adminId: activeConv?.admin_id,
       }
-      const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })
-      const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole: 'user' })
+      const viewerRole = ADMIN_ROLES.includes(currentUser?.role) ? 'admin' : 'user'
+      const isMe = isOwnMessage(msg, { ...identityContext, viewerRole })
+      const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole })
       const showSep = shouldShowDateSeparator(messages, i)
 
       return (
@@ -588,9 +616,27 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
               <div className="mt-1 flex items-center gap-1 px-1">
                 <span className="text-[10px] text-he-soft/60">{formatMsgTime(msg.created_at)}</span>
                 {isMe ? (
-                  <svg className={`h-3.5 w-3.5 ${msg.read ? 'text-blue-400' : 'text-he-soft/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMessage(msg.id)}
+                      disabled={deletingMessageId === msg.id}
+                      className="rounded p-0.5 text-he-soft/50 transition-colors hover:text-[#c65d4a] disabled:opacity-40"
+                      aria-label="Delete message"
+                      title="Delete message"
+                    >
+                      {deletingMessageId === msg.id ? (
+                        <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-current border-t-transparent" />
+                      ) : (
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                      )}
+                    </button>
+                    <svg className={`h-3.5 w-3.5 ${msg.read ? 'text-blue-400' : 'text-he-soft/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  </>
                 ) : null}
               </div>
             </div>
