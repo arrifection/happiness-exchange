@@ -37,10 +37,20 @@ ADMIN_ROLES: set[UserRole] = {
 }
 
 
+def normalize_user_role(user_role: str | None) -> str:
+    """Normalize role strings from DB/API (handles spacing and casing)."""
+    if not user_role:
+        return UserRole.USER.value
+    normalized = str(user_role).strip().lower().replace(" ", "_").replace("-", "_")
+    if normalized == "superadmin":
+        return UserRole.SUPER_ADMIN.value
+    return normalized
+
+
 def has_role(user_role: str, required_role: UserRole) -> bool:
     """Return True if user_role meets or exceeds the required_role level."""
     try:
-        ur = UserRole(user_role)
+        ur = UserRole(normalize_user_role(user_role))
     except ValueError:
         return False
     return ROLE_LEVEL.get(ur, 0) >= ROLE_LEVEL.get(required_role, 99)
@@ -49,6 +59,6 @@ def has_role(user_role: str, required_role: UserRole) -> bool:
 def is_admin_role(user_role: str) -> bool:
     """Return True if the role grants any level of admin panel access."""
     try:
-        return UserRole(user_role) in ADMIN_ROLES
+        return UserRole(normalize_user_role(user_role)) in ADMIN_ROLES
     except ValueError:
         return False

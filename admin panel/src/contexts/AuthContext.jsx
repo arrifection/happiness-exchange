@@ -4,6 +4,7 @@ import { BACKEND_ERROR_MESSAGE, isBackendUnreachable } from '../lib/backend'
 import { canAccess as roleCanAccess } from '../lib/adminPermissions'
 import { AUTH_CLEARED_EVENT } from '../lib/authEvents'
 import { ROLES, ROLE_HIERARCHY } from '../lib/roles'
+import { normalizeRole } from '../lib/staffRoles'
 
 export { ROLES } from '../lib/roles'
 
@@ -22,9 +23,10 @@ function readStoredUser() {
 
 function normalizeStaffUser(raw) {
   if (!raw || typeof raw !== 'object') return null
-  const role = raw.role || raw.user?.role
+  const base = raw.user && raw.user.role ? raw.user : raw
+  const role = normalizeRole(base.role)
   if (!role || !Object.values(ROLES).includes(role)) return null
-  return raw.user && raw.user.role ? raw.user : { ...raw, role }
+  return { ...base, role }
 }
 
 export function AuthProvider({ children }) {
@@ -112,10 +114,14 @@ export function AuthProvider({ children }) {
 
   const hasRole = useCallback((requiredRole) => {
     if (!user?.role) return false
-    return (ROLE_HIERARCHY[user.role] ?? 0) >= (ROLE_HIERARCHY[requiredRole] ?? 99)
+    const normalized = normalizeRole(user.role)
+    return (ROLE_HIERARCHY[normalized] ?? 0) >= (ROLE_HIERARCHY[requiredRole] ?? 99)
   }, [user])
 
-  const canAccess = useCallback((permission) => roleCanAccess(user?.role, permission), [user])
+  const canAccess = useCallback(
+    (permission) => roleCanAccess(normalizeRole(user?.role), permission),
+    [user],
+  )
 
   const isSuperAdmin = useCallback(() => hasRole(ROLES.SUPER_ADMIN), [hasRole])
   const isAdmin      = useCallback(() => hasRole(ROLES.ADMIN),       [hasRole])

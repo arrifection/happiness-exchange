@@ -1,4 +1,5 @@
 import { ROLES } from './roles'
+import { normalizeRole } from './staffRoles'
 
 export const PERMISSIONS = {
   DASHBOARD: 'dashboard',
@@ -39,7 +40,8 @@ const ROLE_PERMISSIONS = {
 
 export function canAccess(role, permission) {
   if (!role || !permission) return false
-  return ROLE_PERMISSIONS[role]?.has(permission) ?? false
+  const normalized = normalizeRole(role)
+  return ROLE_PERMISSIONS[normalized]?.has(permission) ?? false
 }
 
 export function defaultRouteForRole(role) {

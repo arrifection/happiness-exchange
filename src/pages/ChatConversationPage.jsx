@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
+import { isStaffViewerRole } from '../lib/staffRoles.js'
 
 function formatMsgTime(dateStr) {
   if (!dateStr) return ''
@@ -194,8 +195,9 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
             memberId: resolveMemberId(conversation, currentUser?.id),
             adminId: conversation?.admin_id,
           }
-          const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })
-          const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole: 'user' })
+          const viewerRole = isStaffViewerRole(currentUser?.role) ? 'admin' : 'user'
+          const isMe = isOwnMessage(msg, { ...identityContext, viewerRole })
+          const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole })
           const showSep = shouldShowDateSeparator(messages, i)
 
           return (

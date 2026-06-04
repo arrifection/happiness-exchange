@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
 import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
+import { isStaffViewerRole } from '../lib/staffRoles.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
 
@@ -571,15 +572,13 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
       )
     }
 
-    const ADMIN_ROLES = ['admin', 'super_admin', 'moderator']
-
     return messages.map((msg, i) => {
       const identityContext = {
         currentUserId: currentUser?.id,
         memberId: resolveMemberId(activeConv, currentUser?.id),
         adminId: activeConv?.admin_id,
       }
-      const viewerRole = ADMIN_ROLES.includes(currentUser?.role) ? 'admin' : 'user'
+      const viewerRole = isStaffViewerRole(currentUser?.role) ? 'admin' : 'user'
       const isMe = isOwnMessage(msg, { ...identityContext, viewerRole })
       const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole })
       const showSep = shouldShowDateSeparator(messages, i)
