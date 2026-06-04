@@ -114,13 +114,14 @@ export const analyticsApi = {
 // ── Conversations endpoints ────────────────────────────────────────────────────
 export const conversationsApi = {
   messages: (id) => api.get(`/api/conversations/${id}/messages`),
-  sendMessage: (id, data) => api.post(`/api/conversations/${id}/message`, data),
 }
 
 // ── Admin mediated messaging ───────────────────────────────────────────────────
 export const adminConversationsApi = {
   listExchanges: (params) => api.get('/api/admin/conversations', { params }),
   repair: (requestId) => api.post(`/api/admin/conversations/${requestId}/repair`),
+  sendMessage: (conversationId, data) =>
+    api.post(`/api/admin/conversations/${conversationId}/message`, data),
 }
 
 // ── Notifications endpoints ──────────────────────────────────────────────────

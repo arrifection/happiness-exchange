@@ -191,7 +191,7 @@ export default function MessagesPage() {
     setSending(true)
     setSendError('')
     try {
-      const res = await conversationsApi.sendMessage(activeConversationId, {
+      const res = await adminConversationsApi.sendMessage(activeConversationId, {
         text: trimmed,
         message_type: 'text',
       })

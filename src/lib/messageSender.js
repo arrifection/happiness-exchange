@@ -1,8 +1,26 @@
 export const ADMIN_SUPPORT_NAME = 'Happiness Exchange Support'
 
+const ADMIN_SENDER_NAME_MARKERS = new Set([
+  'happiness exchange admin',
+  'happiness exchange support',
+])
+
+export function isAdminSenderName(name) {
+  const normalized = (name || '').trim().toLowerCase()
+  if (!normalized) return false
+  if (ADMIN_SENDER_NAME_MARKERS.has(normalized)) return true
+  return normalized.startsWith('happiness exchange admin')
+}
+
 export function inferSenderRole(msg, { memberId, adminId, currentUserId } = {}) {
-  if (msg?.sender_role === 'admin' || msg?.sender_role === 'user') {
-    return msg.sender_role
+  if (msg?.sender_role === 'admin') return 'admin'
+  if (msg?.sender_role === 'user') {
+    if (isAdminSenderName(msg?.sender_name)) return 'admin'
+    return 'user'
+  }
+
+  if (isAdminSenderName(msg?.sender_name)) {
+    return 'admin'
   }
 
   const senderId = msg?.sender_id
@@ -17,8 +35,15 @@ export function inferSenderRole(msg, { memberId, adminId, currentUserId } = {}) 
 }
 
 export function isOwnMessage(msg, { currentUserId, viewerRole = 'user', memberId, adminId } = {}) {
+  if (msg?.sender_role === 'admin') return false
+  if (isAdminSenderName(msg?.sender_name)) return false
+
   const role = inferSenderRole(msg, { memberId, adminId, currentUserId })
+
   if (viewerRole === 'admin') return role === 'admin'
+
+  if (role === 'admin') return false
+  if (memberId && msg?.sender_id && msg.sender_id !== memberId) return false
   return role === 'user' && msg?.sender_id === currentUserId
 }
 

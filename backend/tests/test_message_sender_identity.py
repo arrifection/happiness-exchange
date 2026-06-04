@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import auth as auth_deps
 from app.api.routes import conversations as conversations_routes
+from app.api.routes.admin import conversations as admin_conversations_routes
+from app.services import conversation_messages as conversation_messages_service
 from app.services.message_identity import (
     SENDER_ROLE_ADMIN,
     SENDER_ROLE_USER,
@@ -120,6 +122,45 @@ class MessageIdentityUnitTests(IsolatedAsyncioTestCase):
         self.assertEqual(identity["receiver_id"], "platform-admin")
         self.assertEqual(identity["receiver_role"], "admin")
 
+    def test_force_admin_sender_when_admin_is_also_member(self):
+        conv = {
+            "member_id": "member-1",
+            "admin_id": "platform-admin",
+            "admin_display_name": "Happiness Exchange Admin",
+        }
+        admin_user = {"id": "member-1", "name": "Sarah", "role": "super_admin"}
+
+        identity = build_message_identity(
+            conv=conv,
+            current_user=admin_user,
+            receiver_id="member-1",
+            receiver_role="user",
+            force_admin_sender=True,
+        )
+
+        self.assertEqual(identity["sender_id"], "member-1")
+        self.assertEqual(identity["sender_role"], SENDER_ROLE_ADMIN)
+        self.assertEqual(identity["sender_name"], "Happiness Exchange Admin")
+
+    def test_infer_sender_role_fixes_wrong_user_role_with_admin_name(self):
+        conv = {
+            "chat_type": "admin_receiver",
+            "member_id": "member-1",
+            "admin_id": "platform-admin",
+        }
+        doc = {
+            "_id": ObjectId(),
+            "sender_id": "member-1",
+            "sender_role": SENDER_ROLE_USER,
+            "sender_name": "Happiness Exchange Admin",
+            "conversation_id": "conv-1",
+            "text": "hi",
+            "created_at": datetime.now(timezone.utc),
+        }
+
+        role = infer_sender_role(doc, conv=conv)
+        self.assertEqual(role, SENDER_ROLE_ADMIN)
+
     def test_infer_sender_role_legacy_admin_message(self):
         conv = {
             "chat_type": "admin_lister",
@@ -177,16 +218,30 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
             "is_verified": True,
         }
 
-        app = FastAPI()
-        app.include_router(conversations_routes.router, prefix="/api")
-        self.app = app
-        self.client = TestClient(app)
+        member_app = FastAPI()
+        member_app.include_router(conversations_routes.router, prefix="/api")
+        self.member_app = member_app
+        self.member_client = TestClient(member_app)
 
-    def _override_send_deps(self, user):
-        self.app.dependency_overrides[auth_deps.get_verified_user] = lambda: user
-        conversations_routes.get_messages_collection_async = lambda: self._messages_col()
-        conversations_routes.get_conversations_collection_async = lambda: self._conversations_col()
-        conversations_routes.get_users_collection_async = lambda: self._users_col()
+        admin_app = FastAPI()
+        admin_app.include_router(
+            admin_conversations_routes.router,
+            prefix="/api/admin/conversations",
+        )
+        self.admin_app = admin_app
+        self.admin_client = TestClient(admin_app)
+
+    def _override_send_deps(self, user, *, app):
+        app.dependency_overrides[auth_deps.get_verified_user] = lambda: user
+        conversation_messages_service.get_messages_collection_async = lambda: self._messages_col()
+        conversation_messages_service.get_conversations_collection_async = lambda: self._conversations_col()
+        conversation_messages_service.get_users_collection_async = lambda: self._users_col()
+
+    def _override_admin_send_deps(self, user):
+        self.admin_app.dependency_overrides[auth_deps.get_current_user] = lambda: user
+        conversation_messages_service.get_messages_collection_async = lambda: self._messages_col()
+        conversation_messages_service.get_conversations_collection_async = lambda: self._conversations_col()
+        conversation_messages_service.get_users_collection_async = lambda: self._users_col()
 
     async def _messages_col(self):
         return self.messages
@@ -198,13 +253,14 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
         return FakeUsersCollection()
 
     def tearDown(self):
-        self.app.dependency_overrides.clear()
+        self.member_app.dependency_overrides.clear()
+        self.admin_app.dependency_overrides.clear()
 
-    async def test_admin_send_sets_admin_sender_role(self):
-        self._override_send_deps(self.staff_admin)
+    async def test_admin_send_uses_admin_endpoint_and_role(self):
+        self._override_admin_send_deps(self.staff_admin)
 
-        res = self.client.post(
-            f"/api/conversations/{self.conversation_id}/message",
+        res = self.admin_client.post(
+            f"/api/admin/conversations/{self.conversation_id}/message",
             json={"text": "Pickup tomorrow?", "message_type": "text"},
         )
 
@@ -215,6 +271,32 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
         self.assertEqual(payload["sender_name"], "Happiness Exchange Admin")
         self.assertEqual(payload["receiver_id"], self.member_id)
         self.assertEqual(payload["receiver_role"], "user")
+
+    async def test_admin_send_force_admin_when_admin_is_member(self):
+        self.conv["member_id"] = self.staff_admin_id
+        self.conv["unread_counts"] = {self.platform_admin_id: 0, self.staff_admin_id: 0}
+        self._override_admin_send_deps(self.staff_admin)
+
+        res = self.admin_client.post(
+            f"/api/admin/conversations/{self.conversation_id}/message",
+            json={"text": "hi give your adress and number", "message_type": "text"},
+        )
+
+        self.assertEqual(res.status_code, 200, res.text)
+        payload = res.json()
+        self.assertEqual(payload["sender_id"], self.staff_admin_id)
+        self.assertEqual(payload["sender_role"], SENDER_ROLE_ADMIN)
+        self.assertEqual(payload["sender_name"], "Happiness Exchange Admin")
+
+    async def test_public_endpoint_rejects_non_member_admin_send(self):
+        self._override_send_deps(self.staff_admin, app=self.member_app)
+
+        res = self.member_client.post(
+            f"/api/conversations/{self.conversation_id}/message",
+            json={"text": "Pickup tomorrow?", "message_type": "text"},
+        )
+
+        self.assertEqual(res.status_code, 403, res.text)
 
     async def test_member_reply_sets_user_sender_role(self):
         self.messages.documents.append(
@@ -231,9 +313,9 @@ class MessageSendRouteTests(IsolatedAsyncioTestCase):
             }
         )
 
-        self._override_send_deps(self.member_user)
+        self._override_send_deps(self.member_user, app=self.member_app)
 
-        res = self.client.post(
+        res = self.member_client.post(
             f"/api/conversations/{self.conversation_id}/message",
             json={"text": "Works for me", "message_type": "text"},
         )

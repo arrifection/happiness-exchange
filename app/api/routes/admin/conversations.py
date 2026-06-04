@@ -3,6 +3,7 @@ Admin mediated conversation routes.
 
 GET  /api/admin/conversations              — grouped exchanges with receiver/lister chats
 POST /api/admin/conversations/{request_id}/repair — ensure missing chats exist
+POST /api/admin/conversations/{conversation_id}/message — admin send (always sender_role=admin)
 """
 from __future__ import annotations
 
@@ -19,7 +20,9 @@ from app.db.mongodb import (
     get_requests_collection_async,
     get_users_collection_async,
 )
+from app.schemas.conversations import MessageResponse, SendMessageRequest
 from app.services.auth import parse_object_id
+from app.services.conversation_messages import send_conversation_message
 from app.services.conversations import (
     CHAT_ADMIN_LISTER,
     CHAT_ADMIN_RECEIVER,
@@ -337,3 +340,20 @@ async def repair_admin_conversations(
         "lister_chat": _serialize_chat(chat_map.get(CHAT_ADMIN_LISTER)),
         "repaired_at": datetime.now(timezone.utc),
     }
+
+
+@router.post("/{conversation_id}/message", response_model=MessageResponse)
+async def send_admin_conversation_message(
+    conversation_id: str,
+    payload: SendMessageRequest,
+    admin: dict = Depends(require_permission(PERMISSION_MESSAGES)),
+):
+    """Send an admin-mediated message; always stored with sender_role=admin."""
+    if not admin.get("is_verified"):
+        raise HTTPException(status_code=403, detail="You must verify your email to perform this action.")
+    return await send_conversation_message(
+        conversation_id=conversation_id,
+        payload=payload,
+        current_user=admin,
+        force_admin_sender=True,
+    )

@@ -11,6 +11,20 @@ SENDER_ROLE_USER = "user"
 RECEIVER_ROLE_ADMIN = "admin"
 RECEIVER_ROLE_USER = "user"
 
+_ADMIN_SENDER_NAME_MARKERS = frozenset({
+    "happiness exchange admin",
+    "happiness exchange support",
+})
+
+
+def is_admin_sender_name(name: str | None) -> bool:
+    normalized = (name or "").strip().lower()
+    if not normalized:
+        return False
+    if normalized in _ADMIN_SENDER_NAME_MARKERS:
+        return True
+    return normalized.startswith("happiness exchange admin")
+
 
 def infer_sender_role(
     doc: dict,
@@ -21,7 +35,12 @@ def infer_sender_role(
     """Backward-compatible sender role when legacy messages omit sender_role."""
     stored = doc.get("sender_role")
     if stored in (SENDER_ROLE_ADMIN, SENDER_ROLE_USER):
+        if stored == SENDER_ROLE_USER and is_admin_sender_name(doc.get("sender_name")):
+            return SENDER_ROLE_ADMIN
         return stored
+
+    if is_admin_sender_name(doc.get("sender_name")):
+        return SENDER_ROLE_ADMIN
 
     sender_id = doc.get("sender_id", "")
     if conv and is_admin_mediated(conv):
@@ -36,6 +55,8 @@ def infer_sender_role(
 
     if current_user:
         if is_admin_role(current_user.get("role", "user")) and sender_id == current_user.get("id"):
+            if conv and is_admin_mediated(conv) and sender_id == conv.get("member_id"):
+                return SENDER_ROLE_USER
             return SENDER_ROLE_ADMIN
         if sender_id == current_user.get("id"):
             return SENDER_ROLE_USER
@@ -82,13 +103,19 @@ def build_message_identity(
     current_user: dict,
     receiver_id: str,
     receiver_role: str,
+    force_admin_sender: bool = False,
 ) -> dict:
     """Derive sender/receiver fields from auth + conversation (never from request body)."""
     user_id = current_user["id"]
     user_role = current_user.get("role", "user")
     member_id = conv.get("member_id", "")
 
-    if user_id == member_id:
+    if force_admin_sender:
+        if not is_admin_role(user_role):
+            raise ValueError("non_admin_non_member_sender")
+        sender_role = SENDER_ROLE_ADMIN
+        sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
+    elif user_id == member_id:
         sender_role = SENDER_ROLE_USER
         sender_name = sanitize_display_name(
             resolve_user_display_name(current_user, fallback="User"),
