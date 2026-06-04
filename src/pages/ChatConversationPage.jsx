@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { isOwnMessage, messageSenderLabel } from '../lib/messageSender.js'
+import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
 
 function formatMsgTime(dateStr) {
   if (!dateStr) return ''
@@ -191,7 +191,7 @@ export default function ChatConversationPage({ apiBase, token, currentUser }) {
         {messages.map((msg, i) => {
           const identityContext = {
             currentUserId: currentUser?.id,
-            memberId: conversation?.member_id,
+            memberId: resolveMemberId(conversation, currentUser?.id),
             adminId: conversation?.admin_id,
           }
           const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })

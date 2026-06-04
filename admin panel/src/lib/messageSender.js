@@ -12,6 +12,11 @@ export function isAdminSenderName(name) {
   return normalized.startsWith('happiness exchange admin')
 }
 
+function idsMatch(a, b) {
+  if (a == null || b == null || a === '' || b === '') return false
+  return String(a) === String(b)
+}
+
 export function inferSenderRole(msg, { memberId, adminId, currentUserId } = {}) {
   if (msg?.sender_role === 'admin') return 'admin'
   if (msg?.sender_role === 'user') {
@@ -26,25 +31,28 @@ export function inferSenderRole(msg, { memberId, adminId, currentUserId } = {}) 
   const senderId = msg?.sender_id
   if (!senderId) return 'unknown'
 
-  if (memberId && senderId === memberId) return 'user'
-  if (adminId && senderId === adminId) return 'admin'
-  if (memberId && senderId !== memberId) return 'admin'
-  if (currentUserId && senderId === currentUserId) return 'user'
+  if (idsMatch(senderId, memberId)) return 'user'
+  if (idsMatch(senderId, adminId)) return 'admin'
+  if (memberId && !idsMatch(senderId, memberId)) return 'admin'
+  if (idsMatch(senderId, currentUserId)) return 'user'
 
   return 'unknown'
 }
 
 export function isOwnMessage(msg, { currentUserId, viewerRole = 'user', memberId, adminId } = {}) {
+  if (viewerRole === 'admin') {
+    return msg?.sender_role === 'admin' || inferSenderRole(msg, { memberId, adminId, currentUserId }) === 'admin'
+  }
+
   if (msg?.sender_role === 'admin') return false
-  if (isAdminSenderName(msg?.sender_name)) return false
+  if (msg?.sender_role === 'user') {
+    if (isAdminSenderName(msg?.sender_name)) return false
+    return idsMatch(msg.sender_id, currentUserId)
+  }
 
   const role = inferSenderRole(msg, { memberId, adminId, currentUserId })
-
-  if (viewerRole === 'admin') return role === 'admin'
-
   if (role === 'admin') return false
-  if (memberId && msg?.sender_id && msg.sender_id !== memberId) return false
-  return role === 'user' && msg?.sender_id === currentUserId
+  return role === 'user' && idsMatch(msg?.sender_id, currentUserId)
 }
 
 export function messageSenderLabel(msg, { currentUserId, viewerRole = 'user', memberId, adminId } = {}) {
@@ -57,11 +65,13 @@ export function messageSenderLabel(msg, { currentUserId, viewerRole = 'user', me
   }
 
   if (role === 'admin') return ADMIN_SUPPORT_NAME
-  if (msg?.sender_id === currentUserId) return 'You'
+  if (idsMatch(msg?.sender_id, currentUserId)) return 'You'
   if (role === 'user') return msg?.sender_name || 'User'
   return 'Unknown sender'
 }
 
 export function isAdminMessage(msg, { memberId, adminId, currentUserId } = {}) {
+  if (msg?.sender_role === 'admin') return true
+  if (msg?.sender_role === 'user') return false
   return inferSenderRole(msg, { memberId, adminId, currentUserId }) === 'admin'
 }

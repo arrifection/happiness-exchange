@@ -48,7 +48,7 @@ def _serialize_chat(doc: dict | None) -> dict | None:
         "chat_type": chat_type,
         "member_role": member_role,
         "role_label": role_label,
-        "member_id": doc.get("member_id"),
+        "member_id": str(doc.get("member_id") or ""),
         "member_name": doc.get("member_name"),
         "admin_id": admin_id,
         "admin_name": doc.get("admin_name"),

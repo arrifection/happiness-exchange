@@ -183,6 +183,27 @@ class MessageIdentityUnitTests(IsolatedAsyncioTestCase):
         self.assertEqual(serialized["sender_role"], SENDER_ROLE_ADMIN)
         self.assertEqual(serialized["receiver_role"], "user")
 
+    def test_member_reply_stays_user_when_viewed_by_admin(self):
+        conv = {
+            "chat_type": "admin_lister",
+            "member_id": "member-1",
+            "admin_id": "platform-admin",
+        }
+        doc = {
+            "_id": ObjectId(),
+            "sender_id": "member-1",
+            "sender_role": SENDER_ROLE_USER,
+            "sender_name": "Lister Person",
+            "conversation_id": "conv-1",
+            "text": "Works for me",
+            "created_at": datetime.now(timezone.utc),
+        }
+        admin_viewer = {"id": "staff-admin-9", "role": "super_admin"}
+
+        serialized = serialize_message_fields(doc, conv=conv, current_user=admin_viewer)
+        self.assertEqual(serialized["sender_role"], SENDER_ROLE_USER)
+        self.assertEqual(serialized["sender_name"], "Lister Person")
+
 
 class MessageSendRouteTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

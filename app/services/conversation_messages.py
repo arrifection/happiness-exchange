@@ -18,6 +18,7 @@ from app.services.conversations import is_admin_mediated
 from app.services.message_identity import (
     RECEIVER_ROLE_ADMIN,
     RECEIVER_ROLE_USER,
+    _ids_match,
     build_message_identity,
     resolve_admin_receiver_id,
     serialize_message_fields,
@@ -85,13 +86,13 @@ async def send_conversation_message(
         other_id = member_id
         receiver_id = member_id or ""
         receiver_role = RECEIVER_ROLE_USER
-    elif user_id == member_id:
+    elif _ids_match(user_id, member_id):
         other_id = admin_id
         receiver_id = await resolve_admin_receiver_id(
             messages_col,
             conversation_id=conversation_id,
             fallback_admin_id=admin_id or "",
-            member_id=member_id or "",
+            member_id=str(member_id or ""),
         )
         receiver_role = RECEIVER_ROLE_ADMIN
     else:

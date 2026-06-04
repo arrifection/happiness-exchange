@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
-import { isOwnMessage, messageSenderLabel } from '../lib/messageSender.js'
+import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
 
@@ -549,7 +549,7 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
     return messages.map((msg, i) => {
       const identityContext = {
         currentUserId: currentUser?.id,
-        memberId: activeConv?.member_id,
+        memberId: resolveMemberId(activeConv, currentUser?.id),
         adminId: activeConv?.admin_id,
       }
       const isMe = isOwnMessage(msg, { ...identityContext, viewerRole: 'user' })

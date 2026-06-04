@@ -59,7 +59,7 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
         "member_role": doc.get("member_role"),
         "admin_id": doc.get("admin_id"),
         "admin_name": doc.get("admin_name"),
-        "member_id": doc.get("member_id"),
+        "member_id": str(doc.get("member_id") or ""),
         "member_name": doc.get("member_name"),
         "counterpart_id": None,
         "counterpart_name": None,

@@ -17,6 +17,12 @@ _ADMIN_SENDER_NAME_MARKERS = frozenset({
 })
 
 
+def _ids_match(a, b) -> bool:
+    if a is None or b is None or a == "" or b == "":
+        return False
+    return str(a) == str(b)
+
+
 def is_admin_sender_name(name: str | None) -> bool:
     normalized = (name or "").strip().lower()
     if not normalized:
@@ -46,19 +52,19 @@ def infer_sender_role(
     if conv and is_admin_mediated(conv):
         member_id = conv.get("member_id", "")
         admin_id = conv.get("admin_id", "")
-        if member_id and sender_id == member_id:
+        if _ids_match(sender_id, member_id):
             return SENDER_ROLE_USER
-        if admin_id and sender_id == admin_id:
+        if _ids_match(sender_id, admin_id):
             return SENDER_ROLE_ADMIN
-        if member_id and sender_id and sender_id != member_id:
+        if member_id and sender_id and not _ids_match(sender_id, member_id):
             return SENDER_ROLE_ADMIN
 
     if current_user:
-        if is_admin_role(current_user.get("role", "user")) and sender_id == current_user.get("id"):
-            if conv and is_admin_mediated(conv) and sender_id == conv.get("member_id"):
+        if is_admin_role(current_user.get("role", "user")) and _ids_match(sender_id, current_user.get("id")):
+            if conv and is_admin_mediated(conv) and _ids_match(sender_id, conv.get("member_id")):
                 return SENDER_ROLE_USER
             return SENDER_ROLE_ADMIN
-        if sender_id == current_user.get("id"):
+        if _ids_match(sender_id, current_user.get("id")):
             return SENDER_ROLE_USER
 
     return SENDER_ROLE_USER
@@ -115,7 +121,7 @@ def build_message_identity(
             raise ValueError("non_admin_non_member_sender")
         sender_role = SENDER_ROLE_ADMIN
         sender_name = conv.get("admin_display_name") or ADMIN_DISPLAY_NAME
-    elif user_id == member_id:
+    elif _ids_match(user_id, member_id):
         sender_role = SENDER_ROLE_USER
         sender_name = sanitize_display_name(
             resolve_user_display_name(current_user, fallback="User"),
@@ -143,7 +149,13 @@ def serialize_message_fields(
     current_user: dict | None = None,
 ) -> dict:
     """Convert a MongoDB message document to API response shape."""
-    sender_role = infer_sender_role(doc, conv=conv, current_user=current_user)
+    stored = doc.get("sender_role")
+    if stored in (SENDER_ROLE_ADMIN, SENDER_ROLE_USER):
+        sender_role = stored
+        if stored == SENDER_ROLE_USER and is_admin_sender_name(doc.get("sender_name")):
+            sender_role = SENDER_ROLE_ADMIN
+    else:
+        sender_role = infer_sender_role(doc, conv=conv, current_user=current_user)
     receiver_role = doc.get("receiver_role")
     if not receiver_role and conv and is_admin_mediated(conv):
         receiver_role = RECEIVER_ROLE_USER if sender_role == SENDER_ROLE_ADMIN else RECEIVER_ROLE_ADMIN
