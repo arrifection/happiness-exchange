@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
@@ -88,6 +88,15 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     'min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10'
   const labelClass = 'text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80'
 
+  const isFormReady = useMemo(() => {
+    if (formData.name.trim().length < 2) return false
+    if (!formData.email.trim()) return false
+    if (validateWhatsAppInput(formData.whatsapp_number)) return false
+    if (formData.password.length < 8) return false
+    if (formData.password !== formData.confirmPassword) return false
+    return true
+  }, [formData])
+
   return (
     <AuthShell
       eyebrow="Join the Movement"
@@ -112,7 +121,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
         </Link>
       </p>
 
-      <form className="grid gap-3" onSubmit={handleSubmit}>
+      <form id="signup-form" className="he-auth-signup-form grid gap-3 pb-24" onSubmit={handleSubmit}>
 
         {/* Name */}
         <div className="grid gap-1">
@@ -234,20 +243,28 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           </p>
         </div>
 
-        <button
-          type="submit"
-          disabled={submitting || (formData.confirmPassword && formData.password !== formData.confirmPassword)}
-          className="relative mt-1 flex min-h-10 w-full items-center justify-center overflow-hidden rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
-        >
-          {submitting ? 'Creating account...' : 'Join Community'}
-        </button>
-
-        {error ? (
-          <div className="rounded-xl border border-[#c65d4a]/20 bg-[#c65d4a]/5 p-2.5 text-center text-[10px] font-bold uppercase tracking-widest text-[#c65d4a]">
-            {error}
-          </div>
+        {!isFormReady ? (
+          <p className="text-center text-[10px] leading-relaxed text-[#8c755f]/90">
+            Fill in all fields above with matching passwords to unlock Create account.
+          </p>
         ) : null}
       </form>
+
+      {isFormReady ? (
+        <div className="he-auth-signup-cta" role="region" aria-label="Create account">
+          {error ? (
+            <p className="mb-2 text-center text-[10px] font-bold text-[#c65d4a]">{error}</p>
+          ) : null}
+          <button
+            type="submit"
+            form="signup-form"
+            disabled={submitting}
+            className="flex min-h-11 w-full items-center justify-center rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
+          >
+            {submitting ? 'Creating account...' : 'Create account'}
+          </button>
+        </div>
+      ) : null}
     </AuthShell>
   )
 }
