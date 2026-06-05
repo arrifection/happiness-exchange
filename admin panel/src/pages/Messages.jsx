@@ -6,6 +6,7 @@ import {
 
 import { adminConversationsApi, conversationsApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
+import { API_BASE_URL } from '../lib/env'
 import { buildMessagesUrl, chatConversationId } from '../lib/messagesNavigation'
 import { EmptyState, ErrorState, LoadingSpinner } from '../components/States'
 
@@ -83,7 +84,8 @@ export default function MessagesPage() {
   const activeChatSide = searchParams.get('chat') === 'lister' ? 'lister' : 'receiver'
 
   const [exchanges, setExchanges] = useState([])
-  const [loadingList, setLoadingList] = useState(true)
+  /** @type {'loading' | 'error' | 'empty' | 'success'} */
+  const [listFetchState, setListFetchState] = useState('loading')
   const [listError, setListError] = useState('')
   const [search, setSearch] = useState('')
   const [chatFilter, setChatFilter] = useState('all')
@@ -107,8 +109,11 @@ export default function MessagesPage() {
     ? selectedExchange?.lister_chat
     : selectedExchange?.receiver_chat
 
-  const loadExchanges = useCallback(async () => {
-    setListError('')
+  const loadExchanges = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setListError('')
+      setListFetchState((prev) => (prev === 'success' ? 'success' : 'loading'))
+    }
     try {
       const params = {
         limit: 100,
@@ -119,11 +124,15 @@ export default function MessagesPage() {
       if (chatFilter !== 'all') params.chat_filter = chatFilter
 
       const res = await adminConversationsApi.listExchanges(params)
-      setExchanges(res.data?.exchanges || [])
+      const rows = res.data?.exchanges || []
+      setExchanges(rows)
+      setListFetchState(rows.length > 0 ? 'success' : 'empty')
     } catch (err) {
-      setListError(resolveApiError(err))
-    } finally {
-      setLoadingList(false)
+      if (!silent) {
+        setListError(resolveApiError(err, 'Could not load mediated exchanges.'))
+        setListFetchState('error')
+        setExchanges([])
+      }
     }
   }, [search, chatFilter, statusFilter])
 
@@ -146,8 +155,8 @@ export default function MessagesPage() {
   }, [])
 
   useEffect(() => {
-    loadExchanges()
-    const interval = window.setInterval(loadExchanges, 15000)
+    loadExchanges({ silent: false })
+    const interval = window.setInterval(() => loadExchanges({ silent: true }), 15000)
     return () => window.clearInterval(interval)
   }, [loadExchanges])
 
@@ -222,7 +231,80 @@ export default function MessagesPage() {
     }
   }
 
-  if (loadingList) return <LoadingSpinner message="Loading mediated exchanges…" />
+  function renderExchangeList() {
+    if (listFetchState === 'loading' && exchanges.length === 0) {
+      return <LoadingSpinner message="Loading mediated exchanges…" />
+    }
+
+    if (listFetchState === 'error') {
+      return (
+        <div className="p-4">
+          <ErrorState
+            message={listError || 'Could not load mediated exchanges.'}
+            onRetry={() => loadExchanges({ silent: false })}
+          />
+          {import.meta.env.DEV ? (
+            <p className="mt-3 text-center text-xs text-surface-500 break-all">
+              API base: {API_BASE_URL}
+            </p>
+          ) : null}
+        </div>
+      )
+    }
+
+    if (listFetchState === 'empty') {
+      return (
+        <EmptyState
+          icon={MessageSquare}
+          title="No mediated exchanges yet"
+          description="Approved or completed requests appear here with separate admin chats."
+        />
+      )
+    }
+
+    return exchanges.map((exchange) => {
+      const isSelected = exchange.request_id === selectedRequestId
+      return (
+        <button
+          key={exchange.request_id}
+          type="button"
+          onClick={() => selectExchange(exchange.request_id, 'receiver')}
+          className={`w-full text-left px-4 py-4 border-b border-surface-200 transition-colors ${
+            isSelected ? 'bg-brand-50 border-l-4 border-l-brand-500' : 'hover:bg-lavender-50'
+          }`}
+        >
+          <div className="flex gap-3">
+            {exchange.item_image_url ? (
+              <img
+                src={exchange.item_image_url}
+                alt={exchange.item_title}
+                className="w-12 h-12 rounded-lg object-cover border border-surface-200 shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center shrink-0">
+                <Package className="w-5 h-5 text-surface-400" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-surface-800 truncate">{exchange.item_title}</p>
+              <span className={`badge ${exchange.request_status === 'completed' ? 'badge-green' : 'badge-blue'} mt-1`}>
+                {exchange.request_status}
+              </span>
+              <p className="text-xs text-surface-500 mt-1 truncate">
+                Receiver: {exchange.requester_name}
+              </p>
+              <p className="text-xs text-surface-500 truncate">
+                Lister: {exchange.owner_name}
+              </p>
+              {exchange.total_unread > 0 ? (
+                <span className="badge-red mt-2">{exchange.total_unread} unread</span>
+              ) : null}
+            </div>
+          </div>
+        </button>
+      )
+    })
+  }
 
   return (
     <div className="animate-slide-in">
@@ -233,13 +315,17 @@ export default function MessagesPage() {
             Admin-mediated coordination — separate chats with receiver and lister (no direct member messaging).
           </p>
         </div>
-        <button type="button" className="btn-secondary" onClick={loadExchanges}>
+        <button type="button" className="btn-secondary" onClick={() => loadExchanges({ silent: false })}>
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh
         </button>
       </div>
 
-      {listError ? <div className="mb-4"><ErrorState message={listError} onRetry={loadExchanges} /></div> : null}
+      {listError && listFetchState !== 'error' ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {listError}
+        </div>
+      ) : null}
 
       <div className="card mb-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -276,56 +362,7 @@ export default function MessagesPage() {
             <p className="text-xs text-surface-500">{exchanges.length} shown</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {exchanges.length === 0 ? (
-              <EmptyState
-                icon={MessageSquare}
-                title="No mediated exchanges yet"
-                description="Approved or completed requests appear here with separate admin chats."
-              />
-            ) : (
-              exchanges.map((exchange) => {
-                const isSelected = exchange.request_id === selectedRequestId
-                return (
-                  <button
-                    key={exchange.request_id}
-                    type="button"
-                    onClick={() => selectExchange(exchange.request_id, 'receiver')}
-                    className={`w-full text-left px-4 py-4 border-b border-surface-200 transition-colors ${
-                      isSelected ? 'bg-brand-50 border-l-4 border-l-brand-500' : 'hover:bg-lavender-50'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      {exchange.item_image_url ? (
-                        <img
-                          src={exchange.item_image_url}
-                          alt={exchange.item_title}
-                          className="w-12 h-12 rounded-lg object-cover border border-surface-200 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-surface-100 border border-surface-200 flex items-center justify-center shrink-0">
-                          <Package className="w-5 h-5 text-surface-400" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-surface-800 truncate">{exchange.item_title}</p>
-                        <span className={`badge ${exchange.request_status === 'completed' ? 'badge-green' : 'badge-blue'} mt-1`}>
-                          {exchange.request_status}
-                        </span>
-                        <p className="text-xs text-surface-500 mt-1 truncate">
-                          Receiver: {exchange.requester_name}
-                        </p>
-                        <p className="text-xs text-surface-500 truncate">
-                          Lister: {exchange.owner_name}
-                        </p>
-                        {exchange.total_unread > 0 ? (
-                          <span className="badge-red mt-2">{exchange.total_unread} unread</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })
-            )}
+            {renderExchangeList()}
           </div>
         </aside>
 

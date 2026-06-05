@@ -21,7 +21,9 @@ Production admin dashboard for the Happiness Exchange platform. Connects exclusi
 | `VITE_API_BASE_URL` | `https://arrifection-happiness-exchange.hf.space` |
 | `VITE_APP_NAME` | `Happiness Exchange Admin` |
 
-Copy `.env.example` to `.env` for local development.
+Copy `.env.example` to `.env` for local development. See also [Admin panel deployment](../docs/ADMIN_PANEL_DEPLOYMENT.md).
+
+**Do not** set `VITE_API_BASE_URL=http://localhost:8000` on Vercel — use the HF backend URL above.
 
 ---
 
@@ -114,6 +116,8 @@ npm run dev
 ```
 
 Admin panel: http://localhost:5200
+
+By default `.env.example` uses the Hugging Face API so `/messages` works without a local backend. To target a local FastAPI server, set `VITE_API_BASE_URL=http://localhost:8000` in `.env`.
 
 ---
 

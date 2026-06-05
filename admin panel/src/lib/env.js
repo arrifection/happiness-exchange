@@ -1,6 +1,7 @@
 export const PRODUCTION_API_BASE = 'https://arrifection-happiness-exchange.hf.space'
 
 const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0'])
+const LOCAL_DEV_API_BASE = 'http://localhost:8000'
 
 function normalizeApiBase(raw) {
   const trimmed = String(raw || '').trim().replace(/\/$/, '')
@@ -26,18 +27,21 @@ function resolveApiBaseUrl() {
       const host = new URL(fromEnv).hostname.toLowerCase()
       if (isProductionHost() && LOCALHOST_HOSTS.has(host)) {
         console.warn(
-          '[Admin panel] Ignoring localhost API URL in production. Using Hugging Face backend.',
+          '[Admin panel] Ignoring localhost API URL on a deployed host. Using Hugging Face backend.',
         )
         return PRODUCTION_API_BASE
       }
+      return fromEnv
     } catch {
-      // fall through to defaults below
+      // Invalid URL in env — fall through to defaults.
     }
-    return fromEnv
   }
 
-  if (import.meta.env.DEV) return 'http://localhost:8000'
-  return PRODUCTION_API_BASE
+  if (isProductionHost() || import.meta.env.PROD) {
+    return PRODUCTION_API_BASE
+  }
+
+  return LOCAL_DEV_API_BASE
 }
 
 export const API_BASE_URL = resolveApiBaseUrl()
@@ -46,5 +50,5 @@ export const APP_NAME =
   import.meta.env.VITE_APP_NAME || 'Happiness Exchange Admin'
 
 if (import.meta.env.DEV) {
-  console.info('[Admin panel] API base URL:', API_BASE_URL)
+  console.info('Admin API base:', API_BASE_URL)
 }
