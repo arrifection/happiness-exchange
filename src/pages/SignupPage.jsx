@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
+import { validateWhatsAppInput } from '../lib/whatsappRequirement.js'
 
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
@@ -42,6 +43,12 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     }
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters.')
+      return
+    }
+
+    const whatsappError = validateWhatsAppInput(formData.whatsapp_number)
+    if (whatsappError) {
+      setError(whatsappError)
       return
     }
 
@@ -134,7 +141,9 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
 
         {/* WhatsApp */}
         <div className="grid gap-1">
-          <label className={labelClass} htmlFor="signup-whatsapp">WhatsApp Number</label>
+          <label className={labelClass} htmlFor="signup-whatsapp">
+            WhatsApp Number <span className="text-[#c65d4a]">*</span>
+          </label>
           <input
             id="signup-whatsapp"
             name="whatsapp_number"

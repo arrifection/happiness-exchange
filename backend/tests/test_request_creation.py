@@ -58,12 +58,14 @@ class RequestCreationGuardTests(IsolatedAsyncioTestCase):
             "name": "Owner User",
             "email": "owner@example.com",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.requester_user = {
             "id": self.requester_id,
             "name": "Requester User",
             "email": "requester@example.com",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
 
         self.items_collection = FakeCollection(

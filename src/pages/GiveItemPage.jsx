@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import ItemForm from '../components/ItemForm.jsx'
 import { Button, Surface } from '../components/ui.jsx'
+import { WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 
 export default function GiveItemPage({
   currentUser,
@@ -67,8 +68,8 @@ export default function GiveItemPage({
         <div className="mb-4 rounded-xl border border-he-danger/30 bg-he-danger/5 p-4 text-sm text-he-ink">
           <p className="font-semibold">WhatsApp number required</p>
           <p className="mt-1 text-he-muted">
-            Please add your WhatsApp number in Settings before listing or requesting.{' '}
-            <Link to="/profile" className="font-bold text-he-purple hover:underline">Go to Settings</Link>
+            {WHATSAPP_REQUIRED_MESSAGE}{' '}
+            <Link to="/profile" state={{ whatsappRequired: true }} className="font-bold text-he-purple hover:underline">Go to Settings</Link>
           </p>
         </div>
       ) : null}

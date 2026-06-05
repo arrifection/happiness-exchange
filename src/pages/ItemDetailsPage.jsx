@@ -10,6 +10,7 @@ import { storageConditionLabel } from '../lib/categories.js'
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { getPublicLocationLabel } from '../lib/locations.js'
+import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 import { safeString } from '../lib/safeValues.js'
 
 import './ItemDetailsPage.css'
@@ -158,6 +159,10 @@ export default function ItemDetailsPage({
         onClick={() => {
           if (!currentUser.is_verified) {
             showFlash('Please verify your email to request an item.')
+            return
+          }
+          if (userNeedsWhatsApp(currentUser)) {
+            showFlash(WHATSAPP_REQUIRED_MESSAGE)
             return
           }
           onCreateRequest(item)

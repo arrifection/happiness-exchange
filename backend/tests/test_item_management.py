@@ -104,6 +104,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             "email": "owner@example.com",
             "account_type": "giver",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.other_user = {
             "id": self.other_user_id,
@@ -111,6 +112,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             "email": "other@example.com",
             "account_type": "receiver",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.requester_user = {
             "id": self.requester_id,
@@ -118,6 +120,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             "email": "requester@example.com",
             "account_type": "receiver",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
 
         self.items_collection = FakeCollection(

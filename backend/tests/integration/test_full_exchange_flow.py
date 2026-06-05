@@ -64,6 +64,7 @@ def exchange_fixture(mongo_db):
             "account_type": "member",
             "is_verified": True,
             "is_banned": False,
+            "whatsapp_number": "+923001234567",
             "trust_score": 0,
             "created_at": now,
             "updated_at": now,
@@ -75,6 +76,7 @@ def exchange_fixture(mongo_db):
             "email": doc["email"],
             "role": doc["role"],
             "is_verified": True,
+            "whatsapp_number": doc["whatsapp_number"],
         }
         token = create_access_token(user["id"], user["email"], user["role"])
         return user, token

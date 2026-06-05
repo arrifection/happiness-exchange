@@ -95,6 +95,7 @@ class RequestReasonApiTests(IsolatedAsyncioTestCase):
             "email": "owner@example.com",
             "account_type": "giver",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.requester_user = {
             "id": self.requester_id,
@@ -102,6 +103,7 @@ class RequestReasonApiTests(IsolatedAsyncioTestCase):
             "email": "requester@example.com",
             "account_type": "receiver",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
 
         self.items_collection = FakeCollection(

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 
 import { RatingStars, ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
@@ -9,6 +9,7 @@ import LocationSelector from '../components/LocationSelector.jsx'
 import { useTheme } from '../components/ThemeContext.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
+import { userNeedsWhatsApp, validateWhatsAppInput } from '../lib/whatsappRequirement.js'
 
 function formatProfileDate(value) {
   if (!value) {
@@ -66,10 +67,13 @@ export default function ProfilePage({
 }) {
   const [name, setName] = useState(currentUser?.name || '')
   const [whatsappNumber, setWhatsappNumber] = useState(currentUser?.whatsapp_number || '')
+  const [whatsappInputError, setWhatsappInputError] = useState('')
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
   const { isDark, toggleTheme } = useTheme()
+  const location = useLocation()
+  const whatsappRequired = userNeedsWhatsApp(currentUser) || Boolean(location.state?.whatsappRequired)
 
   useEffect(() => {
     setName(currentUser?.name || '')
@@ -108,6 +112,12 @@ export default function ProfilePage({
 
   async function handleWhatsAppSubmit(event) {
     event.preventDefault()
+    const nextError = validateWhatsAppInput(whatsappNumber)
+    if (nextError) {
+      setWhatsappInputError(nextError)
+      return
+    }
+    setWhatsappInputError('')
     await onUpdateWhatsApp?.(whatsappNumber.trim())
   }
 
@@ -239,6 +249,15 @@ export default function ProfilePage({
             </p>
           </div>
 
+          {whatsappRequired ? (
+            <div className="mt-4 rounded-xl border border-[#8b4cf6]/30 bg-[#efe7ff]/80 p-3 text-[11px] leading-relaxed text-[#6b3fd4]">
+              <p className="font-bold">WhatsApp number required</p>
+              <p className="mt-1">
+                Add your WhatsApp number below to list or request items. Only Happiness Exchange admins can see it.
+              </p>
+            </div>
+          ) : null}
+
           <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
             <TextField
               id="profile-name"
@@ -264,21 +283,26 @@ export default function ProfilePage({
 
             <div className="grid gap-1">
               <label className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70" htmlFor="profile-whatsapp">
-                WhatsApp Number
+                WhatsApp Number {userNeedsWhatsApp(currentUser) ? <span className="text-he-danger">*</span> : null}
               </label>
               <input
                 id="profile-whatsapp"
                 name="whatsapp_number"
                 type="tel"
                 value={whatsappNumber}
-                onChange={(event) => setWhatsappNumber(event.target.value)}
+                onChange={(event) => {
+                  setWhatsappNumber(event.target.value)
+                  if (whatsappInputError) setWhatsappInputError('')
+                }}
                 placeholder="+92 300 1234567"
                 autoComplete="tel"
+                required={userNeedsWhatsApp(currentUser)}
                 className="min-h-10 w-full rounded-input border border-he-border bg-he-surface px-3 py-2.5 text-[13px] text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/20"
               />
               <p className="text-[10px] leading-relaxed text-he-muted">
                 Your WhatsApp number is private and visible only to Happiness Exchange admins.
               </p>
+              {whatsappInputError ? <p className="text-[10px] font-bold text-he-danger">{whatsappInputError}</p> : null}
               {whatsappMessage ? <p className="text-[10px] font-bold text-he-purple">{whatsappMessage}</p> : null}
               {whatsappError ? <p className="text-[10px] font-bold text-he-danger">{whatsappError}</p> : null}
               <Button

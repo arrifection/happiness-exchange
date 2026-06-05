@@ -44,6 +44,7 @@ import {
 import { getPageMeta } from './lib/siteMeta.js'
 import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
+import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from './lib/whatsappRequirement.js'
 
 const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -498,8 +499,8 @@ export default function App() {
 
   async function handleCreateItem(event) {
     event.preventDefault()
-    if (!currentUser?.whatsapp_number?.trim()) {
-      setItemError('Please add your WhatsApp number in Settings before listing or requesting.')
+    if (userNeedsWhatsApp(currentUser)) {
+      setItemError(WHATSAPP_REQUIRED_MESSAGE)
       return null
     }
     if (uploadingItemImage) { setItemError('Please wait for the image upload to finish before publishing.'); return null }
@@ -648,13 +649,19 @@ export default function App() {
   }
 
   function openRequestModal(item) {
+    if (userNeedsWhatsApp(currentUser)) {
+      setProfileError('')
+      setWhatsappError('')
+      navigate('/profile', { state: { whatsappRequired: true } })
+      return
+    }
     setRequestSubmitError('')
     setRequestModalItem(item)
   }
 
   async function handleCreateRequest(itemId, reason) {
-    if (!currentUser?.whatsapp_number?.trim()) {
-      setRequestSubmitError('Please add your WhatsApp number in Settings before listing or requesting.')
+    if (userNeedsWhatsApp(currentUser)) {
+      setRequestSubmitError(WHATSAPP_REQUIRED_MESSAGE)
       return null
     }
     setRequestsError('')
@@ -1006,6 +1013,21 @@ export default function App() {
             </div>
           ) : null}
 
+          {currentUser && userNeedsWhatsApp(currentUser) && !isAuthPage ? (
+            <div className="border-b border-[#8b4cf6]/30 bg-[#efe7ff] px-4 py-2.5 text-center text-[13px] font-bold text-[#6b3fd4] flex items-center justify-center gap-4 flex-wrap dark:border-purple-900/50 dark:bg-[#2a1f3d] dark:text-purple-200">
+              <span>
+                WhatsApp number required — add yours in Settings to list or request items. Only admins can see it.
+              </span>
+              <NavLink
+                to="/profile"
+                state={{ whatsappRequired: true }}
+                className="underline hover:text-[#5a2fc4] transition-colors"
+              >
+                Add WhatsApp in Settings
+              </NavLink>
+            </div>
+          ) : null}
+
           {showAppChrome && !isAuthPage ? (
             <>
             <header className="he-nav-shell">
@@ -1157,7 +1179,7 @@ export default function App() {
                     uploadingItemImage={uploadingItemImage} itemMessage={itemMessage} itemError={itemError}
                     imageUploadMessage={imageUploadMessage} imageUploadError={imageUploadError}
                     onApplyGivePrefill={handleApplyGivePrefill}
-                    missingWhatsApp={Boolean(currentUser && !currentUser.whatsapp_number?.trim())}
+                    missingWhatsApp={userNeedsWhatsApp(currentUser)}
                   />
                 }
               />
@@ -1308,7 +1330,7 @@ export default function App() {
         open={Boolean(requestModalItem)}
         submitting={requestSubmitting}
         error={requestSubmitError}
-        missingWhatsApp={Boolean(currentUser && !currentUser.whatsapp_number?.trim())}
+        missingWhatsApp={userNeedsWhatsApp(currentUser)}
         onClose={() => {
           if (!requestSubmitting) {
             setRequestModalItem(null)

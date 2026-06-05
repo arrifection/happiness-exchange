@@ -107,6 +107,7 @@ class IdorSecurityTests(TestCase):
             "email": "usera@example.com",
             "role": "user",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.user_b = {
             "id": self.user_b_id,
@@ -114,6 +115,7 @@ class IdorSecurityTests(TestCase):
             "email": "userb@example.com",
             "role": "user",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.owner_user = {
             "id": self.owner_id,
@@ -121,6 +123,7 @@ class IdorSecurityTests(TestCase):
             "email": "owner@example.com",
             "role": "user",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
         self.requester_user = {
             "id": self.requester_id,
@@ -128,6 +131,7 @@ class IdorSecurityTests(TestCase):
             "email": "requester@example.com",
             "role": "user",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
 
         self.items_collection = FakeCollection(

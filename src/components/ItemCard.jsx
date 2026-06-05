@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
+import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { RatingStars } from './reputation.jsx'
 import TrustBadge from './TrustBadge.jsx'
@@ -171,6 +172,10 @@ export default function ItemCard({
         onClick={() => {
           if (!currentUser.is_verified) {
             showFlash('Please verify your email to request an item.')
+            return
+          }
+          if (userNeedsWhatsApp(currentUser)) {
+            showFlash(WHATSAPP_REQUIRED_MESSAGE)
             return
           }
           onCreateRequest(item)

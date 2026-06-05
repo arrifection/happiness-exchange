@@ -137,6 +137,7 @@ class UgcXssSafetyTests(IsolatedAsyncioTestCase):
             "name": "Requester",
             "email": "req@example.com",
             "is_verified": True,
+            "whatsapp_number": "+923001234567",
         }
 
         with TestClient(app) as client:

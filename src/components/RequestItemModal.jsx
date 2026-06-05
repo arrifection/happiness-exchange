@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Button } from './ui.jsx'
+import { WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 
 const MIN_REASON_LENGTH = 30
 const MAX_REASON_LENGTH = 500
@@ -54,8 +55,8 @@ export default function RequestItemModal({ item, open, submitting, error, missin
             <div className="rounded-xl border border-he-danger/30 bg-he-danger/5 p-3 text-sm text-he-ink">
               <p className="font-semibold">WhatsApp number required</p>
               <p className="mt-1 text-he-muted">
-                Please add your WhatsApp number in Settings before listing or requesting.{' '}
-                <Link to="/profile" className="font-bold text-he-purple hover:underline">Go to Settings</Link>
+                {WHATSAPP_REQUIRED_MESSAGE}{' '}
+                <Link to="/profile" state={{ whatsappRequired: true }} className="font-bold text-he-purple hover:underline">Go to Settings</Link>
               </p>
             </div>
           ) : null}
