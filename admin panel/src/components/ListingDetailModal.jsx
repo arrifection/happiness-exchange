@@ -10,7 +10,7 @@ import {
   getListingOwnerLabel,
   getListingStatusBadgeClass,
 } from '../lib/listings'
-import MediatedChatActions from './MediatedChatActions'
+import WhatsAppContact from '../components/WhatsAppContact'
 
 export default function ListingDetailModal({ itemId, fallbackItem, open, onClose }) {
   const [item, setItem] = useState(fallbackItem || null)
@@ -123,6 +123,9 @@ export default function ListingDetailModal({ itemId, fallbackItem, open, onClose
                       Lister
                     </div>
                     <p className="mt-1 text-sm text-surface-800">{getListingOwnerLabel(item)}</p>
+                    <div className="mt-3">
+                      <WhatsAppContact number={item?.owner_whatsapp_number} label="Lister WhatsApp" />
+                    </div>
                   </div>
                   <div className="rounded-lg border border-surface-300 bg-surface-100/60 p-3">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-surface-500">
@@ -148,12 +151,6 @@ export default function ListingDetailModal({ itemId, fallbackItem, open, onClose
                   </div>
                 </div>
 
-                {(item?.status === 'reserved' || item?.status === 'completed') ? (
-                  <MediatedChatActions
-                    itemId={getListingId(item)}
-                    requestStatus="approved"
-                  />
-                ) : null}
               </div>
             </>
           )}

@@ -12,6 +12,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    whatsapp_number: '',
     password: '',
     confirmPassword: '',
   })
@@ -54,6 +55,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
+          whatsapp_number: formData.whatsapp_number,
           password: formData.password,
         }),
       })
@@ -130,6 +132,25 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           />
         </div>
 
+        {/* WhatsApp */}
+        <div className="grid gap-1">
+          <label className={labelClass} htmlFor="signup-whatsapp">WhatsApp Number</label>
+          <input
+            id="signup-whatsapp"
+            name="whatsapp_number"
+            type="tel"
+            value={formData.whatsapp_number}
+            onChange={handleChange}
+            placeholder="+92 300 1234567"
+            autoComplete="tel"
+            required
+            className={inputClass}
+          />
+          <p className="text-[10px] leading-relaxed text-[#8c755f]/90">
+            Only admins can see this. It is used to coordinate approved exchanges.
+          </p>
+        </div>
+
         {/* Password */}
         <div className="grid gap-1">
           <label className={labelClass} htmlFor="signup-password">Password</label>
@@ -193,7 +214,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             </svg>
           </div>
           <p className="text-[10px] font-bold text-[#8b4cf6]">
-            Community Member — give items, request items, chat & review
+            Community Member — give items, request items, and leave reviews
           </p>
         </div>
 

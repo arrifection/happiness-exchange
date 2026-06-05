@@ -51,7 +51,7 @@ async def list_users(
         "total": total,
         "skip": skip,
         "limit": limit,
-        "users": [serialize_user(u) for u in users],
+        "users": [serialize_user(u, include_whatsapp=True) for u in users],
     }
 
 
@@ -73,7 +73,7 @@ async def get_user(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    return serialize_user(user)
+    return serialize_user(user, include_whatsapp=True)
 
 
 @router.patch("/{user_id}/ban")

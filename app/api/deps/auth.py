@@ -45,7 +45,7 @@ async def get_current_user(
             detail="User for this token was not found.",
         )
 
-    return serialize_user(user)
+    return serialize_user(user, include_whatsapp=True)
 
 
 async def get_optional_current_user(
@@ -82,5 +82,17 @@ async def get_verified_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You must verify your email to perform this action.",
+        )
+    return current_user
+
+
+async def get_whatsapp_user(
+    current_user: dict = Depends(get_verified_user),
+):
+    """Ensure the user has a WhatsApp number saved for coordination."""
+    if not current_user.get("whatsapp_number"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please add your WhatsApp number in Settings before listing or requesting.",
         )
     return current_user

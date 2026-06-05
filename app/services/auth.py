@@ -8,6 +8,7 @@ from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.core.roles import UserRole
+from app.core.whatsapp import normalize_whatsapp_number, validate_whatsapp_number
 from app.schemas.auth import TokenPayload
 
 USERNAME_CHANGE_WINDOW_DAYS = 7
@@ -64,7 +65,7 @@ def decode_access_token(token: str) -> TokenPayload | None:
         return None
 
 
-def serialize_user(user: dict) -> dict:
+def serialize_user(user: dict, *, include_whatsapp: bool = False) -> dict:
     """Convert a MongoDB user document into an API-safe response shape."""
     created_at = user.get("created_at")
     username_change_deadline = None
@@ -78,7 +79,7 @@ def serialize_user(user: dict) -> dict:
         username_change_deadline = created_at + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
         can_change_username = datetime.now(timezone.utc) <= username_change_deadline
 
-    return {
+    payload = {
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
@@ -92,6 +93,9 @@ def serialize_user(user: dict) -> dict:
         "username_change_deadline": username_change_deadline,
         "blocked_users": user.get("blocked_users", []),
     }
+    if include_whatsapp:
+        payload["whatsapp_number"] = user.get("whatsapp_number")
+    return payload
 
 
 def normalize_name(value: str) -> str:

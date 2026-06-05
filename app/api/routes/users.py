@@ -9,7 +9,7 @@ from app.db.mongodb import (
     get_reviews_collection_async,
     get_users_collection_async,
 )
-from app.schemas.auth import ProfileUpdateRequest, UserResponse
+from app.schemas.auth import ProfileUpdateRequest, UserResponse, WhatsAppUpdateRequest
 from app.core.roles import is_admin_role
 from app.services.account import delete_user_account
 
@@ -122,7 +122,41 @@ async def update_me(
         )
 
     updated_user = await users_collection.find_one({"_id": user_object_id})
-    return serialize_user(updated_user)
+    return serialize_user(updated_user, include_whatsapp=True)
+
+
+@router.patch("/me/whatsapp", response_model=UserResponse)
+async def update_whatsapp(
+    payload: WhatsAppUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update the authenticated user's private WhatsApp contact number."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    user_object_id = parse_object_id(current_user["id"])
+    if user_object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user id.",
+        )
+
+    await users_collection.update_one(
+        {"_id": user_object_id},
+        {
+            "$set": {
+                "whatsapp_number": payload.whatsapp_number,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+
+    updated_user = await users_collection.find_one({"_id": user_object_id})
+    return serialize_user(updated_user, include_whatsapp=True)
 
 
 @router.delete("/me", status_code=status.HTTP_200_OK)

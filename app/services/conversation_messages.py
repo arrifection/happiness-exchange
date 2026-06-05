@@ -187,7 +187,7 @@ async def send_conversation_message(
             title=f"New message from {sender_name}",
             message=last_text,
             type_="new_message",
-            action_url=f"/messages/{conversation_id}",
+            action_url="/requests",
         )
     )
 

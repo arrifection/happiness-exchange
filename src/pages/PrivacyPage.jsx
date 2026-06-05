@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <h2>How we use information</h2>
       <ul>
         <li>To create and manage your account, verify your email, and prevent abuse.</li>
-        <li>To display listings, match requests, enable chat, and support delivery coordination.</li>
+        <li>To display listings, match requests, coordinate approved exchanges via WhatsApp (admin-only), and support delivery coordination.</li>
         <li>To calculate trust scores, reviews, and community reputation features.</li>
         <li>To send service emails such as verification links and important account notices.</li>
       </ul>

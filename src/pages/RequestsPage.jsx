@@ -238,7 +238,6 @@ export default function RequestsPage({
               {visibleRequests.map((request) => {
                 if (activeView === 'mine') {
                   const reviewContext = getReviewContextForMyRequest?.(request)
-                  const convId = getChatConversationForRequest?.(request.id, request)
 
                   return (
                     <RequestCardShell
@@ -271,14 +270,10 @@ export default function RequestsPage({
                                 {cancelPendingRequestId === request.id ? 'Cancelling…' : 'Cancel Request'}
                               </Button>
                             ) : null}
-                            {request.status === 'approved' && convId ? (
-                              <Button
-                                as="link"
-                                to={`/messages/${convId}`}
-                                className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
-                              >
-                                Open Messages
-                              </Button>
+                            {request.status === 'approved' ? (
+                              <p className="text-[10px] leading-relaxed text-he-muted">
+                                Happiness Exchange admin will contact you via WhatsApp.
+                              </p>
                             ) : null}
                             {reviewContext ? (
                               <Button
@@ -297,7 +292,6 @@ export default function RequestsPage({
                 }
 
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
-                const convId = getChatConversationForRequest?.(request.id, request)
 
                 return (
                   <RequestCardShell
@@ -319,14 +313,10 @@ export default function RequestsPage({
                               </Button>
                             </div>
                           ) : null}
-                          {request.status === 'approved' && convId ? (
-                            <Button
-                              as="link"
-                              to={`/messages/${convId}`}
-                              className="h-7 min-h-0 w-full rounded-btn text-[10px] bg-he-purple text-white"
-                            >
-                              Open Messages
-                            </Button>
+                          {request.status === 'approved' ? (
+                            <p className="text-[10px] leading-relaxed text-he-muted">
+                              Happiness Exchange admin will contact both sides via WhatsApp.
+                            </p>
                           ) : null}
                           {reviewContext ? (
                             <Button

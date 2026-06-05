@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { Link } from 'react-router-dom'
+
 import { Button } from './ui.jsx'
 
 const MIN_REASON_LENGTH = 30
@@ -10,7 +12,7 @@ const EXAMPLE_REASONS = [
   'I recently moved and currently do not have basic kitchen items.',
 ]
 
-export default function RequestItemModal({ item, open, submitting, error, onClose, onSubmit }) {
+export default function RequestItemModal({ item, open, submitting, error, missingWhatsApp = false, onClose, onSubmit }) {
   const [reason, setReason] = useState('')
   const trimmedLength = reason.trim().length
   const isTooShort = trimmedLength > 0 && trimmedLength < MIN_REASON_LENGTH
@@ -48,6 +50,15 @@ export default function RequestItemModal({ item, open, submitting, error, onClos
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {missingWhatsApp ? (
+            <div className="rounded-xl border border-he-danger/30 bg-he-danger/5 p-3 text-sm text-he-ink">
+              <p className="font-semibold">WhatsApp number required</p>
+              <p className="mt-1 text-he-muted">
+                Please add your WhatsApp number in Settings before listing or requesting.{' '}
+                <Link to="/profile" className="font-bold text-he-purple hover:underline">Go to Settings</Link>
+              </p>
+            </div>
+          ) : null}
           <div>
             <label htmlFor="request-reason" className="mb-1.5 block text-sm font-semibold text-he-ink">
               Why do you need this item?
@@ -93,7 +104,7 @@ export default function RequestItemModal({ item, open, submitting, error, onClos
             <Button type="button" variant="secondary" className="flex-1" disabled={submitting} onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!isValid || submitting}>
+            <Button type="submit" className="flex-1" disabled={!isValid || submitting || missingWhatsApp}>
               {submitting ? 'Sending…' : 'Submit Request'}
             </Button>
           </div>

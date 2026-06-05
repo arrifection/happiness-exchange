@@ -53,7 +53,7 @@ const coordinationCards = [
     body: 'After a request is approved, Happiness Exchange administrators coordinate pickup and handoff with both the donor and recipient.',
     features: [
       'No direct donor-recipient messaging',
-      'Dedicated admin chat for each party',
+      'Admins coordinate approved exchanges using private WhatsApp contact information',
       'Privacy preserved throughout',
       'Clear status updates in Activity',
     ],

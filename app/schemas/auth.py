@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.core.roles import UserRole
+from app.core.whatsapp import validate_whatsapp_number
 
 
 class UserResponse(BaseModel):
@@ -11,6 +12,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: str = UserRole.USER
     account_type: str = "member"
+    whatsapp_number: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
     is_verified: bool = False
@@ -26,6 +28,12 @@ class SignupRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
+    whatsapp_number: str = Field(min_length=1, max_length=24)
+
+    @field_validator("whatsapp_number")
+    @classmethod
+    def validate_whatsapp(cls, value: str) -> str:
+        return validate_whatsapp_number(value)
 
 
 class LoginRequest(BaseModel):
@@ -69,3 +77,12 @@ class TokenPayload(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
+
+
+class WhatsAppUpdateRequest(BaseModel):
+    whatsapp_number: str = Field(min_length=1, max_length=24)
+
+    @field_validator("whatsapp_number")
+    @classmethod
+    def validate_whatsapp(cls, value: str) -> str:
+        return validate_whatsapp_number(value)

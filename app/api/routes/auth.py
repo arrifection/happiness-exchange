@@ -100,6 +100,7 @@ async def signup(
         "name": " ".join(payload.name.strip().split()),
         "name_normalized": normalized_name,
         "email": normalized_email,
+        "whatsapp_number": payload.whatsapp_number,
         "hashed_password": hash_password(payload.password),
         "role": UserRole.USER,          # default role for all public signups
         "account_type": "member",
@@ -123,12 +124,13 @@ async def signup(
         "_id": result.inserted_id,
         "name": user_document["name"],
         "email": user_document["email"],
+        "whatsapp_number": user_document["whatsapp_number"],
         "account_type": user_document["account_type"],
         "is_verified": False,
         "created_at": user_document["created_at"],
         "updated_at": user_document["updated_at"],
     }
-    user_response = serialize_user(created_user)
+    user_response = serialize_user(created_user, include_whatsapp=True)
     token = create_access_token(user_response["id"], user_response["email"], user_response["role"])
 
     try:

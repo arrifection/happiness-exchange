@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { requestsApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
-import MediatedChatActions from '../components/MediatedChatActions'
+import WhatsAppContact from '../components/WhatsAppContact'
 import { useApiHealth } from '../contexts/ApiHealthContext'
 import {
   FileText, Search, Filter, RefreshCw, X, ChevronLeft, ChevronRight,
@@ -133,6 +133,7 @@ function RequestDetailModal({ request, onClose }) {
               </h4>
               <p className="font-medium text-surface-800">{request.requester_name || '—'}</p>
               <p className="text-xs text-surface-500 break-all">{request.requester_email || '—'}</p>
+              <WhatsAppContact number={request.requester_whatsapp_number} label="Requester WhatsApp" />
               <p className="text-xs text-surface-400 font-mono">{request.requester_id}</p>
             </section>
             <section className="card-sm space-y-2">
@@ -141,6 +142,7 @@ function RequestDetailModal({ request, onClose }) {
               </h4>
               <p className="font-medium text-surface-800">{request.owner_name || '—'}</p>
               <p className="text-xs text-surface-500 break-all">{request.owner_email || '—'}</p>
+              <WhatsAppContact number={request.owner_whatsapp_number} label="Lister WhatsApp" />
               <p className="text-xs text-surface-400 font-mono">{request.owner_id}</p>
             </section>
           </div>
@@ -154,9 +156,6 @@ function RequestDetailModal({ request, onClose }) {
               {request.reason || <span className="text-surface-400 italic">No reason provided.</span>}
             </p>
           </section>
-
-          {/* Admin-mediated chats */}
-          <MediatedChatActions requestId={request.id} requestStatus={request.status} />
 
           {/* Timeline */}
           <section className="card-sm space-y-2">

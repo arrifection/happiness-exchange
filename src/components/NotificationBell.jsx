@@ -19,8 +19,9 @@ function timeAgo(dateString) {
 
 function normalizeActionUrl(url) {
   if (!url) return null
+  if (url.startsWith('/messages')) return '/requests'
   const queryMatch = url.match(/[?&]conversation=([^&]+)/)
-  if (queryMatch) return `/messages/${queryMatch[1]}`
+  if (queryMatch) return '/requests'
   return url
 }
 

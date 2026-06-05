@@ -6,7 +6,7 @@ import TermsPage from './pages/TermsPage.jsx'
 import ContactPage from './pages/ContactPage.jsx'
 import BrowseItemsPage from './pages/BrowseItemsPage.jsx'
 import AuthenticatedHomePage from './pages/AuthenticatedHomePage.jsx'
-import ChatLayout from './pages/ChatLayout.jsx'
+import MessagingDisabledPage from './pages/MessagingDisabledPage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import GiveItemPage from './pages/GiveItemPage.jsx'
 import NeedsBoardPage from './pages/NeedsBoardPage.jsx'
@@ -54,7 +54,6 @@ const MY_ITEMS_ENDPOINT = `${API_BASE}/api/items/my`
 const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
 const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
-const CONVERSATIONS_ENDPOINT = `${API_BASE}/api/conversations/my`
 const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
 const TOKEN_KEY = 'happiness_exchange_token'
 const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
@@ -163,8 +162,11 @@ export default function App() {
   const [requestSubmitError, setRequestSubmitError] = useState('')
 
   const [profileUpdating, setProfileUpdating] = useState(false)
+  const [whatsappUpdating, setWhatsappUpdating] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
+  const [whatsappMessage, setWhatsappMessage] = useState('')
+  const [whatsappError, setWhatsappError] = useState('')
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [accountDeleteError, setAccountDeleteError] = useState('')
 
@@ -179,9 +181,6 @@ export default function App() {
   const [reviewModalState, setReviewModalState] = useState(null)
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
 
-  // Chat state — map of requestId → conversationId
-  const [conversations, setConversations] = useState([])
-  const [chatUnreadTotal, setChatUnreadTotal] = useState(0)
 
   const [needRequests, setNeedRequests] = useState([])
   const [loadingNeedRequests, setLoadingNeedRequests] = useState(true)
@@ -192,7 +191,6 @@ export default function App() {
 
   const isAuthPage = isAuthPagePath(location.pathname)
   const isMarketingHome = !currentUser && location.pathname === '/'
-  const isMessagesRoute = location.pathname.startsWith('/messages')
   const showAppChrome = !isAuthPage && (Boolean(currentUser) || location.pathname !== '/')
 
   useEffect(() => {
@@ -262,7 +260,6 @@ export default function App() {
       loadRequestData()
       loadMyReputation()
       loadProfileReviews(currentUser.id)
-      loadConversations()
       setItemForm((c) => ({ ...c, owner_name: c.owner_name || currentUser.name }))
     }
   }, [currentUser])
@@ -433,19 +430,6 @@ export default function App() {
     finally { setLoadingProfileReviews(false) }
   }
 
-  async function loadConversations() {
-    if (!token) return
-    try {
-      const res = await fetch(CONVERSATIONS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } })
-      const data = await res.json()
-      if (res.ok) {
-        const list = asArray(data)
-        setConversations(list)
-        setChatUnreadTotal(list.reduce((sum, c) => sum + (c.unread_count || 0), 0))
-      }
-    } catch { /* silent */ }
-  }
-
   function handleLogout() {
     try {
       localStorage.removeItem(TOKEN_KEY)
@@ -462,8 +446,6 @@ export default function App() {
     setMyReputation(null); setReputationError('')
     setProfileReviews([]); setProfileReviewsError('')
     setReviewMessage(''); setReviewModalState(null)
-    setConversations([]); setChatUnreadTotal(0)
-    setMyDeliveries([])
   }
 
   function handleAuthSuccess(data) {
@@ -516,6 +498,10 @@ export default function App() {
 
   async function handleCreateItem(event) {
     event.preventDefault()
+    if (!currentUser?.whatsapp_number?.trim()) {
+      setItemError('Please add your WhatsApp number in Settings before listing or requesting.')
+      return null
+    }
     if (uploadingItemImage) { setItemError('Please wait for the image upload to finish before publishing.'); return null }
     setCreatingItem(true); setItemError(''); setItemMessage('')
     try {
@@ -667,6 +653,10 @@ export default function App() {
   }
 
   async function handleCreateRequest(itemId, reason) {
+    if (!currentUser?.whatsapp_number?.trim()) {
+      setRequestSubmitError('Please add your WhatsApp number in Settings before listing or requesting.')
+      return null
+    }
     setRequestsError('')
     setRequestsMessage('')
     setRequestSubmitError('')
@@ -705,12 +695,10 @@ export default function App() {
       if (!res.ok) throw new Error(formatApiError(data, 'Action failed.'))
       setRequestsMessage(
         action === 'approve'
-          ? 'Request approved. Our team will coordinate the exchange through Messages.'
+          ? 'Request approved. Happiness Exchange admin will contact both sides via WhatsApp.'
           : 'That request has been declined.',
       )
       await loadItems(); await loadMyItems(); await loadRequestData()
-      // Reload conversations so "Open Chat" appears
-      await loadConversations()
       return data
     } catch (error) { setRequestsError(error.message); return null }
   }
@@ -785,6 +773,23 @@ export default function App() {
       return data
     } catch (error) { setOwnerItemsError(error.message); return null }
     finally { setOwnerActionItemId('') }
+  }
+
+  async function handleWhatsAppUpdate(nextWhatsapp) {
+    setWhatsappUpdating(true); setWhatsappMessage(''); setWhatsappError('')
+    try {
+      const res = await fetch(`${ME_ENDPOINT}/whatsapp`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ whatsapp_number: nextWhatsapp }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Unable to update your WhatsApp number.'))
+      setCurrentUser(data)
+      setWhatsappMessage('WhatsApp number saved.')
+      return data
+    } catch (error) { setWhatsappError(error.message); return null }
+    finally { setWhatsappUpdating(false) }
   }
 
   async function handleProfileUpdate(nextName) {
@@ -890,22 +895,6 @@ export default function App() {
     return { itemId: request.item_id, itemTitle: request.item_title, reviewedUserId: request.requester_id, reviewedUserName: request.requester_name }
   }
 
-  // Map requestId → conversationId for "Open Chat" buttons (admin-mediated chats only)
-  function getChatConversationForRequest(requestId, request) {
-    const list = asArray(conversations)
-    if (request && currentUser) {
-      let chatType = null
-      if (currentUser.id === request.requester_id) chatType = 'admin_receiver'
-      else if (currentUser.id === request.owner_id) chatType = 'admin_lister'
-      if (chatType) {
-        const match = list.find((c) => c.request_id === requestId && c.chat_type === chatType)
-        if (match) return match.id
-      }
-    }
-    const fallback = list.find((c) => c.request_id === requestId && c.chat_type)
-    return fallback ? fallback.id : null
-  }
-
   const bottomTabItems = [
     {
       to: '/',
@@ -937,19 +926,12 @@ export default function App() {
       ),
     },
     {
-      to: '/messages',
-      label: 'Messages',
+      to: '/requests',
+      label: 'Activity',
       icon: (
-        <div className="relative">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-          </svg>
-          {chatUnreadTotal > 0 && (
-            <div className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#8b4cf6] text-[7px] font-bold text-white">
-              {chatUnreadTotal > 9 ? '9+' : chatUnreadTotal}
-            </div>
-          )}
-        </div>
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.072C3.4 3.298 2.25 4.8 2.25 6.75v9.75A2.25 2.25 0 004.5 18.75h9A2.25 2.25 0 0015.75 16.5V7.5a2.25 2.25 0 00-2.25-2.25h-1.05z" />
+        </svg>
       ),
     },
     {
@@ -971,7 +953,7 @@ export default function App() {
         <div className="flex flex-1 flex-col">
           {currentUser && !currentUser.is_verified && !isAuthPage ? (
             <div className="border-b border-he-danger/30 bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] flex items-center justify-center gap-4 flex-wrap dark:border-rose-900/50 dark:bg-[#3f1d1d] dark:text-rose-200">
-              <span>Verify your email to list, request, chat, and review.</span>
+              <span>Verify your email to list, request items, and leave reviews.</span>
               <button
                 type="button"
                 onClick={async () => {
@@ -1043,7 +1025,6 @@ export default function App() {
                     { to: '/needs', label: 'Needs' },
                     { to: '/give', label: 'Give Item' },
                     { to: '/requests', label: 'Activity' },
-                    { to: '/messages', label: 'Messages', badge: chatUnreadTotal },
                     { to: '/dashboard', label: 'Dashboard' },
                   ].map((nav) => (
                     <NavLink
@@ -1055,11 +1036,6 @@ export default function App() {
                       ].join(' ')}
                     >
                       {nav.label}
-                      {nav.badge > 0 && (
-                        <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#8b4cf6] text-[8px] font-bold text-white">
-                          {nav.badge > 9 ? '9+' : nav.badge}
-                        </span>
-                      )}
                     </NavLink>
                   ))}
                 </nav>
@@ -1096,9 +1072,7 @@ export default function App() {
               ? 'he-auth-main flex min-h-0 flex-1 flex-col overflow-hidden'
               : isMarketingHome
               ? 'flex-1 min-w-0 overflow-x-clip'
-              : isMessagesRoute
-                ? 'flex min-h-0 flex-1 flex-col overflow-hidden md:pb-8'
-                : 'app-shell flex-1 min-w-0 overflow-x-clip pt-4 pb-20 md:pb-8'
+              : 'app-shell flex-1 min-w-0 overflow-x-clip pt-4 pb-20 md:pb-8'
           }>
             <Routes>
               <Route
@@ -1183,6 +1157,7 @@ export default function App() {
                     uploadingItemImage={uploadingItemImage} itemMessage={itemMessage} itemError={itemError}
                     imageUploadMessage={imageUploadMessage} imageUploadError={imageUploadError}
                     onApplyGivePrefill={handleApplyGivePrefill}
+                    missingWhatsApp={Boolean(currentUser && !currentUser.whatsapp_number?.trim())}
                   />
                 }
               />
@@ -1214,7 +1189,6 @@ export default function App() {
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
-                    getChatConversationForRequest={getChatConversationForRequest}
                     loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
                   />
                 }
@@ -1231,7 +1205,6 @@ export default function App() {
                     onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
                     getReviewContextForOwnerRequest={getReviewContextForOwnerRequest}
-                    getChatConversationForRequest={getChatConversationForRequest}
                     loadingRequests={loadingRequests}
                     requestsMessage={requestsMessage}
                     requestsError={requestsError}
@@ -1242,14 +1215,8 @@ export default function App() {
                   />
                 }
               />
-              <Route
-                path="/messages"
-                element={<ChatLayout apiBase={API_BASE} token={token} currentUser={currentUser} />}
-              />
-              <Route
-                path="/messages/:conversationId"
-                element={<ChatLayout apiBase={API_BASE} token={token} currentUser={currentUser} />}
-              />
+              <Route path="/messages" element={<MessagingDisabledPage />} />
+              <Route path="/messages/:conversationId" element={<MessagingDisabledPage />} />
               <Route
                 path="/deliveries/:deliveryId"
                 element={<Navigate to="/requests" replace />}
@@ -1271,7 +1238,9 @@ export default function App() {
                     profileReviews={profileReviews} loadingProfileReviews={loadingProfileReviews}
                     profileReviewsError={profileReviewsError}
                     onUpdateProfile={handleProfileUpdate} profileUpdating={profileUpdating}
+                    onUpdateWhatsApp={handleWhatsAppUpdate} whatsappUpdating={whatsappUpdating}
                     profileMessage={profileMessage} profileError={profileError}
+                    whatsappMessage={whatsappMessage} whatsappError={whatsappError}
                     onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
                     accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
                     myItems={myItems} myRequests={myRequests}
@@ -1339,6 +1308,7 @@ export default function App() {
         open={Boolean(requestModalItem)}
         submitting={requestSubmitting}
         error={requestSubmitError}
+        missingWhatsApp={Boolean(currentUser && !currentUser.whatsapp_number?.trim())}
         onClose={() => {
           if (!requestSubmitting) {
             setRequestModalItem(null)

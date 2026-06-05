@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import ItemForm from '../components/ItemForm.jsx'
 import { Button, Surface } from '../components/ui.jsx'
@@ -17,6 +17,7 @@ export default function GiveItemPage({
   imageUploadMessage,
   imageUploadError,
   onApplyGivePrefill,
+  missingWhatsApp = false,
 }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -62,6 +63,15 @@ export default function GiveItemPage({
 
   return (
     <Surface className="p-4.5 md:p-8 md:max-w-4xl md:mx-auto">
+      {missingWhatsApp ? (
+        <div className="mb-4 rounded-xl border border-he-danger/30 bg-he-danger/5 p-4 text-sm text-he-ink">
+          <p className="font-semibold">WhatsApp number required</p>
+          <p className="mt-1 text-he-muted">
+            Please add your WhatsApp number in Settings before listing or requesting.{' '}
+            <Link to="/profile" className="font-bold text-he-purple hover:underline">Go to Settings</Link>
+          </p>
+        </div>
+      ) : null}
       <ItemForm
         itemForm={itemForm}
         onChange={onItemChange}
@@ -73,7 +83,7 @@ export default function GiveItemPage({
         itemError={itemError}
         imageUploadMessage={imageUploadMessage}
         imageUploadError={imageUploadError}
-        disabled={!currentUser?.is_verified}
+        disabled={!currentUser?.is_verified || missingWhatsApp}
       />
     </Surface>
   )

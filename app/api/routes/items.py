@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pymongo import DESCENDING
 
-from app.api.deps.auth import get_current_user, get_verified_user
+from app.api.deps.auth import get_current_user, get_verified_user, get_whatsapp_user
 from app.db.mongodb import (
     get_items_collection_async,
     get_requests_collection_async,
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 async def create_item(
     request: Request,
     payload: ItemCreateRequest,
-    current_user: dict = Depends(get_verified_user),
+    current_user: dict = Depends(get_whatsapp_user),
 ):
     """Create a new item listing for the logged-in user."""
     del request

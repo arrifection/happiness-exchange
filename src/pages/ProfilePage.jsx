@@ -52,6 +52,10 @@ export default function ProfilePage({
   profileUpdating,
   profileMessage,
   profileError,
+  onUpdateWhatsApp,
+  whatsappUpdating,
+  whatsappMessage,
+  whatsappError,
   onLogout,
   onDeleteAccount,
   accountDeleting,
@@ -61,6 +65,7 @@ export default function ProfilePage({
   onLocationPrefsUpdated,
 }) {
   const [name, setName] = useState(currentUser?.name || '')
+  const [whatsappNumber, setWhatsappNumber] = useState(currentUser?.whatsapp_number || '')
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
@@ -68,8 +73,9 @@ export default function ProfilePage({
 
   useEffect(() => {
     setName(currentUser?.name || '')
+    setWhatsappNumber(currentUser?.whatsapp_number || '')
     setNameError('')
-  }, [currentUser?.name])
+  }, [currentUser?.name, currentUser?.whatsapp_number])
 
   const joinedLabel = useMemo(
     () => formatProfileDate(currentUser?.created_at),
@@ -98,6 +104,11 @@ export default function ProfilePage({
     }
 
     await onUpdateProfile(name)
+  }
+
+  async function handleWhatsAppSubmit(event) {
+    event.preventDefault()
+    await onUpdateWhatsApp?.(whatsappNumber.trim())
   }
 
   const usernameLocked = !currentUser.can_change_username
@@ -252,10 +263,32 @@ export default function ProfilePage({
             </div>
 
             <div className="grid gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70">Phone Number</span>
-              <div className="min-h-10 rounded-input border border-he-border bg-he-surface-soft/80 px-3 py-2.5 text-[13px] text-he-muted">
-                Coming soon
-              </div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-he-soft/70" htmlFor="profile-whatsapp">
+                WhatsApp Number
+              </label>
+              <input
+                id="profile-whatsapp"
+                name="whatsapp_number"
+                type="tel"
+                value={whatsappNumber}
+                onChange={(event) => setWhatsappNumber(event.target.value)}
+                placeholder="+92 300 1234567"
+                autoComplete="tel"
+                className="min-h-10 w-full rounded-input border border-he-border bg-he-surface px-3 py-2.5 text-[13px] text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/20"
+              />
+              <p className="text-[10px] leading-relaxed text-he-muted">
+                Your WhatsApp number is private and visible only to Happiness Exchange admins.
+              </p>
+              {whatsappMessage ? <p className="text-[10px] font-bold text-he-purple">{whatsappMessage}</p> : null}
+              {whatsappError ? <p className="text-[10px] font-bold text-he-danger">{whatsappError}</p> : null}
+              <Button
+                type="button"
+                className="h-9 min-h-0 w-full text-[12px]"
+                disabled={whatsappUpdating || !whatsappNumber.trim() || whatsappNumber.trim() === (currentUser.whatsapp_number || '')}
+                onClick={handleWhatsAppSubmit}
+              >
+                {whatsappUpdating ? 'Saving…' : 'Save WhatsApp Number'}
+              </Button>
             </div>
 
             <div className="grid gap-1">

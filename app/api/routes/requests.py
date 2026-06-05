@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
-from app.api.deps.auth import get_current_user, get_verified_user
+from app.api.deps.auth import get_current_user, get_verified_user, get_whatsapp_user
 from app.db.mongodb import (
     get_conversations_collection_async,
     get_items_collection_async,
@@ -27,7 +27,7 @@ router = APIRouter()
 async def create_request(
     item_id: str,
     payload: RequestCreateRequest,
-    current_user: dict = Depends(get_verified_user),
+    current_user: dict = Depends(get_whatsapp_user),
 ):
     """Create an interest request for an item."""
     check_user_rate_limit(current_user["id"], "create_request", max_calls=60, window_seconds=3600)
@@ -278,9 +278,9 @@ async def update_request_status(
         create_notification(
             user_id=request["requester_id"],
             title="Request Approved!",
-            message=f"Your request for '{item.get('title')}' was approved. Our team will contact you through Messages to coordinate the exchange.",
+            message=f"Your request for '{item.get('title')}' was approved. Happiness Exchange admin will contact you via WhatsApp.",
             type_="request_approved",
-            action_url=f"/messages"
+            action_url="/requests"
         )
     )
 

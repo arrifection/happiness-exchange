@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps.admin import require_permission
 from app.core.admin_permissions import PERMISSION_LISTINGS
-from app.db.mongodb import get_items_collection_async, get_requests_collection_async
+from app.db.mongodb import get_items_collection_async, get_requests_collection_async, get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import parse_object_id
 from app.services.items import serialize_item
@@ -70,7 +70,21 @@ async def get_item_admin(
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found.")
 
-    return serialize_item(item)
+    payload = serialize_item(item)
+    owner_id = item.get("owner_id")
+    if owner_id:
+        users_collection = await get_users_collection_async()
+        if users_collection is not None:
+            owner_oid = parse_object_id(str(owner_id))
+            if owner_oid is not None:
+                owner = await users_collection.find_one(
+                    {"_id": owner_oid},
+                    {"whatsapp_number": 1},
+                )
+                if owner:
+                    payload["owner_whatsapp_number"] = owner.get("whatsapp_number")
+
+    return payload
 
 
 @router.delete("/{item_id}", status_code=204)

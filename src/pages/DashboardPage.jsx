@@ -234,22 +234,17 @@ export default function DashboardPage({
                 {loadingRequests ? <InlineLoadingNotice label="Updating requests…" className="sm:col-span-2" /> : null}
                 {requestList.map((request) => {
                 const reviewContext = getReviewContextForMyRequest?.(request)
-                const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
                     {request.reason ? (
                       <p className="mt-2 text-[11px] italic leading-relaxed text-he-muted">&ldquo;{request.reason}&rdquo;</p>
                     ) : null}
                     <div className="mt-2.5 flex flex-col gap-1.5 border-t border-he-border/60 pt-2">
-                      {request.status === 'approved' && convId && (
-                        <Button
-                          as="link"
-                          to={`/messages/${convId}`}
-                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px] bg-he-purple text-white"
-                        >
-                          Open Messages
-                        </Button>
-                      )}
+                      {request.status === 'approved' ? (
+                        <p className="text-[10px] leading-relaxed text-he-muted">
+                          Happiness Exchange admin will contact you via WhatsApp.
+                        </p>
+                      ) : null}
                       {reviewContext ? (
                         <Button
                           className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
@@ -290,7 +285,6 @@ export default function DashboardPage({
                 {loadingRequests ? <InlineLoadingNotice label="Updating incoming requests…" /> : null}
                 {incomingRequests.slice(0, 5).map((request) => {
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
-                const convId = getChatConversationForRequest?.(request.id, request)
                 return (
                   <RequestCard key={request.id} request={request}>
                     <IncomingRequestReview request={request} />
@@ -300,17 +294,11 @@ export default function DashboardPage({
                         <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction?.(request.id, 'reject')}>Decline</Button>
                       </div>
                     ) : null}
-                    {request.status === 'approved' && convId && (
-                      <div className="mt-1.5 flex gap-1.5">
-                        <Button
-                          as="link"
-                          to={`/messages/${convId}`}
-                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
-                        >
-                          Open Messages
-                        </Button>
-                      </div>
-                    )}
+                    {request.status === 'approved' ? (
+                      <p className="mt-2 text-[10px] leading-relaxed text-he-muted border-t border-he-border/60 pt-2">
+                        Happiness Exchange admin will contact both sides via WhatsApp.
+                      </p>
+                    ) : null}
                     {reviewContext ? (
                       <div className="mt-1.5 flex gap-1.5">
                         <Button

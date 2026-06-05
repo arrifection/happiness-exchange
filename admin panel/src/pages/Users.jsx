@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usersApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
+import { copyWhatsAppNumber, whatsappWaMeLink } from '../lib/whatsapp'
 import { LoadingSpinner, ErrorState, EmptyState } from '../components/States'
 import { Users, Search, Ban, RefreshCw, MoreVertical } from 'lucide-react'
 
@@ -104,6 +105,7 @@ export default function UsersPage() {
                   <tr>
                     <th>User</th>
                     <th>Email</th>
+                    <th>WhatsApp</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th>Joined</th>
@@ -128,6 +130,34 @@ export default function UsersPage() {
                           </div>
                         </td>
                         <td className="text-surface-600">{email}</td>
+                        <td className="text-surface-600">
+                          {u.whatsapp_number ? (
+                            <div className="space-y-1">
+                              <span className="font-mono text-xs">{u.whatsapp_number}</span>
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  className="btn-secondary text-[10px] px-2 py-1"
+                                  onClick={() => copyWhatsAppNumber(u.whatsapp_number)}
+                                >
+                                  Copy
+                                </button>
+                                {whatsappWaMeLink(u.whatsapp_number) ? (
+                                  <a
+                                    href={whatsappWaMeLink(u.whatsapp_number)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-secondary text-[10px] px-2 py-1"
+                                  >
+                                    WhatsApp
+                                  </a>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-surface-400 italic">Not set</span>
+                          )}
+                        </td>
                         <td>
                           <span className={`badge ${
                             role === 'super_admin' ? 'badge-purple' :

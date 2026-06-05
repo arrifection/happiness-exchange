@@ -51,9 +51,11 @@ def _serialize_request_admin(req: dict, user_lookup: dict, item_lookup: dict) ->
         "requester_id": requester_id,
         "requester_name": req.get("requester_name") or requester.get("name") or "—",
         "requester_email": requester.get("email") or "—",
+        "requester_whatsapp_number": requester.get("whatsapp_number"),
         "owner_id": owner_id,
         "owner_name": req.get("owner_name") or owner.get("name") or "—",
         "owner_email": owner.get("email") or "—",
+        "owner_whatsapp_number": owner.get("whatsapp_number"),
         "reason": req.get("reason") or "",
         "status": req.get("status") or "pending",
         "created_at": req.get("created_at"),
@@ -95,12 +97,13 @@ async def _enrich_requests(requests: list[dict]) -> list[dict]:
         if oids:
             cursor = users_col.find(
                 {"_id": {"$in": oids}},
-                {"name": 1, "email": 1},
+                {"name": 1, "email": 1, "whatsapp_number": 1},
             )
             async for user in cursor:
                 user_lookup[str(user["_id"])] = {
                     "name": user.get("name", ""),
                     "email": user.get("email", ""),
+                    "whatsapp_number": user.get("whatsapp_number"),
                 }
 
     # Batch load items (for image_url and current status)
