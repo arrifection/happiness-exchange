@@ -7,6 +7,7 @@ import {
 import { adminConversationsApi, conversationsApi } from '../lib/api'
 import { resolveApiError } from '../lib/backend'
 import { API_BASE_URL } from '../lib/env'
+import { isAdminMessage, messageSenderLabel } from '../lib/messageSender'
 import { buildMessagesUrl, chatConversationId } from '../lib/messagesNavigation'
 import { EmptyState, ErrorState, LoadingSpinner } from '../components/States'
 
@@ -475,12 +476,13 @@ export default function MessagesPage() {
                         <p className="text-sm text-surface-500 text-center py-8">No messages yet. Start the conversation.</p>
                       ) : (
                         messages.map((msg) => {
-                          const isAdminMessage = msg.message_source === 'admin_panel' || msg.sender_role === 'admin'
-                          const senderLabel = isAdminMessage ? 'You' : (msg.sender_name || 'Member')
+                          const isAdminMsg = isAdminMessage(msg)
+                          const memberRoleLabel = activeChatSide === 'lister' ? 'Lister' : 'Receiver'
+                          const senderLabel = messageSenderLabel(msg, { memberRoleLabel })
                           return (
-                            <div key={msg.id} className={`group flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>
+                            <div key={msg.id} className={`group flex ${isAdminMsg ? 'justify-end' : 'justify-start'}`}>
                               <div className={`relative max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                                isAdminMessage
+                                isAdminMsg
                                   ? 'bg-brand-600 text-white rounded-br-md'
                                   : 'bg-white border border-surface-300 text-surface-800 rounded-bl-md'
                               }`}>
@@ -489,7 +491,7 @@ export default function MessagesPage() {
                                   onClick={() => handleDeleteMessage(msg.id)}
                                   disabled={deletingMessageId === msg.id}
                                   className={`absolute top-2 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-40 ${
-                                    isAdminMessage ? 'left-2 text-brand-100 hover:text-white' : 'right-2 text-surface-400 hover:text-red-600'
+                                    isAdminMsg ? 'left-2 text-brand-100 hover:text-white' : 'right-2 text-surface-400 hover:text-red-600'
                                   }`}
                                   aria-label="Delete message"
                                   title="Delete message"
@@ -501,12 +503,12 @@ export default function MessagesPage() {
                                   )}
                                 </button>
                                 <p className={`text-[10px] font-bold uppercase tracking-wide mb-1 ${
-                                  isAdminMessage ? 'text-brand-100' : 'opacity-70'
+                                  isAdminMsg ? 'text-brand-100' : 'opacity-70'
                                 }`}>
                                   {senderLabel}
                                 </p>
                                 <p className="whitespace-pre-wrap">{msg.text}</p>
-                                <p className={`text-[10px] mt-1 ${isAdminMessage ? 'text-brand-100' : 'text-surface-400'}`}>
+                                <p className={`text-[10px] mt-1 ${isAdminMsg ? 'text-brand-100' : 'text-surface-400'}`}>
                                   {formatTime(msg.created_at)}
                                 </p>
                               </div>

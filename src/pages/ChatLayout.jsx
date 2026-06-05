@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { resolveDisplayName, getInitials as displayInitials } from '../lib/displayNames.js'
-import { isOwnMessage, messageSenderLabel, resolveMemberId } from '../lib/messageSender.js'
+import { isAdminMessage, isOwnMessage, messageSenderLabel } from '../lib/messageSender.js'
 import { canReplyInConversation, isStaffViewerRole, resolveViewerRole } from '../lib/staffRoles.js'
 import { ErrorState, ConversationSkeletonList, MessageSkeletonList } from '../components/ui.jsx'
 import './ChatLayout.css'
@@ -48,21 +48,53 @@ function getInitials(name) {
   return displayInitials(name, 'HE')
 }
 
+const ADMIN_DISPLAY_NAME = 'Happiness Exchange Admin'
+const MEMBER_LIST_TITLE_PREFIX = 'Admin Support'
+
 function getConversationDisplay(conversation, currentUserId) {
   if (!conversation) {
     return { id: null, name: '', title: '', roleLabel: '', itemTitle: '', isAdminChat: false }
   }
 
+  const itemTitle = resolveDisplayName({ name: conversation.item_title }, 'Item chat')
+  const isAdminChat = Boolean(conversation.chat_type)
+  const isMember = isAdminChat
+    && conversation.member_id
+    && String(conversation.member_id) === String(currentUserId)
+
+  if (isAdminChat && isMember) {
+    const roleLabel = conversation.member_role === 'receiver' ? 'Receiver' : 'Lister'
+    return {
+      id: conversation.admin_id,
+      name: ADMIN_DISPLAY_NAME,
+      title: `${MEMBER_LIST_TITLE_PREFIX} — ${itemTitle}`,
+      roleLabel,
+      itemTitle,
+      isAdminChat: true,
+    }
+  }
+
+  if (isAdminChat) {
+    const title = conversation.list_title
+      ? conversation.list_title.replace(/\bUnknown\b/gi, 'User')
+      : itemTitle
+    return {
+      id: conversation.member_id || conversation.counterpart_id,
+      name: resolveDisplayName({ name: conversation.counterpart_name }, 'Member'),
+      title,
+      roleLabel: conversation.role_label || '',
+      itemTitle,
+      isAdminChat: true,
+    }
+  }
+
   const name = resolveDisplayName(
     {
       counterpart_name: conversation.counterpart_name,
-      admin_name: conversation.admin_name,
-      member_name: conversation.member_name,
       name: conversation.counterpart_name,
     },
-    'Happiness Exchange Admin',
+    ADMIN_DISPLAY_NAME,
   )
-  const itemTitle = resolveDisplayName({ name: conversation.item_title }, 'Item chat')
   const title = conversation.list_title
     ? conversation.list_title.replace(/\bUnknown\b/gi, 'User')
     : `${name} — ${itemTitle}`
@@ -73,7 +105,7 @@ function getConversationDisplay(conversation, currentUserId) {
     title,
     roleLabel: conversation.role_label || '',
     itemTitle,
-    isAdminChat: Boolean(conversation.chat_type),
+    isAdminChat: false,
   }
 }
 
@@ -508,7 +540,11 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
               </span>
             </div>
             <p className="truncate text-xs text-he-muted">{display.title}</p>
-            {otherUserOnline && !display.isAdminChat ? (
+            {display.isAdminChat && display.roleLabel ? (
+              <p className="text-[10px] font-bold uppercase tracking-wide text-he-purple">
+                Your role: {display.roleLabel}
+              </p>
+            ) : otherUserOnline && !display.isAdminChat ? (
               <p className="text-[10px] font-medium text-green-600 dark:text-green-400">Online</p>
             ) : (
               <p className="text-[10px] text-he-soft">All pickup coordination goes through Happiness Exchange Admin.</p>
@@ -573,14 +609,9 @@ export default function ChatLayout({ apiBase, token, currentUser }) {
     }
 
     return messages.map((msg, i) => {
-      const identityContext = {
-        currentUserId: currentUser?.id,
-        memberId: resolveMemberId(activeConv, currentUser?.id),
-        adminId: activeConv?.admin_id,
-      }
       const viewerRole = resolveViewerRole(currentUser, activeConv)
-      const isMe = isOwnMessage(msg, { ...identityContext, viewerRole })
-      const senderLabel = messageSenderLabel(msg, { ...identityContext, viewerRole })
+      const isMe = isOwnMessage(msg, { viewerRole })
+      const senderLabel = messageSenderLabel(msg, { viewerRole })
       const showSep = shouldShowDateSeparator(messages, i)
 
       return (

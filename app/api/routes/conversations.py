@@ -10,7 +10,10 @@ from app.schemas.conversations import ConversationResponse, MessageResponse, Sen
 from app.services.auth import parse_object_id
 from app.services.conversations import (
     ADMIN_DISPLAY_NAME,
+    ADMIN_LIST_TITLE_PREFIX,
     ADMIN_MEDIATED_CHAT_TYPES,
+    CHAT_ADMIN_LISTER,
+    CHAT_ADMIN_RECEIVER,
     chat_type_for_request_participant,
     ensure_admin_mediated_conversations,
     get_other_participant_id,
@@ -72,9 +75,14 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
         admin_display = doc.get("admin_display_name") or ADMIN_DISPLAY_NAME
         member_name = sanitize_display_name(doc.get("member_name"), fallback="User")
         item_title = sanitize_display_name(item_title, fallback="Item")
-        role_label = "Receiver" if doc.get("member_role") == "receiver" else "Lister"
+        chat_type = doc.get("chat_type")
+        member_role = doc.get("member_role")
+        if member_role == "receiver" or chat_type == CHAT_ADMIN_RECEIVER:
+            role_label = "Receiver"
+        else:
+            role_label = "Lister"
 
-        if is_admin_role(current_role):
+        if is_admin_role(current_role) and not ids_match(current_user_id, doc.get("member_id")):
             base["counterpart_id"] = doc.get("member_id")
             base["counterpart_name"] = member_name
             base["role_label"] = role_label
@@ -82,14 +90,19 @@ def serialize_conversation(doc: dict, current_user: dict) -> dict:
         elif ids_match(current_user_id, doc.get("member_id")):
             base["counterpart_id"] = doc.get("admin_id")
             base["counterpart_name"] = admin_display
-            base["list_title"] = f"{admin_display} — {item_title}"
+            base["role_label"] = role_label
+            base["list_title"] = f"{ADMIN_LIST_TITLE_PREFIX} — {item_title}"
         else:
             base["counterpart_id"] = doc.get("admin_id")
             base["counterpart_name"] = admin_display
-            base["list_title"] = f"{admin_display} — {item_title}"
+            base["role_label"] = role_label
+            base["list_title"] = f"{ADMIN_LIST_TITLE_PREFIX} — {item_title}"
 
     base["member_name"] = sanitize_display_name(base.get("member_name"), fallback="User")
-    base["admin_name"] = sanitize_display_name(base.get("admin_name"), fallback=ADMIN_DISPLAY_NAME)
+    base["admin_name"] = sanitize_display_name(
+        doc.get("admin_display_name") or ADMIN_DISPLAY_NAME,
+        fallback=ADMIN_DISPLAY_NAME,
+    )
     base["giver_name"] = sanitize_display_name(base.get("giver_name"), fallback="User")
     base["receiver_name"] = sanitize_display_name(base.get("receiver_name"), fallback="User")
     base["item_title"] = sanitize_display_name(base.get("item_title"), fallback="Item")

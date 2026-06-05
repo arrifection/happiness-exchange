@@ -13,6 +13,8 @@ from app.api.routes import conversations as conversations_routes
 from app.api.routes.admin import conversations as admin_conversations_routes
 from app.services import conversation_messages as conversation_messages_service
 from app.services.message_identity import (
+    MESSAGE_SOURCE_ADMIN_PANEL,
+    MESSAGE_SOURCE_MEMBER_REPLY,
     SENDER_ROLE_ADMIN,
     SENDER_ROLE_USER,
     build_message_identity,
@@ -193,6 +195,7 @@ class MessageIdentityUnitTests(IsolatedAsyncioTestCase):
             "_id": ObjectId(),
             "sender_id": "member-1",
             "sender_role": SENDER_ROLE_USER,
+            "message_source": MESSAGE_SOURCE_MEMBER_REPLY,
             "sender_name": "Lister Person",
             "conversation_id": "conv-1",
             "text": "Works for me",
@@ -203,6 +206,7 @@ class MessageIdentityUnitTests(IsolatedAsyncioTestCase):
         serialized = serialize_message_fields(doc, conv=conv, current_user=admin_viewer)
         self.assertEqual(serialized["sender_role"], SENDER_ROLE_USER)
         self.assertEqual(serialized["sender_name"], "Lister Person")
+        self.assertEqual(serialized["message_source"], MESSAGE_SOURCE_MEMBER_REPLY)
 
     def test_legacy_wrong_admin_role_corrected_when_sender_is_member(self):
         conv = {

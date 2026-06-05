@@ -1,4 +1,4 @@
-export const ADMIN_SUPPORT_NAME = 'Happiness Exchange Support'
+export const ADMIN_DISPLAY_NAME = 'Happiness Exchange Admin'
 
 const ADMIN_SENDER_NAME_MARKERS = new Set([
   'happiness exchange admin',
@@ -12,37 +12,20 @@ export function isAdminSenderName(name) {
   return normalized.startsWith('happiness exchange admin')
 }
 
-export function inferSenderRole(msg) {
-  if (msg?.message_source === 'admin_panel') return 'admin'
-  if (msg?.message_source === 'member_reply') return 'user'
-  if (msg?.sender_role === 'admin') return 'admin'
-  if (msg?.sender_role === 'user') return 'user'
-  if (isAdminSenderName(msg?.sender_name)) return 'admin'
-  return 'unknown'
-}
-
-export function isOwnMessage(msg, { viewerRole = 'user' } = {}) {
-  const role = inferSenderRole(msg)
-  if (viewerRole === 'admin') {
-    return role === 'admin'
-  }
-  return role === 'user'
-}
-
-export function messageSenderLabel(msg, { viewerRole = 'user' } = {}) {
-  const role = inferSenderRole(msg)
-  if (viewerRole === 'admin') {
-    return role === 'admin' ? 'You' : (msg?.sender_name || 'Member')
-  }
-  return role === 'admin' ? ADMIN_SUPPORT_NAME : 'You'
-}
-
 export function isAdminMessage(msg) {
-  return inferSenderRole(msg) === 'admin'
+  if (msg?.message_source === 'admin_panel') return true
+  if (msg?.message_source === 'member_reply') return false
+  if (msg?.sender_role === 'admin') return true
+  if (msg?.sender_role === 'user') return false
+  return isAdminSenderName(msg?.sender_name)
 }
 
-export function resolveMemberId(conversation, currentUserId) {
-  if (conversation?.member_id) return String(conversation.member_id)
-  if (conversation?.chat_type && currentUserId) return String(currentUserId)
-  return undefined
+export function isOwnMessage(msg) {
+  return isAdminMessage(msg)
+}
+
+export function messageSenderLabel(msg, { memberRoleLabel = '' } = {}) {
+  if (isAdminMessage(msg)) return 'You'
+  const name = msg?.sender_name || 'Member'
+  return memberRoleLabel ? `${name} (${memberRoleLabel})` : name
 }

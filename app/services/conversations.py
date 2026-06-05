@@ -21,6 +21,7 @@ def ids_match(a, b) -> bool:
 logger = logging.getLogger(__name__)
 
 ADMIN_DISPLAY_NAME = "Happiness Exchange Admin"
+ADMIN_LIST_TITLE_PREFIX = "Admin Support"
 CHAT_ADMIN_RECEIVER = "admin_receiver"
 CHAT_ADMIN_LISTER = "admin_lister"
 ADMIN_MEDIATED_CHAT_TYPES = (CHAT_ADMIN_RECEIVER, CHAT_ADMIN_LISTER)

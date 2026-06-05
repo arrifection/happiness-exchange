@@ -166,13 +166,21 @@ def serialize_message_fields(
     if not receiver_role and conv and is_admin_mediated(conv):
         receiver_role = RECEIVER_ROLE_USER if sender_role == SENDER_ROLE_ADMIN else RECEIVER_ROLE_ADMIN
 
+    if sender_role == SENDER_ROLE_ADMIN:
+        sender_name = sanitize_display_name(
+            (conv or {}).get("admin_display_name") or ADMIN_DISPLAY_NAME,
+            fallback=ADMIN_DISPLAY_NAME,
+        )
+    else:
+        sender_name = sanitize_display_name(doc.get("sender_name"), fallback="User")
+
     return {
         "id": str(doc["_id"]),
         "conversation_id": doc["conversation_id"],
         "sender_id": str(doc.get("sender_id") or ""),
         "sender_role": sender_role,
         "message_source": message_source,
-        "sender_name": sanitize_display_name(doc.get("sender_name"), fallback="User"),
+        "sender_name": sender_name,
         "receiver_id": doc.get("receiver_id") or "",
         "receiver_role": receiver_role or "",
         "text": doc.get("text") or doc.get("body") or "",
