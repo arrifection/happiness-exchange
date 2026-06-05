@@ -150,7 +150,9 @@ html.dark {
   }
 
   .he-auth-main {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Legacy hardcoded light colors inside the authenticated app shell */

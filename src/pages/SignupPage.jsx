@@ -105,7 +105,14 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
-      <form className="grid gap-4" onSubmit={handleSubmit}>
+      <p className="mb-3 text-center text-[11px] text-[#68766d]">
+        Already have an account?{' '}
+        <Link to="/login" className="font-bold text-[#8b4cf6] hover:underline">
+          Sign in
+        </Link>
+      </p>
+
+      <form className="grid gap-3" onSubmit={handleSubmit}>
 
         {/* Name */}
         <div className="grid gap-1">

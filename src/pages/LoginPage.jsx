@@ -72,6 +72,13 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
+      <p className="mb-3 text-center text-[11px] text-[#68766d]">
+        New here?{' '}
+        <Link to="/signup" className="font-bold text-[#8b4cf6] hover:underline">
+          Create an account
+        </Link>
+      </p>
+
       <form className="grid gap-3" onSubmit={handleSubmit}>
         <div className="grid gap-1">
           <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="login-email">
