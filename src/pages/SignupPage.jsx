@@ -85,7 +85,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   }
 
   const inputClass =
-    'min-h-10 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3.5 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10'
+    'min-h-9 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10'
   const labelClass = 'text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80'
 
   const isFormReady = useMemo(() => {
@@ -100,8 +100,6 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   return (
     <AuthShell
       eyebrow="Join the Movement"
-      title="Create Your Account"
-      description="Every member can give and receive. Be part of a community built on trust."
       formEyebrow="Community Member"
       formTitle="Your Details"
       formDescription="Fill in your information to get started."
@@ -114,17 +112,8 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
-      <p className="mb-3 text-center text-[11px] text-[#68766d]">
-        Already have an account?{' '}
-        <Link to="/login" className="font-bold text-[#8b4cf6] hover:underline">
-          Sign in
-        </Link>
-      </p>
-
-      <form id="signup-form" className="he-auth-signup-form grid gap-3 pb-24" onSubmit={handleSubmit}>
-
-        {/* Name */}
-        <div className="grid gap-1">
+      <form className="he-auth-signup-form" onSubmit={handleSubmit}>
+        <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-name">Display Name / Username</label>
           <input
             id="signup-name"
@@ -139,8 +128,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           />
         </div>
 
-        {/* Email */}
-        <div className="grid gap-1">
+        <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-email">Email Address</label>
           <input
             id="signup-email"
@@ -155,8 +143,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           />
         </div>
 
-        {/* WhatsApp */}
-        <div className="grid gap-1">
+        <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-whatsapp">
             WhatsApp Number <span className="text-[#c65d4a]">*</span>
           </label>
@@ -171,13 +158,12 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             required
             className={inputClass}
           />
-          <p className="text-[10px] leading-relaxed text-[#8c755f]/90">
-            Only admins can see this. It is used to coordinate approved exchanges.
+          <p className="he-auth-signup-hint">
+            Admins only — used to coordinate approved exchanges.
           </p>
         </div>
 
-        {/* Password */}
-        <div className="grid gap-1">
+        <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-password">Password</label>
           <div className="relative">
             <input
@@ -202,8 +188,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           </div>
         </div>
 
-        {/* Confirm Password */}
-        <div className="grid gap-1">
+        <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-confirm">Confirm Password</label>
           <div className="relative">
             <input
@@ -226,45 +211,36 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
               {showConfirm ? 'Hide' : 'Show'}
             </button>
           </div>
-          {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-            <p className="text-[9px] font-bold text-[#c65d4a]">Passwords don't match yet.</p>
-          )}
+          {formData.confirmPassword && formData.password !== formData.confirmPassword ? (
+            <p className="text-[9px] font-bold text-[#c65d4a]">Passwords don&apos;t match yet.</p>
+          ) : null}
         </div>
 
-        {/* Community Member badge */}
-        <div className="flex items-center gap-2 rounded-xl border border-[#8b4cf6]/20 bg-[#efe7ff]/30 px-3 py-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#8b4cf6]/20 text-[#8b4cf6]">
+        <div className="he-auth-signup-badge">
+          <div className="he-auth-signup-badge-icon" aria-hidden="true">
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <p className="text-[10px] font-bold text-[#8b4cf6]">
+          <p className="he-auth-signup-badge-text">
             Community Member — give items, request items, and leave reviews
           </p>
         </div>
 
-        {!isFormReady ? (
-          <p className="text-center text-[10px] leading-relaxed text-[#8c755f]/90">
-            Fill in all fields above with matching passwords to unlock Create account.
-          </p>
+        {error ? (
+          <div className="he-auth-signup-error">{error}</div>
         ) : null}
-      </form>
 
-      {isFormReady ? (
-        <div className="he-auth-signup-cta" role="region" aria-label="Create account">
-          {error ? (
-            <p className="mb-2 text-center text-[10px] font-bold text-[#c65d4a]">{error}</p>
-          ) : null}
-          <button
-            type="submit"
-            form="signup-form"
-            disabled={submitting}
-            className="flex min-h-11 w-full items-center justify-center rounded-btn bg-[#8b4cf6] px-6 text-xs font-bold uppercase tracking-widest text-white shadow-xs transition hover:bg-[#7b40e6] active:scale-[0.98] disabled:opacity-60"
-          >
-            {submitting ? 'Creating account...' : 'Create account'}
-          </button>
-        </div>
-      ) : null}
+        <button
+          id="signup-submit"
+          type="submit"
+          disabled={submitting || !isFormReady}
+          className="he-auth-signup-submit"
+          aria-disabled={submitting || !isFormReady}
+        >
+          {submitting ? 'Creating Account...' : 'Create Account'}
+        </button>
+      </form>
     </AuthShell>
   )
 }

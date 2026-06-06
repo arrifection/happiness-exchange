@@ -1091,7 +1091,7 @@ export default function App() {
 
           <main className={
             isAuthPage
-              ? 'he-auth-main flex min-h-0 flex-1 flex-col overflow-hidden'
+              ? 'he-auth-main flex flex-1 flex-col'
               : isMarketingHome
               ? 'flex-1 min-w-0 overflow-x-clip'
               : 'app-shell flex-1 min-w-0 overflow-x-clip pt-4 pb-20 md:pb-8'

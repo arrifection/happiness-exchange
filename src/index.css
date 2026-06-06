@@ -121,38 +121,39 @@ html.dark {
   }
 
   html.he-auth-page {
-    overflow: hidden;
-    height: 100%;
-    overscroll-behavior: none;
+    overflow-x: clip;
+    height: auto;
+    min-height: 100%;
   }
 
   html.he-auth-page body {
-    overflow: hidden;
-    height: 100%;
-    overscroll-behavior: none;
-    position: fixed;
-    inset: 0;
+    overflow-x: clip;
+    overflow-y: auto;
+    position: static;
+    inset: auto;
     width: 100%;
+    min-height: 100dvh;
+    height: auto;
   }
 
   html.he-auth-page #root {
-    height: 100dvh;
-    max-height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    overflow: visible;
   }
 
   .he-app.he-app-auth {
-    height: 100%;
-    max-height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
+    height: auto;
+    min-height: 100dvh;
+    max-height: none;
+    overflow: visible;
   }
 
   .he-auth-main {
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   /* Legacy hardcoded light colors inside the authenticated app shell */
