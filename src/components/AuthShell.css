@@ -117,7 +117,7 @@ html.dark .he-auth-shell-footer {
   border-top-color: var(--color-he-border, #2a2a32);
 }
 
-/* Signup form — compact, inline CTA (no fixed bar) */
+/* Signup form - compact, inline CTA (no fixed bar) */
 .he-auth-signup-form {
   display: grid;
   gap: 0.5rem;
@@ -133,6 +133,17 @@ html.dark .he-auth-shell-footer {
   font-size: 9px;
   line-height: 1.35;
   color: rgba(140, 117, 95, 0.9);
+}
+
+.he-auth-signup-status {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.he-auth-signup-status-warning {
+  color: #c65d4a;
 }
 
 .he-auth-signup-badge {
@@ -185,29 +196,40 @@ html.dark .he-auth-shell-footer {
   margin-top: 0.125rem;
   border: none;
   border-radius: var(--radius-btn, 10px);
-  background: #8b4cf6;
+  background: linear-gradient(135deg, #cdb7f4 0%, #b999ee 100%);
   padding: 0 1.25rem;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(31, 31, 31, 0.06);
-  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease, filter 0.18s ease;
   cursor: pointer;
 }
 
-.he-auth-signup-submit:hover:not(:disabled) {
-  background: #7b40e6;
+.he-auth-signup-submit.is-ready,
+.he-auth-signup-submit.is-submitting {
+  background: linear-gradient(135deg, #7b40e6 0%, #8b4cf6 55%, #a855f7 100%);
+  box-shadow: 0 12px 24px -12px rgba(139, 76, 246, 0.72);
 }
 
-.he-auth-signup-submit:active:not(:disabled) {
+.he-auth-signup-submit.is-ready:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.he-auth-signup-submit.is-ready:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.he-auth-signup-submit:disabled {
-  opacity: 0.55;
+.he-auth-signup-submit.is-disabled:disabled {
+  filter: saturate(0.85);
   cursor: not-allowed;
+}
+
+.he-auth-signup-submit.is-submitting:disabled {
+  filter: brightness(1);
+  cursor: wait;
 }
 
 @media (max-width: 420px) {

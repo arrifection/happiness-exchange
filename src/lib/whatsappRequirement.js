@@ -11,13 +11,17 @@ export function validateWhatsAppInput(value) {
   if (!trimmed) {
     return 'WhatsApp number is required.'
   }
+
   const normalized = trimmed.replace(/[\s\-()]/g, '')
   const digits = normalized.startsWith('+') ? normalized.slice(1) : normalized
+
   if (!/^\d+$/.test(digits)) {
     return 'Use digits only, with an optional leading +.'
   }
+
   if (digits.length < 10 || digits.length > 15) {
-    return 'WhatsApp number must be 10–15 digits.'
+    return 'WhatsApp number must be 10-15 digits.'
   }
+
   return ''
 }

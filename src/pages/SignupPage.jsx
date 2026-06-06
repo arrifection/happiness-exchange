@@ -87,15 +87,35 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   const inputClass =
     'min-h-9 w-full rounded-input border border-[#efe8da] bg-[#fffdfb] px-3 text-xs text-[#1f1f1f] outline-none transition focus:border-[#8b4cf6] focus:ring-2 focus:ring-[#8b4cf6]/10'
   const labelClass = 'text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80'
+  const hasStartedForm = Object.values(formData).some((value) => String(value || '').trim().length > 0)
+  const whatsappError = useMemo(
+    () => validateWhatsAppInput(formData.whatsapp_number),
+    [formData.whatsapp_number],
+  )
 
   const isFormReady = useMemo(() => {
     if (formData.name.trim().length < 2) return false
     if (!formData.email.trim()) return false
-    if (validateWhatsAppInput(formData.whatsapp_number)) return false
+    if (whatsappError) return false
     if (formData.password.length < 8) return false
     if (formData.password !== formData.confirmPassword) return false
     return true
-  }, [formData])
+  }, [formData, whatsappError])
+
+  const disabledReason = useMemo(() => {
+    if (formData.name.trim().length < 2) return 'Add a display name to unlock Create Account.'
+    if (!formData.email.trim()) return 'Add your email address to continue.'
+    if (whatsappError) return whatsappError
+    if (formData.password.length < 8) return 'Password must be at least 8 characters.'
+    if (formData.password !== formData.confirmPassword) return 'Passwords must match to continue.'
+    return ''
+  }, [formData, whatsappError])
+
+  const submitStateClass = submitting
+    ? 'is-submitting'
+    : isFormReady
+      ? 'is-ready'
+      : 'is-disabled'
 
   return (
     <AuthShell
@@ -159,8 +179,11 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             className={inputClass}
           />
           <p className="he-auth-signup-hint">
-            Admins only — used to coordinate approved exchanges.
+            Admins only - used to coordinate approved exchanges.
           </p>
+          {formData.whatsapp_number.trim() && whatsappError ? (
+            <p className="he-auth-signup-status he-auth-signup-status-warning">{whatsappError}</p>
+          ) : null}
         </div>
 
         <div className="he-auth-signup-field">
@@ -223,7 +246,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             </svg>
           </div>
           <p className="he-auth-signup-badge-text">
-            Community Member — give items, request items, and leave reviews
+            Community Member - give items, request items, and leave reviews
           </p>
         </div>
 
@@ -231,11 +254,15 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           <div className="he-auth-signup-error">{error}</div>
         ) : null}
 
+        {hasStartedForm && !isFormReady && !submitting ? (
+          <p className="he-auth-signup-status he-auth-signup-status-warning">{disabledReason}</p>
+        ) : null}
+
         <button
           id="signup-submit"
           type="submit"
           disabled={submitting || !isFormReady}
-          className="he-auth-signup-submit"
+          className={`he-auth-signup-submit ${submitStateClass}`}
           aria-disabled={submitting || !isFormReady}
         >
           {submitting ? 'Creating Account...' : 'Create Account'}
