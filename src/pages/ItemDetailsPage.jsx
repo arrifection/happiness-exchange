@@ -10,6 +10,7 @@ import { storageConditionLabel } from '../lib/categories.js'
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { getPublicLocationLabel } from '../lib/locations.js'
+import { formatListingExpiryLabel, isListingExpired } from '../lib/listingExpiration.js'
 import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 import { safeString } from '../lib/safeValues.js'
 
@@ -37,6 +38,7 @@ export default function ItemDetailsPage({
   onOpenReview,
   onDeleteItem,
   onCompleteItem,
+  onRenewItem,
   ownerActionItemId,
 }) {
   const { itemId } = useParams()
@@ -102,7 +104,15 @@ export default function ItemDetailsPage({
     if (isOwner) {
       return (
         <div className="flex flex-wrap gap-2">
-          {item.status !== 'completed' ? (
+          {isListingExpired(item) ? (
+            <Button
+              disabled={ownerActionPending}
+              onClick={() => onRenewItem?.(item)}
+            >
+              Renew for 14 days
+            </Button>
+          ) : null}
+          {item.status !== 'completed' && !isListingExpired(item) ? (
             <Button
               variant="secondary"
               disabled={ownerActionPending}

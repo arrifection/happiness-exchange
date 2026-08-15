@@ -1,26 +1,22 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 
-import { getStoredTheme, setStoredTheme } from '../lib/theme.js'
+import { applyTheme } from '../lib/theme.js'
 
 const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => getStoredTheme())
-  const isDark = theme === 'dark'
-
   useEffect(() => {
-    setStoredTheme(theme)
-  }, [theme])
+    applyTheme('light')
+  }, [])
 
-  function toggleTheme() {
-    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  const value = {
+    theme: 'light',
+    isDark: false,
+    setTheme: () => {},
+    toggleTheme: () => {},
   }
 
-  return (
-    <ThemeContext.Provider value={{ theme, isDark, setTheme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {

@@ -257,6 +257,7 @@ def build_items_list_query(
     country: str | None = None,
     city: str | None = None,
     status: str | None = "available",
+    active_only: bool = True,
 ) -> dict[str, Any]:
     """Build a MongoDB filter for public item browse queries."""
     query: dict[str, Any] = {}
@@ -264,6 +265,11 @@ def build_items_list_query(
 
     if status:
         query["status"] = status
+
+    if active_only and (status == "available" or status is None):
+        from app.services.listing_expiration import active_listings_mongo_clause
+
+        and_clauses.append(active_listings_mongo_clause())
 
     if country:
         normalized = normalize_country(country)

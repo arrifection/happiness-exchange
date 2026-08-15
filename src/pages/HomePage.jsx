@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+
+import { asArray } from '../lib/api.js'
+import { isListingActive } from '../lib/listingExpiration.js'
 
 import './HomePage.css'
 
@@ -135,9 +138,28 @@ function StepText({ text }) {
   )
 }
 
-export default function HomePage({ currentUser }) {
+export default function HomePage({ currentUser, items = [], loadingItems = false }) {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const previewItems = useMemo(() => {
+    const liveItems = asArray(items)
+      .filter((item) => isListingActive(item))
+      .slice(0, 3)
+      .map((item, index) => ({
+        key: item.id,
+        name: item.title || 'Community item',
+        location: item.location_display || item.location || item.city || 'Nearby',
+        icon: ['🧥', '📚', '🎒'][index] || '🎁',
+        tint: ['#FFF3CD', '#E8F4FD', '#F0FDF4'][index] || '#FFF3CD',
+      }))
+
+    if (liveItems.length > 0) {
+      return liveItems
+    }
+
+    return phoneItems.map((item) => ({ key: item.name, ...item }))
+  }, [items])
 
   const navCtaTo = currentUser ? '/browse' : '/login'
   const navCtaLabel = currentUser ? 'Open App' : 'Login'
@@ -285,18 +307,30 @@ export default function HomePage({ currentUser }) {
               </div>
 
               <div className="he-phone-items" aria-hidden="true">
-                {phoneItems.map((item) => (
-                  <div key={item.name} className="he-item-card">
-                    <div className="he-item-thumb" style={{ background: item.tint }}>
-                      {item.icon}
+                {loadingItems && previewItems.length === phoneItems.length ? (
+                  phoneItems.map((item) => (
+                    <div key={item.name} className="he-item-card he-item-card-skeleton">
+                      <div className="he-item-thumb he-skeleton-block" />
+                      <div className="he-item-info">
+                        <div className="he-skeleton-line he-skeleton-line-wide" />
+                        <div className="he-skeleton-line he-skeleton-line-narrow" />
+                      </div>
                     </div>
-                    <div className="he-item-info">
-                      <div className="he-item-name">{item.name}</div>
-                      <div className="he-item-loc">{item.location}</div>
+                  ))
+                ) : (
+                  previewItems.map((item) => (
+                    <div key={item.key} className="he-item-card">
+                      <div className="he-item-thumb" style={{ background: item.tint }}>
+                        {item.icon}
+                      </div>
+                      <div className="he-item-info">
+                        <div className="he-item-name">{item.name}</div>
+                        <div className="he-item-loc">{item.location}</div>
+                      </div>
+                      <div className="he-item-tag">FREE</div>
                     </div>
-                    <div className="he-item-tag">FREE</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               <div className="he-app-list-btn">

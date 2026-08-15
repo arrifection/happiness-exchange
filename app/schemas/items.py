@@ -74,6 +74,9 @@ class ItemResponse(BaseModel):
     expiry_date: date | None = None
     sealed_packaging: bool | None = None
     storage_condition: StorageCondition | None = None
+    listing_expires_at: datetime
+    is_expired: bool = False
+    listing_active: bool = True
 
 
 class ItemImageUploadResponse(BaseModel):

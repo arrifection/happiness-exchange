@@ -42,6 +42,7 @@ export default function GiverHomePage({
   ownerActionItemId,
   onDeleteItem,
   onCompleteItem,
+  onRenewItem,
   ownerRequests,
   onRequestAction,
   onOpenReview,
@@ -152,6 +153,7 @@ export default function GiverHomePage({
                   currentUser={currentUser}
                   onDeleteItem={onDeleteItem}
                   onCompleteItem={onCompleteItem}
+                  onRenewItem={onRenewItem}
                   ownerActionPending={ownerActionItemId === item.id}
                   compact
                 />

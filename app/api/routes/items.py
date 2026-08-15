@@ -28,6 +28,7 @@ from app.services.cloudinary import (
 from app.core.slowapi_limiter import authenticated_user_key, limiter
 from app.services.image_validation import validate_and_sanitize_image
 from app.services.items import build_item_document, serialize_item
+from app.services.listing_expiration import compute_listing_expires_at, is_listing_expired, utc_now
 from app.services.location import apply_keyset_cursor_filter, build_items_list_query, filter_and_sort_items, haversine_km
 from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
 from app.services.trust import award_completed_donation
@@ -165,7 +166,11 @@ async def list_items(
             detail="Database connection is not available.",
         )
 
-    mongo_query = build_items_list_query(country=country, city=city, status=status)
+    mongo_query = build_items_list_query(
+        country=country,
+        city=city,
+        status=status or None,
+    )
     geo_mode = near_lat is not None and near_lng is not None
     location_prefiltered = bool(country or city)
     total = await items_collection.count_documents(mongo_query)
@@ -456,6 +461,12 @@ async def complete_item(
             detail="You do not have permission to modify this item.",
         )
 
+    if is_listing_expired(item):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This listing has expired. Renew it before marking it as completed.",
+        )
+
     result = await items_collection.update_one(
         {"_id": object_id},
         {"$set": {"status": "completed"}},
@@ -506,4 +517,74 @@ async def complete_item(
             reviews_collection=reviews_collection,
         )
 
+    return serialize_item(updated_item, owner_reputation=owner_reputation)
+
+
+@router.post("/items/{item_id}/renew", response_model=ItemResponse)
+async def renew_item(
+    item_id: str,
+    current_user: dict = Depends(get_verified_user),
+):
+    """Renew an expired listing for another 14 days. Owner only."""
+    items_collection = await get_items_collection_async()
+    requests_collection = await get_requests_collection_async()
+    reviews_collection = await get_reviews_collection_async()
+    if items_collection is None or requests_collection is None or reviews_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    object_id = parse_object_id(item_id)
+    if object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid item id.",
+        )
+
+    item = await items_collection.find_one({"_id": object_id})
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found.",
+        )
+
+    if item["owner_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to renew this item.",
+        )
+
+    if item.get("status") == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Completed listings cannot be renewed.",
+        )
+
+    if not is_listing_expired(item):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This listing is still active.",
+        )
+
+    renewed_at = utc_now()
+    new_expiry = compute_listing_expires_at(renewed_at)
+    await items_collection.update_one(
+        {"_id": object_id},
+        {
+            "$set": {
+                "listing_expires_at": new_expiry,
+                "status": "available",
+                "listing_renewed_at": renewed_at,
+            }
+        },
+    )
+
+    updated_item = await items_collection.find_one({"_id": object_id})
+    owner_reputation = await calculate_reputation_summary(
+        current_user["id"],
+        items_collection=items_collection,
+        requests_collection=requests_collection,
+        reviews_collection=reviews_collection,
+    )
     return serialize_item(updated_item, owner_reputation=owner_reputation)
