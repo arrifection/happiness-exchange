@@ -1,6 +1,12 @@
 from datetime import datetime, timezone
 
 from app.schemas.items import ItemCreateRequest
+from app.services.listing_expiration import (
+    compute_listing_expires_at,
+    is_listing_expired,
+    is_listing_publicly_active,
+    resolve_listing_expires_at,
+)
 from app.services.location import enrich_item_location, build_item_location_payload
 
 
@@ -66,6 +72,9 @@ def serialize_item(
         "expiry_date": enriched.get("expiry_date"),
         "sealed_packaging": enriched.get("sealed_packaging"),
         "storage_condition": enriched.get("storage_condition"),
+        "listing_expires_at": resolve_listing_expires_at(enriched),
+        "is_expired": is_listing_expired(enriched),
+        "listing_active": is_listing_publicly_active(enriched),
     }
 
 
@@ -98,4 +107,5 @@ def build_item_document(payload: ItemCreateRequest, current_user: dict) -> dict:
         document["sealed_packaging"] = payload.sealed_packaging
     if payload.storage_condition is not None:
         document["storage_condition"] = payload.storage_condition
+    document["listing_expires_at"] = compute_listing_expires_at()
     return document

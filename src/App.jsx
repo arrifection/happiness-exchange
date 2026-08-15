@@ -765,6 +765,23 @@ export default function App() {
     finally { setOwnerActionItemId('') }
   }
 
+  async function handleRenewItem(item) {
+    setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
+    try {
+      const res = await fetch(`${ITEMS_ENDPOINT}/${item.id}/renew`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Unable to renew this listing.'))
+      setItems((c) => c.map((i) => (i.id === data.id ? data : i)))
+      setMyItems((c) => c.map((i) => (i.id === data.id ? data : i)))
+      setOwnerItemsMessage(`"${item.title}" is active again for 14 days.`)
+      await loadItems(); await loadMyItems()
+      return data
+    } catch (error) { setOwnerItemsError(error.message); return null }
+    finally { setOwnerActionItemId('') }
+  }
+
   async function handleCompleteItem(item) {
     setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
     try {
@@ -1193,6 +1210,7 @@ export default function App() {
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
+                    onRenewItem={handleRenewItem}
                     ownerActionItemId={ownerActionItemId}
                   />
                 }

@@ -4,9 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { RatingStars, ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
-import ThemeToggle from '../components/ThemeToggle.jsx'
 import LocationSelector from '../components/LocationSelector.jsx'
-import { useTheme } from '../components/ThemeContext.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 import { userNeedsWhatsApp, validateWhatsAppInput } from '../lib/whatsappRequirement.js'
@@ -71,7 +69,6 @@ export default function ProfilePage({
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
-  const { isDark, toggleTheme } = useTheme()
   const location = useLocation()
   const whatsappRequired = userNeedsWhatsApp(currentUser) || Boolean(location.state?.whatsappRequired)
 
@@ -341,19 +338,14 @@ export default function ProfilePage({
         <div className="space-y-4 md:space-y-6">
           <Surface className="p-5">
             <h2 className="font-['Plus_Jakarta_Sans',sans-serif] text-sm font-bold text-he-ink md:text-base">App Preferences</h2>
-            <div className="mt-4 flex items-center justify-between py-2">
-              <div>
-                <p className="text-xs font-bold text-he-ink">Dark Theme</p>
-                <p className="mt-0.5 text-[10px] text-he-muted">Switch to a darker interface.</p>
-              </div>
-              <ThemeToggle checked={isDark} onChange={() => toggleTheme()} label="Dark theme" />
-            </div>
-            <div className="mt-1 flex items-center justify-between border-t border-he-border/40 py-2">
+            <div className="mt-4 flex items-center justify-between border-t border-he-border/40 py-2">
               <div>
                 <p className="text-xs font-bold text-he-ink">Email Notifications</p>
                 <p className="mt-0.5 text-[10px] text-he-muted">Get alerted on new requests.</p>
               </div>
-              <ThemeToggle checked disabled label="Email notifications — coming soon" />
+              <span className="rounded-full bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-he-muted">
+                Coming soon
+              </span>
             </div>
             <div className="mt-4 border-t border-he-border/40 pt-4">
               <p className="text-xs font-bold text-he-ink">Default Browse Location</p>

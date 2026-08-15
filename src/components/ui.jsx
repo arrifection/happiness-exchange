@@ -57,7 +57,7 @@ export function StatusBadge({ status, className = '' }) {
         className,
       )}
     >
-      {status}
+      {status === 'expired' ? 'Expired' : status === 'active' ? 'Active' : status}
     </span>
   )
 }

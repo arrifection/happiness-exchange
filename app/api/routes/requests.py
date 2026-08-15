@@ -15,6 +15,7 @@ from app.db.mongodb import (
 from app.schemas.requests import RequestCreateRequest, RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
+from app.services.listing_expiration import is_listing_publicly_active
 from app.services.notifications import create_notification
 from app.services.reputation import build_public_reputation_lookup
 from app.services.request_approval import approve_request_and_create_conversations
@@ -70,6 +71,12 @@ async def create_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This item is not currently available for requests.",
+        )
+
+    if not is_listing_publicly_active(item):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This listing has expired and is no longer available for requests.",
         )
 
     request_document = build_request_document(item, current_user, reason=reason)
