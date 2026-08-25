@@ -49,6 +49,10 @@ class ItemCreateRequest(ItemLocationFields, ItemFoodFields):
     listing_mode: ListingMode = "GIVEAWAY"
 
 
+class ItemListingModeUpdateRequest(BaseModel):
+    listing_mode: ListingMode
+
+
 class ItemResponse(BaseModel):
     id: str
     title: str

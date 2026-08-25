@@ -809,6 +809,24 @@ export default function App() {
     finally { setOwnerActionItemId('') }
   }
 
+  async function handleChangeListingMode(item, listingMode = 'EXCHANGE') {
+    setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
+    try {
+      const res = await fetch(`${ITEMS_ENDPOINT}/${item.id}/listing-mode`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_mode: listingMode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Unable to update listing type.'))
+      setItems((c) => c.map((i) => (i.id === data.id ? { ...i, ...data } : i)))
+      setMyItems((c) => c.map((i) => (i.id === data.id ? { ...i, ...data } : i)))
+      setOwnerItemsMessage(`"${item.title}" is now listed for ${listingMode === 'EXCHANGE' ? 'Exchange / Swap only' : listingMode === 'BOTH' ? 'Give Away and Exchange' : 'Give Away'}.`)
+      return data
+    } catch (error) { setOwnerItemsError(error.message); return null }
+    finally { setOwnerActionItemId('') }
+  }
+
   async function handleRenewItem(item) {
     setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
     try {
@@ -1233,6 +1251,9 @@ export default function App() {
                       loadingItems={loadingItems} itemsError={itemsError}
                       onRefreshItems={loadItems}
                       myRequests={myRequests} ownerRequests={ownerRequests}
+                      onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
+                      onRenewItem={handleRenewItem} onChangeListingMode={handleChangeListingMode}
+                      ownerActionItemId={ownerActionItemId}
                     />
                   ) : (
                     <HomePage
@@ -1319,6 +1340,7 @@ export default function App() {
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
                     onRenewItem={handleRenewItem}
+                    onChangeListingMode={handleChangeListingMode}
                     ownerActionItemId={ownerActionItemId}
                   />
                 }

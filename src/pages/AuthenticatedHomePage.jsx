@@ -76,6 +76,11 @@ export default function AuthenticatedHomePage({
   itemsError,
   onRefreshItems,
   myRequests,
+  onDeleteItem,
+  onCompleteItem,
+  onRenewItem,
+  onChangeListingMode,
+  ownerActionItemId,
 }) {
   const [taglineIndex, setTaglineIndex] = useState(0)
   const [taglineVisible, setTaglineVisible] = useState(true)
@@ -225,6 +230,11 @@ export default function AuthenticatedHomePage({
               reviewContext={getReviewContextForItem(item)}
               onCreateRequest={onCreateRequest}
               onOpenReview={onOpenReview}
+              onDeleteItem={onDeleteItem}
+              onCompleteItem={onCompleteItem}
+              onRenewItem={onRenewItem}
+              onChangeListingMode={onChangeListingMode}
+              ownerActionPending={ownerActionItemId === item.id}
               compact
             />
           ))}

@@ -11,7 +11,7 @@ import TrustBadge from './TrustBadge.jsx'
 import ListingModeBadge from './ListingModeBadge.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
-function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, ownerActionPending }) {
+function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, onChangeListingMode, ownerActionPending }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -77,6 +77,16 @@ function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, own
             </button>
           ) : null}
 
+          {item.status !== 'completed' && !isListingExpired(item) && onChangeListingMode && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
+            <button
+              type="button"
+              onClick={() => handleAction(() => onChangeListingMode(item, 'EXCHANGE'))}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[11px] font-bold uppercase tracking-widest text-[#7340d2] transition hover:bg-[#f5efff]"
+            >
+              Change to Exchange only
+            </button>
+          ) : null}
+
           {item.status !== 'completed' && !isListingExpired(item) ? (
             <button
               type="button"
@@ -116,6 +126,7 @@ export default function ItemCard({
   onDeleteItem,
   onCompleteItem,
   onRenewItem,
+  onChangeListingMode,
   ownerActionPending = false,
   compact = false,
 }) {
@@ -139,6 +150,7 @@ export default function ItemCard({
           onDeleteItem={onDeleteItem}
           onCompleteItem={onCompleteItem}
           onRenewItem={onRenewItem}
+          onChangeListingMode={onChangeListingMode}
           ownerActionPending={ownerActionPending}
         />
       )

@@ -249,6 +249,27 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(len(self.items_collection.documents), 1)
 
+    def test_owner_can_change_listing_mode_to_exchange(self):
+        with self.make_client(self.owner_user) as client:
+            response = client.patch(
+                f"/api/items/{self.item_id}/listing-mode",
+                json={"listing_mode": "EXCHANGE"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["listing_mode"], "EXCHANGE")
+        self.assertEqual(self.items_collection.documents[0]["listing_mode"], "EXCHANGE")
+
+    def test_non_owner_cannot_change_listing_mode(self):
+        with self.make_client(self.other_user) as client:
+            response = client.patch(
+                f"/api/items/{self.item_id}/listing-mode",
+                json={"listing_mode": "EXCHANGE"},
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertNotEqual(self.items_collection.documents[0].get("listing_mode"), "EXCHANGE")
+
     def test_owner_can_mark_item_as_completed(self):
         with self.make_client(self.owner_user) as client:
             response = client.patch(f"/api/items/{self.item_id}/complete")

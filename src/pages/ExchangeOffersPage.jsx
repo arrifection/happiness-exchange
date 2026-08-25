@@ -41,7 +41,12 @@ export default function ExchangeOffersPage({ currentUser, token }) {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Could not load swap offers.')
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Exchange is still starting on the server. Wait a minute and tap Try again.')
+        }
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not load swap offers.')
+      }
       setOffers(asArray(data.offers))
     } catch (loadError) {
       setError(loadError.message)
