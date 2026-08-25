@@ -43,6 +43,7 @@ export default function ItemDetailsPage({
   onDeleteItem,
   onCompleteItem,
   onRenewItem,
+  onChangeListingMode,
   ownerActionItemId,
   token,
   onRefreshMyItems,
@@ -124,6 +125,15 @@ export default function ItemDetailsPage({
               onClick={() => onRenewItem?.(item)}
             >
               Renew for 14 days
+            </Button>
+          ) : null}
+          {item.status !== 'completed' && !isListingExpired(item) && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
+            <Button
+              variant="secondary"
+              disabled={ownerActionPending}
+              onClick={() => onChangeListingMode?.(item, 'EXCHANGE')}
+            >
+              Change to Exchange only
             </Button>
           ) : null}
           {item.status !== 'completed' && !isListingExpired(item) ? (

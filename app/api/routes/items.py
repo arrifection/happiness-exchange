@@ -17,6 +17,7 @@ from app.schemas.items import (
     ItemCreateRequest,
     ItemImageUploadResponse,
     ItemListResponse,
+    ItemListingModeUpdateRequest,
     ItemResponse,
 )
 from app.services.auth import parse_object_id
@@ -426,6 +427,65 @@ async def delete_item(
         await requests_collection.delete_many({"item_id": item_id})
 
     return
+
+
+@router.patch("/items/{item_id}/listing-mode", response_model=ItemResponse)
+async def update_item_listing_mode(
+    item_id: str,
+    payload: ItemListingModeUpdateRequest,
+    current_user: dict = Depends(get_verified_user),
+):
+    """Owner-only: switch a listing between Give Away, Exchange, or both."""
+    items_collection = await get_items_collection_async()
+    if items_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    object_id = parse_object_id(item_id)
+    if object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid item id.",
+        )
+
+    item = await items_collection.find_one({"_id": object_id})
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found.",
+        )
+
+    if item["owner_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this item.",
+        )
+
+    if item.get("status") == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Completed items cannot change listing type.",
+        )
+
+    if item.get("status") == "exchange_reserved" or item.get("giveaway_paused"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Listing type cannot change while an exchange is in progress.",
+        )
+
+    await items_collection.update_one(
+        {"_id": object_id},
+        {
+            "$set": {
+                "listing_mode": payload.listing_mode,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+    updated_item = await items_collection.find_one({"_id": object_id})
+    return serialize_item(updated_item)
 
 
 @router.patch("/items/{item_id}/complete", response_model=ItemResponse)

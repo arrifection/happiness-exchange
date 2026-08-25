@@ -354,7 +354,9 @@ export default function ItemForm({
               </select>
             </label>
             <p className="mt-1 text-[9px] text-[#8c755f]/60">
-              Choose whether this listing accepts give-away requests, swap offers, or both.
+              {(itemForm.listing_mode || 'GIVEAWAY') === 'EXCHANGE'
+                ? 'This listing will only accept swap offers, not Give Away requests.'
+                : 'Choose whether this listing accepts give-away requests, swap offers, or both.'}
             </p>
           </div>
 

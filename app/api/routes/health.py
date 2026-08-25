@@ -11,7 +11,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Human-readable deploy label — bump on meaningful backend releases
-API_BUILD = "2026-05-29-launch-readiness-v1"
+API_BUILD = "2026-08-25-exchange-live-v1"
 
 
 @router.get("/", summary="Backend status check")
