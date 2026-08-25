@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import ItemForm from '../components/ItemForm.jsx'
 import { Button, Surface } from '../components/ui.jsx'
@@ -22,7 +22,17 @@ export default function GiveItemPage({
 }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const prefillAppliedRef = useRef(false)
+  const exchangeModeAppliedRef = useRef(false)
+
+  useEffect(() => {
+    if (exchangeModeAppliedRef.current || searchParams.get('mode') !== 'exchange' || !onItemChange) {
+      return
+    }
+    exchangeModeAppliedRef.current = true
+    onItemChange({ target: { name: 'listing_mode', value: 'EXCHANGE' } })
+  }, [searchParams, onItemChange])
 
   useEffect(() => {
     if (prefillAppliedRef.current || !location.state?.prefill || !onApplyGivePrefill) {

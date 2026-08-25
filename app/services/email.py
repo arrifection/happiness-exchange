@@ -1,10 +1,13 @@
 import logging
 import re
+import smtplib
+from email.message import EmailMessage
 from typing import Any
 
 import httpx
 
 from app.core.config import settings
+from app.core.runtime import is_production_environment
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +49,29 @@ def parse_from_domain(email_from: str) -> str:
     return address.split("@", 1)[1].strip().lower()
 
 
+def smtp_configured() -> bool:
+    return bool((settings.SMTP_HOST or "").strip())
+
+
+def get_email_delivery_mode() -> str:
+    """Choose how outbound email is delivered.
+
+    Production uses Resend (or terminal_fallback if the key is missing).
+    Local/development never uses Resend, so test addresses cannot reach real
+    inboxes: SMTP (Mailpit) when SMTP_HOST is set, otherwise the terminal.
+    """
+    if is_production_environment():
+        if _clean_api_key(settings.RESEND_API_KEY):
+            return "resend"
+        return "terminal_fallback"
+    if smtp_configured():
+        return "smtp"
+    return "terminal_fallback"
+
+
 def get_resend_mode() -> str:
-    return "resend" if _clean_api_key(settings.RESEND_API_KEY) else "terminal_fallback"
+    """Backward-compatible delivery mode name (includes local smtp)."""
+    return get_email_delivery_mode()
 
 
 def get_email_diagnostics() -> dict[str, Any]:
@@ -55,6 +79,7 @@ def get_email_diagnostics() -> dict[str, Any]:
     email_from = (settings.EMAIL_FROM or "").strip()
     domain = parse_from_domain(email_from)
     key_configured = bool(_clean_api_key(settings.RESEND_API_KEY))
+    smtp_host = (settings.SMTP_HOST or "").strip()
     return {
         "resend_key_configured": key_configured,
         "email_from": email_from,
@@ -64,6 +89,28 @@ def get_email_diagnostics() -> dict[str, Any]:
         "app_base_url": settings.APP_BASE_URL.rstrip("/"),
         "admin_panel_url": settings.ADMIN_PANEL_URL.rstrip("/"),
         "resend_mode": get_resend_mode(),
+        "email_delivery_mode": get_email_delivery_mode(),
+        "smtp_configured": bool(smtp_host),
+        "smtp_host": smtp_host or None,
+        "smtp_port": settings.SMTP_PORT,
+        "is_production": is_production_environment(),
+    }
+
+
+def build_verification_email_content(token: str) -> dict[str, str]:
+    """Build verification email fields without sending."""
+    verify_link = f"{settings.APP_BASE_URL.rstrip('/')}/verify-email?token={token}"
+    plain_text = (
+        "Please verify your email to start listing items, requesting items, "
+        "chatting, and reviewing exchanges.\n\n"
+        f"{verify_link}\n\n"
+        "This link expires in 24 hours."
+    )
+    return {
+        "subject": "Verify your Happiness Exchange account",
+        "verify_link": verify_link,
+        "html": _verification_html(verify_link),
+        "text": plain_text,
     }
 
 
@@ -199,6 +246,62 @@ def _post_resend_email(to_email: str, subject: str, html: str, plain_text: str) 
         raise EmailSendError(f"Unexpected email send error: {exc}") from exc
 
 
+def _post_smtp_email(to_email: str, subject: str, html: str, plain_text: str) -> bool:
+    """Send email through a local SMTP sink such as Mailpit.
+
+    Used only in non-production. Failures fall back to the terminal so local
+    signup is not blocked if Mailpit is not running.
+    """
+    host = (settings.SMTP_HOST or "").strip()
+    port = int(settings.SMTP_PORT or 1025)
+    email_from = (settings.EMAIL_FROM or "").strip() or "dev@localhost"
+    normalized_to = to_email.strip().lower()
+
+    message = EmailMessage()
+    message["From"] = email_from
+    message["To"] = normalized_to
+    message["Subject"] = subject
+    message.set_content(plain_text)
+    message.add_alternative(html, subtype="html")
+
+    logger.info(
+        "Sending SMTP email to=%s host=%s port=%s subject=%s",
+        normalized_to,
+        host,
+        port,
+        subject,
+    )
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            if settings.SMTP_STARTTLS:
+                smtp.starttls()
+            smtp_user = (settings.SMTP_USER or "").strip()
+            if smtp_user:
+                smtp.login(smtp_user, settings.SMTP_PASSWORD or "")
+            smtp.send_message(message)
+        logger.info("SMTP email accepted for %s (subject=%s)", normalized_to, subject)
+        return True
+    except Exception as exc:
+        logger.warning(
+            "Local SMTP delivery failed to=%s host=%s port=%s error=%s. "
+            "Printing the message to the terminal instead.",
+            normalized_to,
+            host,
+            port,
+            exc,
+        )
+        print(f"\n[DEV] Email to {normalized_to}\nSubject: {subject}\n{plain_text}\n")
+        return False
+
+
+def _deliver_email(to_email: str, subject: str, html: str, plain_text: str) -> bool:
+    """Route email to local SMTP, Resend, or the terminal fallback."""
+    mode = get_email_delivery_mode()
+    if mode == "smtp":
+        return _post_smtp_email(to_email, subject, html, plain_text)
+    return _post_resend_email(to_email, subject, html, plain_text)
+
+
 def _friendly_resend_error(status_code: int, body: str, from_address: str) -> str:
     body_lower = (body or "").lower()
     domain = parse_from_domain(from_address)
@@ -229,25 +332,19 @@ def _friendly_resend_error(status_code: int, body: str, from_address: str) -> st
 
 
 def send_verification_email(to_email: str, token: str) -> None:
-    """Send a verification email via Resend.
+    """Send a verification email.
 
-    If RESEND_API_KEY is not configured, prints the verification link to the
-    server terminal for local development (never exposed to the frontend).
+    Local/dev: SMTP (Mailpit) when SMTP_HOST is set; otherwise prints the
+    verification link to the server terminal. Production: Resend HTTP API.
 
     Raises EmailSendError when Resend is configured but delivery fails.
     """
-    verify_link = f"{settings.APP_BASE_URL.rstrip('/')}/verify-email?token={token}"
-    plain_text = (
-        "Please verify your email to start listing items, requesting items, "
-        "chatting, and reviewing exchanges.\n\n"
-        f"{verify_link}\n\n"
-        "This link expires in 24 hours."
-    )
-    _post_resend_email(
+    content = build_verification_email_content(token)
+    _deliver_email(
         to_email,
-        "Verify your Happiness Exchange account",
-        _verification_html(verify_link),
-        plain_text,
+        content["subject"],
+        content["html"],
+        content["text"],
     )
 
 
@@ -321,7 +418,7 @@ def send_team_invite_email(
             f"Open the admin panel:\n{admin_panel_url}\n"
         )
 
-    return _post_resend_email(
+    return _deliver_email(
         to_email,
         "You've been invited to the Happiness Exchange admin team",
         _team_invite_html(

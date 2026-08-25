@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import PrivacyPage from './pages/PrivacyPage.jsx'
 import TermsPage from './pages/TermsPage.jsx'
@@ -20,7 +20,12 @@ import RequestsPage from './pages/RequestsPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import CheckYourEmailPage from './pages/CheckYourEmailPage.jsx'
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx'
+import ExchangeTransactionPage from './pages/ExchangeTransactionPage.jsx'
+import ExchangeOffersPage from './pages/ExchangeOffersPage.jsx'
+import ShipmentTrackingPage from './pages/ShipmentTrackingPage.jsx'
+import MyDeliveriesPage from './pages/MyDeliveriesPage.jsx'
 import RequestItemModal from './components/RequestItemModal.jsx'
+import CountrySelect from './components/CountrySelect.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import FlashBanner from './components/FlashBanner.jsx'
 import BackendWakeupBanner from './components/BackendWakeupBanner.jsx'
@@ -43,8 +48,9 @@ import {
 } from './lib/bootstrapFetch.js'
 import { getPageMeta } from './lib/siteMeta.js'
 import { usePageMeta } from './lib/usePageMeta.js'
-import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences } from './lib/locations.js'
+import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences, writeLocationPreferences } from './lib/locations.js'
 import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from './lib/whatsappRequirement.js'
+import { IS_LOCAL_DEV, LOCAL_TEST_USERS, loginLocalTestUser } from './lib/localDevAuth.js'
 
 const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -91,6 +97,7 @@ const emptyItemForm = {
   storage_condition: '',
   image_url: '',
   owner_name: '',
+  listing_mode: 'GIVEAWAY',
 }
 
 function formatApiError(errorData, fallbackMessage) {
@@ -168,6 +175,9 @@ export default function App() {
   const [profileError, setProfileError] = useState('')
   const [whatsappMessage, setWhatsappMessage] = useState('')
   const [whatsappError, setWhatsappError] = useState('')
+  const [countryUpdating, setCountryUpdating] = useState(false)
+  const [countryMessage, setCountryMessage] = useState('')
+  const [countryError, setCountryError] = useState('')
   const [accountDeleting, setAccountDeleting] = useState(false)
   const [accountDeleteError, setAccountDeleteError] = useState('')
 
@@ -181,6 +191,9 @@ export default function App() {
   const [reviewMessage, setReviewMessage] = useState('')
   const [reviewModalState, setReviewModalState] = useState(null)
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [localLoginBusy, setLocalLoginBusy] = useState('')
+  const [localCountry, setLocalCountry] = useState(DEFAULT_COUNTRY)
+  const userLoadGeneration = useRef(0)
 
 
   const [needRequests, setNeedRequests] = useState([])
@@ -278,7 +291,22 @@ export default function App() {
     }
   }
 
+  async function loginAsLocalDummy(user, nextPath = '/browse') {
+    setLocalLoginBusy(user.key)
+    setAuthError('')
+    try {
+      const data = await loginLocalTestUser(API_BASE, user, localCountry)
+      handleAuthSuccess(data)
+      navigate(nextPath, { replace: true })
+    } catch (error) {
+      setAuthError(error.message)
+    } finally {
+      setLocalLoginBusy('')
+    }
+  }
+
   async function loadUserData() {
+    const generation = userLoadGeneration.current
     setLoadingUser(true)
     setAuthError('')
 
@@ -287,6 +315,7 @@ export default function App() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
+      if (generation !== userLoadGeneration.current) return
 
       if (res.ok) {
         setCurrentUser(data)
@@ -301,9 +330,10 @@ export default function App() {
 
       setAuthError(formatApiError(data, 'Could not load your profile.'))
     } catch {
+      if (generation !== userLoadGeneration.current) return
       setAuthError(`${SERVER_STARTING_MESSAGE} Your session is saved — we'll keep trying.`)
     } finally {
-      setLoadingUser(false)
+      if (generation === userLoadGeneration.current) setLoadingUser(false)
     }
   }
 
@@ -432,6 +462,7 @@ export default function App() {
   }
 
   function handleLogout() {
+    userLoadGeneration.current += 1
     try {
       localStorage.removeItem(TOKEN_KEY)
     } catch {
@@ -444,14 +475,26 @@ export default function App() {
     setUploadingItemImage(false); setImageUploadMessage(''); setImageUploadError('')
     setItemMessage(''); setItemError('')
     setProfileMessage(''); setProfileError('')
+    setWhatsappMessage(''); setWhatsappError('')
+    setCountryMessage(''); setCountryError('')
     setMyReputation(null); setReputationError('')
     setProfileReviews([]); setProfileReviewsError('')
     setReviewMessage(''); setReviewModalState(null)
   }
 
   function handleAuthSuccess(data) {
+    userLoadGeneration.current += 1
     setAuthError('')
-    if (data.user) setCurrentUser(data.user)
+    if (data.user) {
+      setCurrentUser(data.user)
+      const country = data.user.country || DEFAULT_COUNTRY
+      const prefs = readLocationPreferences()
+      if (prefs.country !== country) {
+        const nextPrefs = { ...prefs, country, city: '', area: '' }
+        writeLocationPreferences(nextPrefs)
+        loadItems(nextPrefs)
+      }
+    }
     if (data.access_token) {
       try {
         localStorage.setItem(TOKEN_KEY, data.access_token)
@@ -531,6 +574,7 @@ export default function App() {
           ? (itemForm.location_display || itemForm.location?.trim() || itemForm.city || 'Pickup to be arranged')
           : 'Pickup to be arranged',
         image_url: itemForm.image_url?.trim() || null,
+        listing_mode: itemForm.listing_mode || 'GIVEAWAY',
       }
       if (itemForm.category === 'Food') {
         if (itemForm.expiry_date) payload.expiry_date = itemForm.expiry_date
@@ -659,7 +703,7 @@ export default function App() {
     setRequestModalItem(item)
   }
 
-  async function handleCreateRequest(itemId, reason) {
+  async function handleCreateRequest(itemId, reason, requesterCity) {
     if (userNeedsWhatsApp(currentUser)) {
       setRequestSubmitError(WHATSAPP_REQUIRED_MESSAGE)
       return null
@@ -675,7 +719,7 @@ export default function App() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, requester_city: requesterCity }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(formatApiError(data, 'Request failed.'))
@@ -816,6 +860,23 @@ export default function App() {
     finally { setWhatsappUpdating(false) }
   }
 
+  async function handleCountryUpdate(nextCountry) {
+    setCountryUpdating(true); setCountryMessage(''); setCountryError('')
+    try {
+      const res = await fetch(`${ME_ENDPOINT}/country`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ country: nextCountry }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(formatApiError(data, 'Unable to update your country.'))
+      setCurrentUser(data)
+      setCountryMessage('Country saved.')
+      return data
+    } catch (error) { setCountryError(error.message); return null }
+    finally { setCountryUpdating(false) }
+  }
+
   async function handleProfileUpdate(nextName) {
     setProfileUpdating(true); setProfileMessage(''); setProfileError('')
     try {
@@ -950,11 +1011,20 @@ export default function App() {
       ),
     },
     {
-      to: '/requests',
-      label: 'Activity',
+      to: '/swaps',
+      label: 'Exchange',
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.072C3.4 3.298 2.25 4.8 2.25 6.75v9.75A2.25 2.25 0 004.5 18.75h9A2.25 2.25 0 0015.75 16.5V7.5a2.25 2.25 0 00-2.25-2.25h-1.05z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+        </svg>
+      ),
+    },
+    {
+      to: '/deliveries',
+      label: 'Delivery',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21m-3 0h-.375c-.621 0-1.125-.504-1.125-1.125v-3.026a2.999 2.999 0 00-.5-1.664l-2.2-3.3A2.25 2.25 0 0014.25 9H9.75a2.25 2.25 0 00-1.875 1.011l-2.2 3.3a3 3 0 00-.5 1.664V16.5" />
         </svg>
       ),
     },
@@ -975,6 +1045,40 @@ export default function App() {
         <SplashScreen visible={showSplash} />
 
         <div className="flex flex-1 flex-col">
+          {import.meta.env.DEV ? (
+            <div className="border-b border-[#8b4cf6]/40 bg-[#efe7ff] px-4 py-2.5 text-center text-[13px] font-bold text-[#5a2fc4] flex items-center justify-center gap-3 flex-wrap">
+              <span>LOCAL APP — not the live website. API: {API_BASE}</span>
+              {IS_LOCAL_DEV ? (
+                <>
+                  <div className="w-full max-w-sm">
+                    <CountrySelect
+                      value={localCountry}
+                      onChange={setLocalCountry}
+                      disabled={Boolean(localLoginBusy)}
+                    />
+                  </div>
+                  {LOCAL_TEST_USERS.map((user) => (
+                    <button
+                      key={user.key}
+                      type="button"
+                      disabled={Boolean(localLoginBusy)}
+                      onClick={() => loginAsLocalDummy(user, user.key === 'A' ? '/browse' : '/swaps')}
+                      className="rounded-full bg-[#8b4cf6] px-3 py-1 text-[12px] font-bold uppercase tracking-wide text-white disabled:opacity-60"
+                    >
+                      {localLoginBusy === user.key ? 'Signing in…' : `Log in as User ${user.key}`}
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              <NavLink to="/deliveries" className="underline">
+                Delivery
+              </NavLink>
+              <NavLink to="/swaps" className="underline">
+                Exchange
+              </NavLink>
+            </div>
+          ) : null}
+
           {currentUser && !currentUser.is_verified && !isAuthPage ? (
             <div className="border-b border-he-danger/30 bg-[#fff3f0] px-4 py-2.5 text-center text-[13px] font-bold text-[#c65d4a] flex items-center justify-center gap-4 flex-wrap dark:border-rose-900/50 dark:bg-[#3f1d1d] dark:text-rose-200">
               <span>Verify your email to list, request items, and leave reviews.</span>
@@ -1063,6 +1167,8 @@ export default function App() {
                     { to: '/browse', label: 'Browse' },
                     { to: '/needs', label: 'Needs' },
                     { to: '/give', label: 'Give Item' },
+                    { to: '/swaps', label: 'Exchange' },
+                    { to: '/deliveries', label: 'Delivery' },
                     { to: '/requests', label: 'Activity' },
                     { to: '/dashboard', label: 'Dashboard' },
                   ].map((nav) => (
@@ -1207,12 +1313,32 @@ export default function App() {
                     currentUser={currentUser} items={items} myItems={myItems}
                     loadingItems={loadingItems} itemsError={itemsError}
                     onRefreshItems={loadItems}
+                    onRefreshMyItems={loadMyItems}
+                    token={token}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
                     onRenewItem={handleRenewItem}
                     ownerActionItemId={ownerActionItemId}
                   />
+                }
+              />
+              <Route
+                path="/exchange/:transactionId"
+                element={
+                  <ExchangeTransactionPage currentUser={currentUser} token={token} />
+                }
+              />
+              <Route
+                path="/deliveries"
+                element={
+                  <MyDeliveriesPage currentUser={currentUser} token={token} />
+                }
+              />
+              <Route
+                path="/tracking/:shipmentId"
+                element={
+                  <ShipmentTrackingPage currentUser={currentUser} token={token} />
                 }
               />
               <Route
@@ -1232,6 +1358,16 @@ export default function App() {
                     loadingRequests={loadingRequests} requestsMessage={requestsMessage} requestsError={requestsError}
                   />
                 }
+              />
+              <Route
+                path="/swaps"
+                element={
+                  <ExchangeOffersPage currentUser={currentUser} token={token} />
+                }
+              />
+              <Route
+                path="/exchange-offers"
+                element={<Navigate to="/swaps" replace />}
               />
               <Route
                 path="/requests"
@@ -1278,9 +1414,11 @@ export default function App() {
                     profileReviews={profileReviews} loadingProfileReviews={loadingProfileReviews}
                     profileReviewsError={profileReviewsError}
                     onUpdateProfile={handleProfileUpdate} profileUpdating={profileUpdating}
-                    onUpdateWhatsApp={handleWhatsAppUpdate} whatsappUpdating={whatsappUpdating}
                     profileMessage={profileMessage} profileError={profileError}
+                    onUpdateWhatsApp={handleWhatsAppUpdate} whatsappUpdating={whatsappUpdating}
                     whatsappMessage={whatsappMessage} whatsappError={whatsappError}
+                    onUpdateCountry={handleCountryUpdate} countryUpdating={countryUpdating}
+                    countryMessage={countryMessage} countryError={countryError}
                     onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
                     accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
                     myItems={myItems} myRequests={myRequests}
@@ -1349,6 +1487,7 @@ export default function App() {
         submitting={requestSubmitting}
         error={requestSubmitError}
         missingWhatsApp={userNeedsWhatsApp(currentUser)}
+        country={currentUser?.country}
         onClose={() => {
           if (!requestSubmitting) {
             setRequestModalItem(null)

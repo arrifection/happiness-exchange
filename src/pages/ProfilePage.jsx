@@ -6,7 +6,8 @@ import TrustBadge from '../components/TrustBadge.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import LocationSelector from '../components/LocationSelector.jsx'
 import { Button, EmptyState, Surface, TextField } from '../components/ui.jsx'
-import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
+import CountrySelect from '../components/CountrySelect.jsx'
+import { DEFAULT_COUNTRY, readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
 import { userNeedsWhatsApp, validateWhatsAppInput } from '../lib/whatsappRequirement.js'
 
 function formatProfileDate(value) {
@@ -55,6 +56,10 @@ export default function ProfilePage({
   whatsappUpdating,
   whatsappMessage,
   whatsappError,
+  onUpdateCountry,
+  countryUpdating,
+  countryMessage,
+  countryError,
   onLogout,
   onDeleteAccount,
   accountDeleting,
@@ -65,6 +70,7 @@ export default function ProfilePage({
 }) {
   const [name, setName] = useState(currentUser?.name || '')
   const [whatsappNumber, setWhatsappNumber] = useState(currentUser?.whatsapp_number || '')
+  const [country, setCountry] = useState(currentUser?.country || DEFAULT_COUNTRY)
   const [whatsappInputError, setWhatsappInputError] = useState('')
   const [nameError, setNameError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -75,8 +81,9 @@ export default function ProfilePage({
   useEffect(() => {
     setName(currentUser?.name || '')
     setWhatsappNumber(currentUser?.whatsapp_number || '')
+    setCountry(currentUser?.country || DEFAULT_COUNTRY)
     setNameError('')
-  }, [currentUser?.name, currentUser?.whatsapp_number])
+  }, [currentUser?.name, currentUser?.whatsapp_number, currentUser?.country])
 
   const joinedLabel = useMemo(
     () => formatProfileDate(currentUser?.created_at),
@@ -116,6 +123,11 @@ export default function ProfilePage({
     }
     setWhatsappInputError('')
     await onUpdateWhatsApp?.(whatsappNumber.trim())
+  }
+
+  async function handleCountrySubmit(event) {
+    event.preventDefault()
+    await onUpdateCountry?.(country)
   }
 
   const usernameLocked = !currentUser.can_change_username
@@ -276,6 +288,29 @@ export default function ProfilePage({
               <div className="min-h-10 cursor-not-allowed break-all rounded-input border border-he-border bg-he-surface-soft/80 px-3 py-2.5 text-[13px] text-he-muted">
                 {currentUser.email}
               </div>
+            </div>
+
+            <div className="grid gap-1">
+              <CountrySelect
+                id="profile-country"
+                value={country}
+                onChange={setCountry}
+                disabled={countryUpdating}
+                label="Country"
+              />
+              <p className="text-[10px] leading-relaxed text-he-muted">
+                Saved on your account. Request and swap forms only show cities in this country.
+              </p>
+              {countryMessage ? <p className="text-[10px] font-bold text-he-purple">{countryMessage}</p> : null}
+              {countryError ? <p className="text-[10px] font-bold text-he-danger">{countryError}</p> : null}
+              <Button
+                type="button"
+                className="h-9 min-h-0 w-full text-[12px]"
+                disabled={countryUpdating || !country || country === (currentUser.country || DEFAULT_COUNTRY)}
+                onClick={handleCountrySubmit}
+              >
+                {countryUpdating ? 'Saving…' : 'Save Country'}
+              </Button>
             </div>
 
             <div className="grid gap-1">

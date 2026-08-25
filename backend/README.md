@@ -98,3 +98,9 @@ Expected response:
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017` |
 | `DB_NAME` | Database name | `happiness_exchange` |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | `http://localhost:5173` |
+| `ENVIRONMENT` | `development` or `production` | `development` |
+| `DEV_BYPASS_EMAIL_VERIFICATION` | Local-only verification shortcut | `false` |
+| `SMTP_HOST` | Local Mailpit SMTP host | empty |
+
+Local Mailpit inbox, dummy users, and the verification bypass are documented in [docs/LOCAL_EMAIL.md](../docs/LOCAL_EMAIL.md).
+

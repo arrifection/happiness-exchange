@@ -199,7 +199,7 @@ class WhatsAppGatingTests(IsolatedAsyncioTestCase):
         client = self._build_requests_app()
         response = client.post(
             f"/api/requests/{self.item_id}",
-            json={"reason": "I need this item for my university studies this semester."},
+            json={"reason": "I need this item for my university studies this semester.", "requester_city": "Karachi"},
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("WhatsApp", response.json()["detail"])
@@ -234,7 +234,7 @@ class WhatsAppGatingTests(IsolatedAsyncioTestCase):
         client = self._build_requests_app(self.user_with_whatsapp)
         response = client.post(
             f"/api/requests/{self.item_id}",
-            json={"reason": "I need this item for my university studies this semester."},
+            json={"reason": "I need this item for my university studies this semester.", "requester_city": "Karachi"},
         )
         self.assertEqual(response.status_code, 201)
 
@@ -279,6 +279,31 @@ class WhatsAppProfileTests(IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["whatsapp_number"], "+966501234567")
+
+    async def test_update_country(self):
+        async def fake_users():
+            return self.users_collection
+
+        app = FastAPI()
+        app.include_router(users_routes.router, prefix="/api")
+        users_routes.get_users_collection_async = fake_users
+
+        async def no_collection():
+            return None
+
+        users_routes.get_items_collection_async = no_collection
+        users_routes.get_requests_collection_async = no_collection
+        users_routes.get_reviews_collection_async = no_collection
+        app.dependency_overrides[auth_deps.get_current_user] = lambda: serialize_user(
+            self.user_doc, include_whatsapp=True
+        )
+        client = TestClient(app)
+        response = client.patch(
+            "/api/me/country",
+            json={"country": "Saudi Arabia"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["country"], "Saudi Arabia")
 
     async def test_admin_user_list_includes_whatsapp(self):
         self.user_doc["whatsapp_number"] = "+923001234567"

@@ -25,6 +25,8 @@ The goal is to make community support more organized, trackable, and efficient.
 * Responsive user interface
 * Real-time status updates for requests
 
+Local email testing (Mailpit, dummy users, optional verification bypass): see [docs/LOCAL_EMAIL.md](docs/LOCAL_EMAIL.md).
+
 ---
 
 ## 🛠️ Tech Stack

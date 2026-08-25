@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pymongo.errors import DuplicateKeyError
@@ -17,11 +18,13 @@ from app.services.auth import (
     verify_password,
 )
 from app.core.config import settings
+from app.core.runtime import email_verification_bypass_enabled
 from app.services.email import EmailSendError, get_email_diagnostics, send_verification_email
 from app.services.notifications import notify_admins
 from app.api.deps.auth import get_current_user, get_optional_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 RESEND_COOLDOWN = timedelta(minutes=10)
 
@@ -95,16 +98,18 @@ async def signup(
     raw_token = generate_verification_token()
     token_hash = hash_verification_token(raw_token)
     token_expiry = now + timedelta(hours=24)
+    locally_verified = email_verification_bypass_enabled()
 
     user_document = {
         "name": " ".join(payload.name.strip().split()),
         "name_normalized": normalized_name,
         "email": normalized_email,
         "whatsapp_number": payload.whatsapp_number,
+        "country": payload.country,
         "hashed_password": hash_password(payload.password),
         "role": UserRole.USER,          # default role for all public signups
         "account_type": "member",
-        "is_verified": False,
+        "is_verified": locally_verified,
         "is_banned": False,
         "email_verification_token_hash": token_hash,
         "email_verification_expires_at": token_expiry,
@@ -125,8 +130,9 @@ async def signup(
         "name": user_document["name"],
         "email": user_document["email"],
         "whatsapp_number": user_document["whatsapp_number"],
+        "country": user_document["country"],
         "account_type": user_document["account_type"],
-        "is_verified": False,
+        "is_verified": user_document["is_verified"],
         "created_at": user_document["created_at"],
         "updated_at": user_document["updated_at"],
     }
@@ -136,10 +142,16 @@ async def signup(
     try:
         send_verification_email(normalized_email, raw_token)
     except EmailSendError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=exc.message,
-        )
+        if locally_verified:
+            logger.warning(
+                "Verification email was not delivered during local bypass signup: %s",
+                exc,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=exc.message,
+            )
 
     await users_collection.update_one(
         {"_id": result.inserted_id},
@@ -185,6 +197,15 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
+
+    if payload.country:
+        now = datetime.now(timezone.utc)
+        await users_collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"country": payload.country, "updated_at": now}},
+        )
+        user["country"] = payload.country
+        user["updated_at"] = now
 
     user_response = serialize_user(user)
 

@@ -21,6 +21,9 @@ import TeamPage          from './pages/Team'
 import CourierPage       from './pages/Courier'
 import AnalyticsPage     from './pages/Analytics'
 import MessagesPage      from './pages/Messages'
+import ExchangesPage     from './pages/Exchanges'
+import ExchangeDetailPage from './pages/ExchangeDetail'
+import ShippingPage      from './pages/Shipping'
 
 function RootRedirect() {
   const { user, loading, isAuthenticated } = useAuth()
@@ -59,6 +62,9 @@ export default function App() {
             <Route path="reviews" element={<RequireRole permission={PERMISSIONS.REVIEWS}><ReviewsPage /></RequireRole>} />
             <Route path="team" element={<RequireRole permission={PERMISSIONS.TEAM}><TeamPage /></RequireRole>} />
             <Route path="courier" element={<RequireRole permission={PERMISSIONS.DELIVERIES}><CourierPage /></RequireRole>} />
+            <Route path="exchanges" element={<RequireRole permission={PERMISSIONS.DELIVERIES}><ExchangesPage /></RequireRole>} />
+            <Route path="exchanges/:transactionId" element={<RequireRole permission={PERMISSIONS.DELIVERIES}><ExchangeDetailPage /></RequireRole>} />
+            <Route path="shipping" element={<RequireRole permission={PERMISSIONS.DELIVERIES}><ShippingPage /></RequireRole>} />
             <Route path="analytics" element={<RequireRole permission={PERMISSIONS.ANALYTICS}><AnalyticsPage /></RequireRole>} />
           </Route>
 

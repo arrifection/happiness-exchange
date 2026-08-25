@@ -1,3 +1,5 @@
+import { PAKISTAN_POPULAR_CITIES, PAKISTAN_TRANSACTION_CITIES, SAUDI_POPULAR_CITIES, SAUDI_TRANSACTION_CITIES } from './transactionCities.js'
+
 export const LOCATION_PREF_KEY = 'happiness_exchange_location_prefs'
 
 export const COUNTRIES = ['Pakistan', 'Saudi Arabia']
@@ -87,6 +89,58 @@ export function getPublicLocationLabel(item) {
 
 export function getCitiesForCountry(country) {
   return CITIES_BY_COUNTRY[country] || []
+}
+
+export function normalizeCountryName(country) {
+  const cleaned = String(country || '').trim()
+  if (!cleaned) return DEFAULT_COUNTRY
+  const lower = cleaned.toLowerCase()
+  if (lower.includes('saudi')) return 'Saudi Arabia'
+  if (lower.includes('pakistan') || lower === 'pk') return 'Pakistan'
+  return COUNTRIES.includes(cleaned) ? cleaned : DEFAULT_COUNTRY
+}
+
+function citiesWithPopularFirst(allCities, popularCities) {
+  const seen = new Set()
+  const ordered = []
+  for (const city of [...popularCities, ...allCities]) {
+    if (seen.has(city)) continue
+    seen.add(city)
+    ordered.push(city)
+  }
+  return ordered
+}
+
+export const TRANSACTION_CITIES = {
+  Pakistan: citiesWithPopularFirst(
+    Array.from(new Set(PAKISTAN_TRANSACTION_CITIES)).sort((a, b) => a.localeCompare(b)),
+    PAKISTAN_POPULAR_CITIES,
+  ),
+  'Saudi Arabia': citiesWithPopularFirst(
+    Array.from(new Set(SAUDI_TRANSACTION_CITIES)).sort((a, b) => a.localeCompare(b)),
+    SAUDI_POPULAR_CITIES,
+  ),
+}
+
+export function getTransactionCitiesForCountry(country) {
+  return TRANSACTION_CITIES[normalizeCountryName(country)] || TRANSACTION_CITIES[DEFAULT_COUNTRY]
+}
+
+export function isKnownTransactionCity(city, country = DEFAULT_COUNTRY) {
+  const cleaned = String(city || '').trim().toLowerCase()
+  if (!cleaned) return false
+  return getTransactionCitiesForCountry(country).some((name) => name.toLowerCase() === cleaned)
+}
+
+export function resolveUserCountry(user, prefs) {
+  if (COUNTRIES.includes(user?.country)) return user.country
+  if (COUNTRIES.includes(prefs?.country)) return prefs.country
+  return DEFAULT_COUNTRY
+}
+
+export function displayTransactionCity(city) {
+  const text = String(city || '').trim()
+  return text || 'City not provided'
 }
 
 export function buildLocationDisplay({

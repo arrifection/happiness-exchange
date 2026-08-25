@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.services.location import require_allowed_city
 
 
 RequestStatus = Literal["pending", "approved", "rejected"]
@@ -14,6 +16,12 @@ class RequestCreateRequest(BaseModel):
         max_length=500,
         description="Why the requester needs this item.",
     )
+    requester_city: str = Field(..., min_length=2, max_length=120)
+
+    @field_validator("requester_city")
+    @classmethod
+    def validate_requester_city(cls, value: str) -> str:
+        return require_allowed_city(value)
 
 
 class RequesterReputationSummary(BaseModel):
@@ -30,6 +38,7 @@ class RequestResponse(BaseModel):
     item_title: str
     requester_id: str
     requester_name: str
+    requester_city: str | None = None
     owner_id: str
     reason: str
     status: RequestStatus

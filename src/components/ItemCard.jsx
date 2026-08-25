@@ -8,6 +8,7 @@ import { isListingActive, isListingExpired } from '../lib/listingExpiration.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { RatingStars } from './reputation.jsx'
 import TrustBadge from './TrustBadge.jsx'
+import ListingModeBadge from './ListingModeBadge.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
 function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, ownerActionPending }) {
@@ -271,8 +272,11 @@ export default function ItemCard({
             </div>
           </div>
 
-          <Link to={itemHref} className="block rounded-lg transition">
-            {!isOwner ? (
+            <Link to={itemHref} className="block rounded-lg transition">
+              <div className="mb-1">
+                <ListingModeBadge mode={item.listing_mode} />
+              </div>
+              {!isOwner ? (
               <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#8c755f]/80">
                 <span>By {item.owner_name}</span>
                 {item.owner_badge ? (

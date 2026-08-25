@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import auth as auth_deps
 from app.api.routes.admin import analytics as admin_analytics_routes
 from app.api.routes.admin import deliveries as admin_deliveries_routes
+from app.api.routes.admin import exchange as admin_exchange_routes
 from app.api.routes.admin import items as admin_items_routes
 from app.api.routes.admin import reports as admin_reports_routes
 from app.api.routes.admin import reviews as admin_reviews_routes
@@ -78,6 +79,7 @@ class AdminAccessTests(IsolatedAsyncioTestCase):
         self.app = FastAPI()
         self.app.include_router(admin_analytics_routes.router, prefix="/api/admin/analytics")
         self.app.include_router(admin_deliveries_routes.router, prefix="/api/admin")
+        self.app.include_router(admin_exchange_routes.router, prefix="/api/admin")
         self.app.include_router(admin_items_routes.router, prefix="/api/admin/items")
         self.app.include_router(admin_reports_routes.router, prefix="/api/admin/reports")
         self.app.include_router(admin_reviews_routes.router, prefix="/api/admin/reviews")
@@ -141,4 +143,9 @@ class AdminAccessTests(IsolatedAsyncioTestCase):
     def test_non_admin_cannot_list_admin_team(self):
         with self._client_as_regular_user() as client:
             response = client.get("/api/admin/team")
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_admin_cannot_list_admin_exchange_transactions(self):
+        with self._client_as_regular_user() as client:
+            response = client.get("/api/admin/exchange-transactions")
         self.assertEqual(response.status_code, 403)

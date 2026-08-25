@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
+import CountrySelect from '../components/CountrySelect.jsx'
 import { validateWhatsAppInput } from '../lib/whatsappRequirement.js'
+import { DEFAULT_COUNTRY } from '../lib/locations.js'
 
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
@@ -16,6 +18,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     whatsapp_number: '',
     password: '',
     confirmPassword: '',
+    country: DEFAULT_COUNTRY,
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -64,6 +67,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
           email: formData.email,
           whatsapp_number: formData.whatsapp_number,
           password: formData.password,
+          country: formData.country,
         }),
       })
 
@@ -99,6 +103,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     if (whatsappError) return false
     if (formData.password.length < 8) return false
     if (formData.password !== formData.confirmPassword) return false
+    if (!formData.country) return false
     return true
   }, [formData, whatsappError])
 
@@ -108,6 +113,7 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
     if (whatsappError) return whatsappError
     if (formData.password.length < 8) return 'Password must be at least 8 characters.'
     if (formData.password !== formData.confirmPassword) return 'Passwords must match to continue.'
+    if (!formData.country) return 'Choose Pakistan or Saudi Arabia.'
     return ''
   }, [formData, whatsappError])
 
@@ -146,6 +152,19 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
             required
             className={inputClass}
           />
+        </div>
+
+        <div className="he-auth-signup-field">
+          <CountrySelect
+            id="signup-country"
+            value={formData.country}
+            onChange={(country) => setFormData((current) => ({ ...current, country }))}
+            disabled={submitting}
+            label="Country"
+          />
+          <p className="m-0 text-[10px] leading-relaxed text-[#68766d]">
+            Saved on your account. You will only see cities from this country when requesting or swapping items.
+          </p>
         </div>
 
         <div className="he-auth-signup-field">

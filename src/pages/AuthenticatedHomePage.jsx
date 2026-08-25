@@ -151,10 +151,16 @@ export default function AuthenticatedHomePage({
 
             <div className="he-auth-cta-row">
               <Link to="/browse" className="he-auth-cta-primary">
-                Browse Items
+                Browse
               </Link>
               <Link to="/give" className="he-auth-cta-secondary">
-                List Item
+                Give Away
+              </Link>
+              <Link to="/swaps" className="he-auth-cta-secondary">
+                Exchange
+              </Link>
+              <Link to="/deliveries" className="he-auth-cta-secondary">
+                Delivery
               </Link>
             </div>
           </div>

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo import DESCENDING
@@ -7,6 +8,7 @@ from pymongo.errors import DuplicateKeyError
 from app.api.deps.auth import get_current_user, get_verified_user, get_whatsapp_user
 from app.db.mongodb import (
     get_conversations_collection_async,
+    get_exchange_shipping_collection_async,
     get_items_collection_async,
     get_requests_collection_async,
     get_reviews_collection_async,
@@ -16,12 +18,16 @@ from app.schemas.requests import RequestCreateRequest, RequestResponse
 from app.services.auth import parse_object_id
 from app.services.requests import build_request_document, serialize_request
 from app.services.listing_expiration import is_listing_publicly_active
+from app.services.exchange_offers import is_listing_exchange_reserved, item_supports_giveaway
 from app.services.notifications import create_notification
 from app.services.reputation import build_public_reputation_lookup
 from app.services.request_approval import approve_request_and_create_conversations
+from app.services.exchange_shipping import build_shipping_document
+from app.services.shipment_events import notify_shipment_status
 from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/requests/{item_id}", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
@@ -73,13 +79,30 @@ async def create_request(
             detail="This item is not currently available for requests.",
         )
 
+    if not item_supports_giveaway(item):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This listing is exchange-only and does not accept give-away requests.",
+        )
+
+    if is_listing_exchange_reserved(item) or item.get("giveaway_paused"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Give-away requests are paused while an exchange is in progress.",
+        )
+
     if not is_listing_publicly_active(item):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This listing has expired and is no longer available for requests.",
         )
 
-    request_document = build_request_document(item, current_user, reason=reason)
+    request_document = build_request_document(
+        item,
+        current_user,
+        reason=reason,
+        requester_city=payload.requester_city,
+    )
     request_document["created_at"] = datetime.now(timezone.utc)
 
     try:
@@ -264,6 +287,12 @@ async def update_request_status(
             detail="Completed items cannot accept requests.",
         )
 
+    if is_listing_exchange_reserved(item) or item.get("giveaway_paused"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Give-away requests are paused while an exchange is in progress.",
+        )
+
     conversations_collection = await get_conversations_collection_async()
     users_collection = await get_users_collection_async()
 
@@ -285,11 +314,45 @@ async def update_request_status(
         create_notification(
             user_id=request["requester_id"],
             title="Request Approved!",
-            message=f"Your request for '{item.get('title')}' was approved. Happiness Exchange admin will contact you via WhatsApp.",
+            message=f"Your request for '{item.get('title')}' was approved. Add shipping details to continue.",
             type_="request_approved",
             action_url="/requests"
         )
     )
+
+    try:
+        shipping_collection = await get_exchange_shipping_collection_async()
+        if shipping_collection is not None:
+            existing = await shipping_collection.find_one({
+                "transaction_type": "GIVEAWAY",
+                "transaction_id": str(request_object_id),
+            })
+            if existing is None:
+                giver_name = request.get("owner_name") or item.get("owner_name") or current_user.get("name", "")
+                taker_name = request.get("requester_name") or ""
+                shipment = build_shipping_document(
+                    exchange_transaction_id=str(request_object_id),
+                    sender_user_id=request["owner_id"],
+                    sender_user_name=giver_name,
+                    receiver_user_id=request["requester_id"],
+                    receiver_user_name=taker_name,
+                    transaction_type="GIVEAWAY",
+                    item_title=item.get("title"),
+                    payer_user_id=request["requester_id"],
+                )
+                inserted = await shipping_collection.insert_one(shipment)
+                shipment["_id"] = inserted.inserted_id
+                notify_shipment_status(shipment, None, "PENDING")
+                asyncio.create_task(create_notification(
+                    user_id=request["requester_id"],
+                    title="Shipping Details Needed",
+                    message="The giver accepted your request. Submit your delivery address so admin can arrange shipping.",
+                    type_="giveaway_shipping_pending",
+                    action_url=f"/tracking/{inserted.inserted_id}",
+                    dedupe_key=f"giveaway_shipping_pending:{inserted.inserted_id}",
+                ))
+    except Exception:
+        logger.exception("Could not create Give Away shipment after request approval.")
 
     updated_request = await requests_collection.find_one({"_id": request_object_id})
     return serialize_request(updated_request)

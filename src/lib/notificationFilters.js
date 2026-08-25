@@ -8,6 +8,7 @@ const ADMIN_NOTIFICATION_TYPES = new Set([
   'low_rating_review',
   'suspicious_activity',
   'delivery_match_created',
+  'exchange_admin_action',
 ])
 
 /** Fallback title patterns when type is missing or legacy. */
