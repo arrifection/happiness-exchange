@@ -122,6 +122,33 @@ async def _ensure_indexes(database) -> None:
         unique=True,
         partialFilterExpression={"reference_id": {"$exists": True, "$ne": None}},
     )
+    # Exchange system indexes
+    await database.exchange_offers.create_index("listing_id")
+    await database.exchange_offers.create_index("offering_user_id")
+    await database.exchange_offers.create_index("owner_user_id")
+    await database.exchange_offers.create_index("status")
+    await database.exchange_offers.create_index("expires_at")
+    await database.exchange_offers.create_index(
+        [("status", ASCENDING), ("expires_at", ASCENDING)],
+        name="status_expires_at",
+    )
+    await database.exchange_offers.create_index([("listing_id", ASCENDING), ("status", ASCENDING)])
+    await database.exchange_offers.create_index(
+        [("listing_id", ASCENDING), ("offering_user_id", ASCENDING)],
+        unique=True,
+        partialFilterExpression={"status": {"$in": ["PENDING", "UNDER_REVIEW", "COUNTERED", "ACCEPTED", "SHIPPING", "SHIPPED", "DELIVERED"]}},
+        name="listing_offer_user_active_unique",
+    )
+    await database.exchange_transactions.create_index("exchange_offer_id")
+    await database.exchange_transactions.create_index("listing_id")
+    await database.exchange_transactions.create_index("user_a_id")
+    await database.exchange_transactions.create_index("user_b_id")
+    await database.exchange_transactions.create_index("status")
+    await database.exchange_shipping.create_index("exchange_transaction_id")
+    await database.exchange_shipping.create_index("sender_user_id")
+    await database.exchange_shipping.create_index("receiver_user_id")
+    await database.exchange_shipping.create_index("shipping_status")
+    await database.exchange_shipping.create_index("payment_status")
     _indexes_ready = True
 
 
@@ -273,6 +300,27 @@ async def get_need_requests_collection_async():
     if database is None:
         return None
     return database.need_requests
+
+
+async def get_exchange_offers_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.exchange_offers
+
+
+async def get_exchange_transactions_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.exchange_transactions
+
+
+async def get_exchange_shipping_collection_async():
+    database = await get_db_async()
+    if database is None:
+        return None
+    return database.exchange_shipping
 
 
 async def close_mongo_connection() -> None:

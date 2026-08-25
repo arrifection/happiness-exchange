@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from app.services.location import SUPPORTED_COUNTRIES, normalize_country
 
 
-ItemStatus = Literal["available", "reserved", "completed"]
+ListingMode = Literal["GIVEAWAY", "EXCHANGE", "BOTH"]
+ItemStatus = Literal["available", "reserved", "exchange_reserved", "completed"]
 LocationSource = Literal["manual", "current_location"]
 StorageCondition = Literal["room_temp", "refrigerated", "frozen"]
 
@@ -45,6 +46,7 @@ class ItemCreateRequest(ItemLocationFields, ItemFoodFields):
     condition: str = Field(min_length=2, max_length=60)
     location: str = Field(min_length=2, max_length=120)
     image_url: HttpUrl | None = None
+    listing_mode: ListingMode = "GIVEAWAY"
 
 
 class ItemResponse(BaseModel):
@@ -63,6 +65,10 @@ class ItemResponse(BaseModel):
     location_display: str
     image_url: str | None = None
     status: ItemStatus
+    listing_mode: ListingMode = "GIVEAWAY"
+    exchange_offer_count: int = 0
+    giveaway_paused: bool = False
+    exchange_reserved: bool = False
     owner_id: str
     owner_name: str
     owner_badge: str | None = None

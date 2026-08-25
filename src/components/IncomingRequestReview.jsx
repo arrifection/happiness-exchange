@@ -1,5 +1,6 @@
 import TrustBadge from './TrustBadge.jsx'
 import { RatingStars } from './reputation.jsx'
+import { displayTransactionCity } from '../lib/locations.js'
 
 function formatRequestDate(value) {
   if (!value) return 'Recently'
@@ -22,9 +23,18 @@ export default function IncomingRequestReview({ request }) {
         </p>
         <span className="text-[10px] text-he-soft">·</span>
         <p className="text-[10px] font-bold uppercase tracking-widest text-he-muted">
+          {displayTransactionCity(request.requester_city)}
+        </p>
+        <span className="text-[10px] text-he-soft">·</span>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-he-muted">
           {formatRequestDate(request.created_at)}
         </p>
       </div>
+      {request.item_title ? (
+        <p className="text-[12px] text-he-ink">
+          Requesting: <span className="font-bold">{request.item_title}</span>
+        </p>
+      ) : null}
 
       {reputation ? (
         <div className="flex flex-wrap items-center gap-2">

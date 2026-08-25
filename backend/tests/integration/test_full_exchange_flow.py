@@ -131,6 +131,7 @@ def test_full_exchange_happy_path(client, exchange_fixture, mongo_db):
 
     request_payload = {
         "reason": "I need this lamp for my study desk during the integration test run today.",
+        "requester_city": "Karachi",
     }
     create_request = client.post(f"/api/requests/{item_id}", json=request_payload, headers=requester_headers)
     assert create_request.status_code == 201, create_request.text

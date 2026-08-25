@@ -8,8 +8,10 @@ from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.core.roles import UserRole
+from app.core.runtime import email_verification_bypass_enabled
 from app.core.whatsapp import normalize_whatsapp_number, validate_whatsapp_number
 from app.schemas.auth import TokenPayload
+from app.services.location import DEFAULT_COUNTRY, SUPPORTED_COUNTRIES, normalize_country
 
 USERNAME_CHANGE_WINDOW_DAYS = 7
 
@@ -87,11 +89,17 @@ def serialize_user(user: dict, *, include_whatsapp: bool = False) -> dict:
         "account_type": user.get("account_type"),
         "created_at": created_at,
         "updated_at": user.get("updated_at"),
-        "is_verified": user.get("is_verified", False),
+        "is_verified": bool(user.get("is_verified", False))
+        or email_verification_bypass_enabled(),
         "is_banned": user.get("is_banned", False),
         "can_change_username": can_change_username,
         "username_change_deadline": username_change_deadline,
         "blocked_users": user.get("blocked_users", []),
+        "country": (
+            normalize_country(user.get("country"))
+            if normalize_country(user.get("country") or DEFAULT_COUNTRY) in SUPPORTED_COUNTRIES
+            else DEFAULT_COUNTRY
+        ),
     }
     if include_whatsapp:
         payload["whatsapp_number"] = user.get("whatsapp_number")

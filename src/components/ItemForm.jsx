@@ -339,6 +339,26 @@ export default function ItemForm({
           </div>
 
           <div>
+            <label className="grid gap-1.5" htmlFor="item-listing-mode">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">Listing type</span>
+              <select
+                id="item-listing-mode"
+                name="listing_mode"
+                value={itemForm.listing_mode || 'GIVEAWAY'}
+                onChange={handleFormChange}
+                className="h-10 w-full rounded-input border border-he-border bg-he-input px-3 text-sm text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/10"
+              >
+                <option value="GIVEAWAY">Give Away only</option>
+                <option value="EXCHANGE">Exchange / Swap only</option>
+                <option value="BOTH">Give Away and Exchange</option>
+              </select>
+            </label>
+            <p className="mt-1 text-[9px] text-[#8c755f]/60">
+              Choose whether this listing accepts give-away requests, swap offers, or both.
+            </p>
+          </div>
+
+          <div>
             <GiveItemLocationPill
               itemForm={itemForm}
               onOpenSetup={() => setLocationModalOpen(true)}

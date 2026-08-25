@@ -203,6 +203,7 @@ export default function HomePage({ currentUser, items = [], loadingItems = false
         <div className="he-nav-links">
           <a href="#how-it-works">How it works</a>
           <a href="#give">Give Happiness</a>
+          <Link to="/swaps">Exchange</Link>
           <a href="#get">Get Happiness</a>
           <a href="#impact">Impact</a>
         </div>
@@ -227,6 +228,7 @@ export default function HomePage({ currentUser, items = [], loadingItems = false
       <div className={`he-nav-mobile-menu ${mobileMenuOpen ? 'active' : ''}`}>
         <a href="#how-it-works">How it works</a>
         <a href="#give">Give Happiness</a>
+        <Link to="/swaps" onClick={() => setMobileMenuOpen(false)}>Exchange</Link>
         <a href="#get">Get Happiness</a>
         <a href="#impact">Impact</a>
         <Link to={navCtaTo} className="he-nav-mobile-cta">

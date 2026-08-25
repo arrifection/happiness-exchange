@@ -43,10 +43,16 @@ function normalizeConfiguredApiBase(raw) {
 
 export function resolveApiBase() {
   const configured = normalizeConfiguredApiBase(import.meta.env.VITE_API_BASE_URL)
-  if (configured) return configured
   if (import.meta.env.DEV) {
+    try {
+      const host = configured ? new URL(configured).hostname : ''
+      if (host === 'localhost' || host === '127.0.0.1') return configured
+    } catch {
+      /* fall through to local API */
+    }
     return 'http://127.0.0.1:8000'
   }
+  if (configured) return configured
   return PRODUCTION_API_BASE
 }
 

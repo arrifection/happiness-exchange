@@ -3,6 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.db.mongodb import get_users_collection_async
 from app.services.auth import decode_access_token, parse_object_id, serialize_user
+from app.core.runtime import email_verification_bypass_enabled
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -78,12 +79,12 @@ async def get_verified_user(
     current_user: dict = Depends(get_current_user),
 ):
     """Ensure the resolved user has verified their email."""
-    if not current_user.get("is_verified"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must verify your email to perform this action.",
-        )
-    return current_user
+    if current_user.get("is_verified") or email_verification_bypass_enabled():
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You must verify your email to perform this action.",
+    )
 
 
 async def get_whatsapp_user(

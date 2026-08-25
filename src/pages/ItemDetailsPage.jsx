@@ -3,6 +3,10 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 
 import ItemLocationMapModal from '../components/map/ItemLocationMapModal.jsx'
 import ImagePreviewModal, { normalizeItemImages } from '../components/ImagePreviewModal.jsx'
+import ListingModeBadge from '../components/ListingModeBadge.jsx'
+import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
+import ProposeSwapModal from '../components/ProposeSwapModal.jsx'
+import ExchangeOffersPanel from '../components/ExchangeOffersPanel.jsx'
 import { RatingStars } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, ErrorState, ItemCardSkeleton, StatusBadge } from '../components/ui.jsx'
@@ -40,11 +44,14 @@ export default function ItemDetailsPage({
   onCompleteItem,
   onRenewItem,
   ownerActionItemId,
+  token,
+  onRefreshMyItems,
 }) {
   const { itemId } = useParams()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
+  const [swapModalOpen, setSwapModalOpen] = useState(false)
 
   const item = useMemo(() => {
     const pool = [...(myItems || []), ...(items || [])]
@@ -55,6 +62,8 @@ export default function ItemDetailsPage({
   const displayImage = item ? resolveItemImageUrl(item.image_url) : ITEM_PLACEHOLDER_URL
   const itemImages = item ? normalizeItemImages(item) : []
   const isOwner = item?.owner_id === currentUser?.id
+  const supportsExchangeListing = item ? supportsExchange(item) : false
+  const supportsGiveawayListing = item ? supportsGiveaway(item) : false
   const myRequest = item ? getMyRequestForItem(item.id) : null
   const reviewContext = item ? getReviewContextForItem(item) : null
   const ownerActionPending = ownerActionItemId === item?.id
@@ -104,6 +113,11 @@ export default function ItemDetailsPage({
     if (isOwner) {
       return (
         <div className="flex flex-wrap gap-2">
+          {item.exchange_reserved || item.status === 'exchange_reserved' ? (
+            <span className="inline-flex items-center rounded-full bg-[#f8edff] px-3 py-1 text-[11px] font-bold text-[#7340d2]">
+              Exchange Reserved
+            </span>
+          ) : null}
           {isListingExpired(item) ? (
             <Button
               disabled={ownerActionPending}
@@ -164,22 +178,44 @@ export default function ItemDetailsPage({
     }
 
     return (
-      <Button
-        variant="primary"
-        onClick={() => {
-          if (!currentUser.is_verified) {
-            showFlash('Please verify your email to request an item.')
-            return
-          }
-          if (userNeedsWhatsApp(currentUser)) {
-            showFlash(WHATSAPP_REQUIRED_MESSAGE)
-            return
-          }
-          onCreateRequest(item)
-        }}
-      >
-        Request this item
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {supportsGiveawayListing ? (
+          <Button
+            variant="primary"
+            onClick={() => {
+              if (!currentUser.is_verified) {
+                showFlash('Please verify your email to request an item.')
+                return
+              }
+              if (userNeedsWhatsApp(currentUser)) {
+                showFlash(WHATSAPP_REQUIRED_MESSAGE)
+                return
+              }
+              onCreateRequest(item)
+            }}
+          >
+            Request this item
+          </Button>
+        ) : null}
+        {supportsExchangeListing && !item.exchange_reserved && item.status !== 'exchange_reserved' ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              if (!currentUser.is_verified) {
+                showFlash('Please verify your email to propose a swap.')
+                return
+              }
+              if (userNeedsWhatsApp(currentUser)) {
+                showFlash(WHATSAPP_REQUIRED_MESSAGE)
+                return
+              }
+              setSwapModalOpen(true)
+            }}
+          >
+            Propose a Swap
+          </Button>
+        ) : null}
+      </div>
     )
   }
 
@@ -232,6 +268,8 @@ export default function ItemDetailsPage({
           <h2 className="he-item-details-title">{item.title}</h2>
 
           <div className="he-item-details-meta">
+            <ListingModeBadge mode={item.listing_mode} />
+            <span>·</span>
             <span>{safeString(item.category, 'Other')}</span>
             <span>·</span>
             <span>{safeString(item.condition, 'Good')}</span>
@@ -317,6 +355,30 @@ export default function ItemDetailsPage({
           ) : null}
         </div>
       </section>
+
+      {isOwner && supportsExchangeListing ? (
+        <ExchangeOffersPanel
+          item={item}
+          token={token}
+          onUpdated={() => {
+            onRefreshItems?.()
+            onRefreshMyItems?.()
+          }}
+        />
+      ) : null}
+
+      <ProposeSwapModal
+        open={swapModalOpen}
+        onClose={() => setSwapModalOpen(false)}
+        item={item}
+        myItems={myItems}
+        token={token}
+        country={currentUser?.country}
+        onSubmitted={() => {
+          onRefreshItems?.()
+          setSwapModalOpen(false)
+        }}
+      />
 
       <ImagePreviewModal
         open={previewOpen && hasRealImage}

@@ -163,7 +163,7 @@ class RequestReasonApiTests(IsolatedAsyncioTestCase):
         client = self.make_client(self.requester_user)
         response = client.post(
             f"/api/requests/{self.item_id}",
-            json={"reason": "Too short reason here."},
+            json={"reason": "Too short reason here.", "requester_city": "Lahore"},
         )
 
         self.assertEqual(response.status_code, 422)
@@ -173,13 +173,15 @@ class RequestReasonApiTests(IsolatedAsyncioTestCase):
         client = self.make_client(self.requester_user)
         response = client.post(
             f"/api/requests/{self.item_id}",
-            json={"reason": reason},
+            json={"reason": reason, "requester_city": "Lahore"},
         )
 
         self.assertEqual(response.status_code, 201)
         payload = response.json()
         self.assertEqual(payload["reason"], reason)
+        self.assertEqual(payload["requester_city"], "Lahore")
         self.assertEqual(self.requests_collection.documents[0]["reason"], reason)
+        self.assertEqual(self.requests_collection.documents[0]["requester_city"], "Lahore")
 
     def test_incoming_requests_include_requester_reputation(self):
         reason = "I recently moved and currently do not have basic kitchen items at home."
@@ -205,4 +207,5 @@ class RequestReasonApiTests(IsolatedAsyncioTestCase):
         payload = response.json()
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["reason"], reason)
+        self.assertIsNone(payload[0].get("requester_city"))
         self.assertEqual(payload[0]["requester_reputation"]["level"], "Trusted Giver")

@@ -10,7 +10,7 @@ from app.services.listing_expiration import (
 from app.services.location import enrich_item_location, build_item_location_payload
 
 
-VALID_ITEM_STATUSES = frozenset({"available", "reserved", "completed"})
+VALID_ITEM_STATUSES = frozenset({"available", "reserved", "exchange_reserved", "completed"})
 
 
 def _owner_id_str(item: dict) -> str:
@@ -21,6 +21,7 @@ def _owner_id_str(item: dict) -> str:
 def serialize_item(
     item: dict,
     request_count: int | None = None,
+    exchange_offer_count: int | None = None,
     owner_reputation: dict | None = None,
     distance_km: float | None = None,
 ) -> dict:
@@ -61,6 +62,10 @@ def serialize_item(
         "location_display": enriched.get("location_display") or enriched.get("location") or "Unknown",
         "image_url": image_url,
         "status": status,
+        "listing_mode": (enriched.get("listing_mode") or "GIVEAWAY").upper(),
+        "exchange_offer_count": 0 if exchange_offer_count is None else exchange_offer_count,
+        "giveaway_paused": bool(enriched.get("giveaway_paused")),
+        "exchange_reserved": status == "exchange_reserved",
         "owner_id": _owner_id_str(enriched),
         "owner_name": enriched.get("owner_name") or "Community Member",
         "owner_badge": owner_reputation.get("level") if owner_reputation else None,
@@ -98,6 +103,9 @@ def build_item_document(payload: ItemCreateRequest, current_user: dict) -> dict:
         **location_fields,
         "image_url": str(payload.image_url) if payload.image_url else None,
         "status": "available",
+        "listing_mode": (payload.listing_mode or "GIVEAWAY").upper(),
+        "giveaway_paused": False,
+        "active_exchange_offer_id": None,
         "owner_id": current_user["id"],
         "owner_name": current_user["name"],
     }

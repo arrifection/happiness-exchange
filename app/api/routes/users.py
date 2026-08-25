@@ -9,7 +9,7 @@ from app.db.mongodb import (
     get_reviews_collection_async,
     get_users_collection_async,
 )
-from app.schemas.auth import ProfileUpdateRequest, UserResponse, WhatsAppUpdateRequest
+from app.schemas.auth import ProfileUpdateRequest, UserResponse, WhatsAppUpdateRequest, CountryUpdateRequest
 from app.core.roles import is_admin_role
 from app.services.account import delete_user_account
 
@@ -150,6 +150,40 @@ async def update_whatsapp(
         {
             "$set": {
                 "whatsapp_number": payload.whatsapp_number,
+                "updated_at": datetime.now(timezone.utc),
+            }
+        },
+    )
+
+    updated_user = await users_collection.find_one({"_id": user_object_id})
+    return serialize_user(updated_user, include_whatsapp=True)
+
+
+@router.patch("/me/country", response_model=UserResponse)
+async def update_country(
+    payload: CountryUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Save the user's country for city lists on requests and offers."""
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    user_object_id = parse_object_id(current_user["id"])
+    if user_object_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user id.",
+        )
+
+    await users_collection.update_one(
+        {"_id": user_object_id},
+        {
+            "$set": {
+                "country": payload.country,
                 "updated_at": datetime.now(timezone.utc),
             }
         },

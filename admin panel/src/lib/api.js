@@ -150,6 +150,22 @@ export const deliveriesApi = {
   },
 }
 
+// ── Exchange / shipping endpoints (Admin — PERMISSION_DELIVERIES) ────────────
+export const exchangeAdminApi = {
+  listTransactions: () => api.get('/api/admin/exchange-transactions'),
+  getTransaction: (id) => api.get(`/api/admin/exchange-transactions/${id}`),
+  getShipping: (id) => api.get(`/api/admin/exchange-shipping/${id}`),
+  updateShipping: (id, data) => api.patch(`/api/admin/exchange-shipping/${id}`, data),
+  updateTransactionStatus: (id, status) =>
+    api.patch(`/api/admin/exchange-transactions/${id}/status`, { status }),
+}
+
+export const shippingAdminApi = {
+  list: (params) => api.get('/api/admin/shipments', { params }),
+  getById: (id) => api.get(`/api/admin/shipments/${id}`),
+  update: (id, data) => api.patch(`/api/admin/shipments/${id}`, data),
+}
+
 // ── Status endpoint ────────────────────────────────────────────────────────────
 export const statusApi = {
   // Trailing slash avoids HF 307 redirect to http:// (breaks HTTPS admin panel).

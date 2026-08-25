@@ -2,6 +2,7 @@ import ItemCard from '../components/ItemCard.jsx'
 import { RatingStars, ReputationBadge } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, SectionHeading, StatusBadge, Surface } from '../components/ui.jsx'
+import { displayTransactionCity } from '../lib/locations.js'
 
 function RequestPreviewCard({ request, onRequestAction, children }) {
   return (
@@ -11,6 +12,9 @@ function RequestPreviewCard({ request, onRequestAction, children }) {
           <h3 className="font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-[#1f1f1f]">{request.item_title}</h3>
           <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/70">
             {request.requester_name.split(' ')[0]} is interested
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[#68766d]">
+            {displayTransactionCity(request.requester_city)}
           </p>
         </div>
         <div className="origin-top-right shrink-0 scale-90">

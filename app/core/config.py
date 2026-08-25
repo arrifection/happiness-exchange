@@ -18,6 +18,23 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Happiness Exchange"
     VERSION: str = "0.1.0"
 
+    # Local default is development. Production hosts must set ENVIRONMENT=production
+    # (or APP_ENV=production). Hugging Face Spaces are also treated as production.
+    ENVIRONMENT: str = Field(
+        default="development",
+        validation_alias=AliasChoices("ENVIRONMENT", "APP_ENV"),
+    )
+
+    # Local/dev only. Default FALSE. Ignored when the process is production.
+    DEV_BYPASS_EMAIL_VERIFICATION: bool = False
+
+    # Local SMTP sink (Mailpit). Unused in production — Resend remains the path.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_STARTTLS: bool = False
+
     MONGODB_URI: str = Field(
         default="mongodb://localhost:27017",
         validation_alias=AliasChoices(
@@ -42,6 +59,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     LISTING_ACTIVE_DAYS: int = 14
+    EXCHANGE_OFFER_EXPIRE_DAYS: int = 14
+    EXCHANGE_SHIPPING_PAYMENT_DEADLINE_HOURS: int = 72
 
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
@@ -66,6 +85,10 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
         "http://localhost:5200",
@@ -76,6 +99,13 @@ class Settings(BaseSettings):
         "https://happiness-exchange.vercel.app",
         "https://admin.happyexchange.net",
     ]
+
+    @field_validator("ENVIRONMENT", mode="before")
+    @classmethod
+    def normalize_environment(cls, v):
+        if v is None or v == "":
+            return "development"
+        return str(v).strip().lower()
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -124,11 +154,34 @@ class Settings(BaseSettings):
         logger.info("CLOUDINARY_API_KEY present: %s", bool(self.CLOUDINARY_API_KEY))
         logger.info("CLOUDINARY_API_SECRET present: %s", bool(self.CLOUDINARY_API_SECRET))
         logger.info("CLOUDINARY_FOLDER: %s", self.CLOUDINARY_FOLDER)
+        logger.info("ENVIRONMENT: %s", self.ENVIRONMENT)
         logger.info("RESEND_API_KEY present: %s", bool(self.RESEND_API_KEY))
         logger.info("EMAIL_FROM: %s", self.EMAIL_FROM)
         logger.info("APP_BASE_URL: %s", self.APP_BASE_URL)
         logger.info("ADMIN_PANEL_URL: %s", self.ADMIN_PANEL_URL)
         logger.info("ENABLE_EMAIL_DIAGNOSTICS: %s", self.ENABLE_EMAIL_DIAGNOSTICS)
+        logger.info("SMTP_HOST: %s", self.SMTP_HOST or "(not set)")
+        logger.info("SMTP_PORT: %s", self.SMTP_PORT)
+        logger.info(
+            "DEV_BYPASS_EMAIL_VERIFICATION requested: %s",
+            self.DEV_BYPASS_EMAIL_VERIFICATION,
+        )
+        from app.core.runtime import email_verification_bypass_enabled, is_production_environment
+
+        production = is_production_environment()
+        bypass_active = email_verification_bypass_enabled()
+        logger.info("is_production_environment: %s", production)
+        logger.info("email_verification_bypass_enabled: %s", bypass_active)
+        if self.DEV_BYPASS_EMAIL_VERIFICATION and production:
+            logger.error(
+                "DEV_BYPASS_EMAIL_VERIFICATION is set in a production environment. "
+                "The bypass is IGNORED. Email verification remains required."
+            )
+        elif bypass_active:
+            logger.warning(
+                "DEV_BYPASS_EMAIL_VERIFICATION is enabled. This is a local/dev-only "
+                "shortcut. Do not use it in production."
+            )
         logger.info("ALLOWED_ORIGINS: %s", self.ALLOWED_ORIGINS)
 
 

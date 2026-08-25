@@ -3,7 +3,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Button } from './ui.jsx'
+import CitySelector from './CitySelector.jsx'
+import RequesterShippingNotice, { REQUESTER_SHIPPING_NOTICE_KIND } from './RequesterShippingNotice.jsx'
 import { WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
+import { DEFAULT_COUNTRY } from '../lib/locations.js'
 
 const MIN_REASON_LENGTH = 30
 const MAX_REASON_LENGTH = 500
@@ -13,17 +16,21 @@ const EXAMPLE_REASONS = [
   'I recently moved and currently do not have basic kitchen items.',
 ]
 
-export default function RequestItemModal({ item, open, submitting, error, missingWhatsApp = false, onClose, onSubmit }) {
+export default function RequestItemModal({ item, open, submitting, error, missingWhatsApp = false, country = DEFAULT_COUNTRY, onClose, onSubmit }) {
   const [reason, setReason] = useState('')
+  const [city, setCity] = useState('')
+  const [showShippingNotice, setShowShippingNotice] = useState(false)
   const trimmedLength = reason.trim().length
   const isTooShort = trimmedLength > 0 && trimmedLength < MIN_REASON_LENGTH
-  const isValid = trimmedLength >= MIN_REASON_LENGTH && trimmedLength <= MAX_REASON_LENGTH
+  const isValid = trimmedLength >= MIN_REASON_LENGTH && trimmedLength <= MAX_REASON_LENGTH && Boolean(city.trim())
 
   useEffect(() => {
     if (open) {
       setReason('')
+      setCity('')
+      setShowShippingNotice(false)
     }
-  }, [open, item?.id])
+  }, [open, item?.id, country])
 
   if (!open || !item) {
     return null
@@ -31,11 +38,18 @@ export default function RequestItemModal({ item, open, submitting, error, missin
 
   function handleSubmit(event) {
     event.preventDefault()
-    if (!isValid || submitting) return
-    onSubmit?.(item.id, reason.trim())
+    if (!isValid || submitting || missingWhatsApp || showShippingNotice) return
+    setShowShippingNotice(true)
+  }
+
+  function handleAcknowledgeAndSubmit() {
+    if (!isValid || submitting || missingWhatsApp) return
+    setShowShippingNotice(false)
+    onSubmit?.(item.id, reason.trim(), city.trim())
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/45 p-4 sm:items-center">
       <div
         className="w-full max-w-lg rounded-2xl border border-he-border bg-he-surface p-5 shadow-2xl"
@@ -88,6 +102,8 @@ export default function RequestItemModal({ item, open, submitting, error, missin
             </div>
           </div>
 
+          <CitySelector id="request-city" value={city} onChange={setCity} country={country} required disabled={missingWhatsApp} />
+
           <div className="rounded-xl border border-he-border/70 bg-he-surface-soft p-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Examples</p>
             <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-he-muted">
@@ -112,5 +128,13 @@ export default function RequestItemModal({ item, open, submitting, error, missin
         </form>
       </div>
     </div>
+    <RequesterShippingNotice
+      open={showShippingNotice}
+      kind={REQUESTER_SHIPPING_NOTICE_KIND.giveaway}
+      confirming={submitting}
+      onCancel={() => setShowShippingNotice(false)}
+      onConfirm={handleAcknowledgeAndSubmit}
+    />
+    </>
   )
 }

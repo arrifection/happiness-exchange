@@ -270,7 +270,7 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         with self.make_client(self.other_user) as client:
             response = client.post(
                 f"/api/requests/{self.item_id}",
-                json={"reason": "I am a student and need this completed-item test case for validation."},
+                json={"reason": "I am a student and need this completed-item test case for validation.", "requester_city": "Lahore"},
             )
 
         self.assertEqual(response.status_code, 400)

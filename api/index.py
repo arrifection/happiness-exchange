@@ -25,6 +25,9 @@ from app.api.routes.leaderboard import router as leaderboard_router
 from app.api.routes.community import router as community_router
 from app.api.routes.deliveries import router as deliveries_router
 from app.api.routes.need_requests import router as need_requests_router
+from app.api.routes.exchange_offers import router as exchange_offers_router
+from app.api.routes.exchange_transactions import router as exchange_transactions_router
+from app.api.routes.shipments import router as shipments_router
 # ── Admin routes ──────────────────────────────────────────────────────────────
 from app.api.routes.admin.auth      import router as admin_auth_router
 from app.api.routes.admin.users     import router as admin_users_router
@@ -36,6 +39,8 @@ from app.api.routes.admin.analytics import router as admin_analytics_router
 from app.api.routes.admin.team      import router as admin_team_router
 from app.api.routes.admin.deliveries import router as admin_deliveries_router
 from app.api.routes.admin.conversations import router as admin_conversations_router
+from app.api.routes.admin.exchange import router as admin_exchange_router
+from app.api.routes.admin.shipments import router as admin_shipments_router
 from app.core.config import settings
 from app.core.middleware import RequestLoggingMiddleware
 from app.core.startup_checks import log_production_warnings
@@ -95,6 +100,9 @@ app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["Leaderb
 app.include_router(community_router, prefix="/api/community", tags=["Community"])
 app.include_router(deliveries_router, prefix="/api", tags=["Deliveries"])
 app.include_router(need_requests_router, prefix="/api", tags=["Need Requests"])
+app.include_router(exchange_offers_router, prefix="/api", tags=["Exchange Offers"])
+app.include_router(exchange_transactions_router, prefix="/api", tags=["Exchange Transactions"])
+app.include_router(shipments_router, prefix="/api", tags=["Shipments"])
 
 # ── Admin API ─────────────────────────────────────────────────────────────────
 app.include_router(admin_auth_router,      prefix="/api/admin/auth",      tags=["Admin · Auth"])
@@ -107,6 +115,8 @@ app.include_router(admin_analytics_router, prefix="/api/admin/analytics", tags=[
 app.include_router(admin_team_router,      prefix="/api/admin/team",      tags=["Admin · Team"])
 app.include_router(admin_deliveries_router, prefix="/api/admin",          tags=["Admin · Deliveries"])
 app.include_router(admin_conversations_router, prefix="/api/admin/conversations", tags=["Admin · Conversations"])
+app.include_router(admin_exchange_router, prefix="/api/admin", tags=["Admin · Exchange"])
+app.include_router(admin_shipments_router, prefix="/api/admin", tags=["Admin · Shipping"])
 
 # ── Diagnostic endpoint ───────────────────────────────────────────────────────
 # SAFE: never returns MONGODB_URI, password, or any secret value.

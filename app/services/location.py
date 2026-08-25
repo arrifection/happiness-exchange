@@ -17,11 +17,14 @@ PAKISTAN_CITIES = frozenset({
     "Lahore", "Islamabad", "Karachi", "Rawalpindi", "Faisalabad", "Multan",
     "Gujrat", "Mandi Bahauddin", "Gujranwala", "Sialkot", "Peshawar", "Quetta",
     "Hyderabad", "Bahawalpur", "Sargodha", "Sukkur", "Larkana", "Sheikhupura",
-    "Jhang", "Rahim Yar Khan", "Kasur",
+    "Jhang", "Rahim Yar Khan", "Kasur", "Abbottabad", "Mardan", "Sahiwal",
+    "Okara", "Jhelum", "Dera Ghazi Khan", "Mingora", "Mansehra", "Kohat",
+    "Gilgit", "Muzaffarabad", "Nawabshah", "Gwadar", "Wah Cantt",
 })
 
 SAUDI_CITIES = frozenset({
     "Riyadh", "Jeddah", "Makkah", "Madina", "Madinah", "Dammam", "Khobar", "Taif",
+    "Abha", "Tabuk", "Hail", "Najran", "Jazan", "Buraidah", "Yanbu", "Jubail",
 })
 
 CITIES_BY_COUNTRY: dict[str, frozenset[str]] = {
@@ -96,6 +99,39 @@ def normalize_city(value: str | None) -> str | None:
     if not value or not str(value).strip():
         return None
     return str(value).strip()
+
+
+ALL_ALLOWED_CITIES = frozenset(PAKISTAN_CITIES | SAUDI_CITIES)
+
+
+def canonicalize_allowed_city(value: str | None) -> str | None:
+    """Return the canonical allowed city name, or None if missing/invalid."""
+    cleaned = normalize_city(value)
+    if not cleaned:
+        return None
+    for city in ALL_ALLOWED_CITIES:
+        if city.lower() == cleaned.lower():
+            return city
+    return None
+
+
+CUSTOM_CITY_RE = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,59}$")
+BLOCKED_CITY_VALUES = frozenset({"other", "other (type your city)", "__other__"})
+
+
+def require_allowed_city(value: str | None) -> str:
+    """Accept a listed city, or a typed city name that is not on the list."""
+    known = canonicalize_allowed_city(value)
+    if known:
+        return known
+    cleaned = normalize_city(value)
+    if not cleaned:
+        raise ValueError("Please select or enter your city.")
+    if cleaned.lower() in BLOCKED_CITY_VALUES:
+        raise ValueError("Please type your city.")
+    if not CUSTOM_CITY_RE.fullmatch(cleaned):
+        raise ValueError("Please enter a valid city name.")
+    return " ".join(part.capitalize() for part in cleaned.split())
 
 
 def infer_country_from_city(city: str | None) -> str:

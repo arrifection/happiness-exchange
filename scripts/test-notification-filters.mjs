@@ -21,14 +21,33 @@ const requestAlert = {
   read: false,
 }
 
+const swapAlert = {
+  id: '3',
+  title: 'New Swap Offer',
+  message: 'Someone sent you a swap offer for Nike Shoes.',
+  type: 'exchange_offer_received',
+  read: false,
+}
+
+const adminExchangeAlert = {
+  id: '4',
+  title: 'Exchange Accepted',
+  message: 'Shipping coordination required.',
+  type: 'exchange_admin_action',
+  read: false,
+}
+
 assert.equal(isStaffUser('user'), false)
 assert.equal(isStaffUser('admin'), true)
 assert.equal(isAdminNotification(signupAlert), true)
 assert.equal(isAdminNotification(requestAlert), false)
+assert.equal(isAdminNotification(swapAlert), false)
+assert.equal(isAdminNotification(adminExchangeAlert), true)
 
-const filtered = filterNotificationsForUser([signupAlert, requestAlert])
-assert.equal(filtered.length, 1)
+const filtered = filterNotificationsForUser([signupAlert, requestAlert, swapAlert, adminExchangeAlert])
+assert.equal(filtered.length, 2)
 assert.equal(filtered[0].id, '2')
+assert.equal(filtered[1].id, '3')
 
 const staffView = filterNotificationsForUser([signupAlert, requestAlert])
 assert.equal(staffView.length, 1)

@@ -47,6 +47,22 @@ export function StatusBadge({ status, className = '' }) {
     pending: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
     approved: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
     rejected: 'bg-rose-50 text-rose-700 ring-rose-200/50 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-800/60',
+    exchange_reserved: 'bg-[#f8edff] text-[#8b4cf6] ring-[#8b4cf6]/20 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
+    countered: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
+    under_review: 'bg-stone-100 text-stone-700 ring-stone-200/50 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700',
+    shipping: 'bg-sky-50 text-sky-700 ring-sky-200/50 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-800/60',
+    shipped: 'bg-indigo-50 text-indigo-700 ring-indigo-200/50 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-800/60',
+    delivered: 'bg-emerald-50 text-emerald-700 ring-emerald-200/50 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-800/60',
+    collecting_shipping: 'bg-sky-50 text-sky-700 ring-sky-200/50 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-800/60',
+    awaiting_payment: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
+    awaiting_details: 'bg-[#fff8e8] text-[#9a7420] ring-[#ffcc22]/35 dark:bg-[#3d3520] dark:text-he-yellow dark:ring-he-yellow/40',
+    ready_to_ship: 'bg-sky-50 text-sky-700 ring-sky-200/50 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-800/60',
+    in_transit: 'bg-indigo-50 text-indigo-700 ring-indigo-200/50 dark:bg-indigo-950/40 dark:text-indigo-300 dark:ring-indigo-800/60',
+    out_for_delivery: 'bg-amber-50 text-amber-800 ring-amber-200/50 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800/60',
+    paid: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
+    expired: 'bg-stone-100 text-stone-600 ring-stone-200/50 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700',
+    cancelled: 'bg-stone-100 text-stone-600 ring-stone-200/50 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700',
+    accepted: 'bg-[#efe7ff] text-[#7340d2] ring-[#8b4cf6]/25 dark:bg-[#2d2640] dark:text-[#ddd6fe] dark:ring-he-purple/40',
   }
 
   return (
@@ -57,7 +73,7 @@ export function StatusBadge({ status, className = '' }) {
         className,
       )}
     >
-      {status === 'expired' ? 'Expired' : status === 'active' ? 'Active' : status}
+      {status === 'expired' ? 'Expired' : status === 'active' ? 'Active' : status === 'exchange_reserved' ? 'Exchange Reserved' : status.replace(/_/g, ' ')}
     </span>
   )
 }
@@ -358,6 +374,7 @@ export function SelectField({
   options = [],
   required = false,
   placeholder,
+  disabled = false,
 }) {
   return (
     <label className="grid gap-1.5" htmlFor={id}>
@@ -369,12 +386,17 @@ export function SelectField({
           value={value}
           onChange={onChange}
           required={required}
-          className="h-10 w-full appearance-none rounded-input border border-he-border bg-he-input px-3 pr-10 text-sm text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/10"
+          disabled={disabled}
+          className="h-10 w-full appearance-none rounded-input border border-he-border bg-he-input px-3 pr-10 text-sm text-he-ink outline-none transition focus:border-he-purple focus:ring-2 focus:ring-he-purple/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {placeholder && <option value="" disabled>{placeholder}</option>}
-          {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
+          {options.map((opt) => {
+            const optionValue = typeof opt === 'string' ? opt : opt.value
+            const optionLabel = typeof opt === 'string' ? opt : opt.label
+            return (
+              <option key={optionValue} value={optionValue}>{optionLabel}</option>
+            )
+          })}
         </select>
         <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-he-soft/50">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">

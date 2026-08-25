@@ -12,6 +12,8 @@ const routeLabels = {
   '/reports':    'Reports & Flags',
   '/users':      'Users Management',
   '/courier':    'Courier Coordination',
+  '/exchanges':  'Exchange Shipping',
+  '/shipping':   'Shipping Management',
   '/team':       'Team Members',
   '/messages':   'Messages',
   '/settings':   'Settings',
@@ -24,7 +26,11 @@ export default function TopBar() {
   // and immediately updated when any page successfully loads data.
   const { status: apiStatus } = useApiHealth()
 
-  const pageTitle = routeLabels[location.pathname] || 'Admin Panel'
+  const pageTitle = location.pathname.startsWith('/exchanges')
+    ? 'Exchange Shipping'
+    : location.pathname.startsWith('/shipping')
+      ? 'Shipping Management'
+      : (routeLabels[location.pathname] || 'Admin Panel')
 
   return (
     <header className="h-16 bg-white/90 backdrop-blur-sm border-b border-surface-300 flex items-center justify-between px-6 sticky top-0 z-30 shadow-soft">

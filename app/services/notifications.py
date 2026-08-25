@@ -20,16 +20,30 @@ async def create_notification(
     message: str,
     type_: str,
     action_url: str | None = None,
+    *,
+    dedupe_key: str | None = None,
 ) -> None:
     """
     Create a notification for a specific user.
     Fire-and-forget: swallows errors so it doesn't break the main request flow.
+    Optional dedupe_key skips inserting another unread notification with the same
+    user/type/key (used for Exchange shipping events that can be retried).
     """
     try:
         notifications_col = await get_notifications_collection_async()
         if notifications_col is None:
             logger.warning("create_notification: Database unavailable.")
             return
+
+        if dedupe_key:
+            existing = await notifications_col.find_one({
+                "user_id": user_id,
+                "type": type_,
+                "dedupe_key": dedupe_key,
+                "read": False,
+            })
+            if existing is not None:
+                return
 
         doc = {
             "user_id": user_id,
@@ -40,6 +54,8 @@ async def create_notification(
             "read": False,
             "created_at": datetime.now(timezone.utc),
         }
+        if dedupe_key:
+            doc["dedupe_key"] = dedupe_key
         await notifications_col.insert_one(doc)
     except Exception as exc:
         logger.error("create_notification failed for user %s: %s", user_id, exc)

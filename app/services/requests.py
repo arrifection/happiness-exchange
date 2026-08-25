@@ -6,6 +6,7 @@ def serialize_request(request: dict, *, requester_reputation: dict | None = None
         "item_title": request["item_title"],
         "requester_id": request["requester_id"],
         "requester_name": request["requester_name"],
+        "requester_city": request.get("requester_city"),
         "owner_id": request["owner_id"],
         "owner_name": request.get("owner_name", ""),
         "reason": request.get("reason") or "",
@@ -23,13 +24,14 @@ def serialize_request(request: dict, *, requester_reputation: dict | None = None
     return payload
 
 
-def build_request_document(item: dict, current_user: dict, *, reason: str) -> dict:
+def build_request_document(item: dict, current_user: dict, *, reason: str, requester_city: str | None = None) -> dict:
     """Create the MongoDB document for a new item interest request."""
     return {
         "item_id": str(item["_id"]),
         "item_title": item["title"],
         "requester_id": current_user["id"],
         "requester_name": current_user["name"],
+        "requester_city": requester_city,
         "owner_id": item["owner_id"],
         "owner_name": item.get("owner_name", ""),
         "reason": reason.strip(),

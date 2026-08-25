@@ -109,6 +109,7 @@ class RequestCreationGuardTests(IsolatedAsyncioTestCase):
     def test_user_cannot_request_own_item(self):
         payload = {
             "reason": "I wanted to test whether I can request my own listing by mistake today.",
+            "requester_city": "Lahore",
         }
         with self.make_client(self.owner_user) as client:
             response = client.post(f"/api/requests/{self.item_id}", json=payload)
@@ -128,6 +129,7 @@ class RequestCreationGuardTests(IsolatedAsyncioTestCase):
         )
         payload = {
             "reason": "I still need this item and wanted to submit another request by accident.",
+            "requester_city": "Lahore",
         }
         with self.make_client(self.requester_user) as client:
             response = client.post(f"/api/requests/{self.item_id}", json=payload)

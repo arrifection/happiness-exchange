@@ -15,6 +15,7 @@ import {
   LogOut,
   ChevronRight,
   Shield,
+  ArrowLeftRight,
 } from 'lucide-react'
 
 const navItems = [
@@ -44,6 +45,8 @@ const navItems = [
     group: 'Operations',
     items: [
       { label: 'Courier Coord.', to: '/courier', icon: Truck, permission: PERMISSIONS.DELIVERIES },
+      { label: 'Shipping', to: '/shipping', icon: Package, permission: PERMISSIONS.DELIVERIES },
+      { label: 'Exchanges', to: '/exchanges', icon: ArrowLeftRight, permission: PERMISSIONS.DELIVERIES },
       { label: 'Team Members', to: '/team', icon: UsersRound, permission: PERMISSIONS.TEAM },
     ],
   },

@@ -6,6 +6,7 @@ import LocationSetupModal from '../components/LocationSetupModal.jsx'
 import ItemsBrowseMap from '../components/map/ItemsBrowseMap.jsx'
 import { Button, EmptyState, ErrorState, ItemCardSkeletonGrid, InlineLoadingNotice } from '../components/ui.jsx'
 import { readLocationPreferences, writeLocationPreferences } from '../lib/locations.js'
+import { supportsExchange } from '../lib/listingMode.js'
 
 const CATEGORIES = ['All', 'Furniture', 'Home', 'Kids Goods', 'Books', 'Kitchen', 'Clothes', 'Family Items', 'Food', 'Other']
 const STATUSES = ['All', 'Available', 'Reserved', 'Completed']
@@ -56,6 +57,7 @@ export default function BrowseItemsPage({
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('Available')
   const [sortBy, setSortBy] = useState('Newest first')
+  const [listingTypeFilter, setListingTypeFilter] = useState('All')
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
   const [locationModalOpen, setLocationModalOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
@@ -122,6 +124,10 @@ export default function BrowseItemsPage({
       result = result.filter((item) => item.status === statusFilter.toLowerCase())
     }
 
+    if (listingTypeFilter === 'Exchange') {
+      result = result.filter((item) => supportsExchange(item))
+    }
+
     result.sort((a, b) => {
       const dateA = new Date(a.created_at || 0).getTime()
       const dateB = new Date(b.created_at || 0).getTime()
@@ -129,7 +135,7 @@ export default function BrowseItemsPage({
     })
 
     return result
-  }, [items, search, categoryFilter, statusFilter, sortBy])
+  }, [items, search, categoryFilter, statusFilter, sortBy, listingTypeFilter])
 
   const hasActiveFilters = search || categoryFilter !== 'All' || statusFilter !== 'All'
     || locationPrefs.city || locationPrefs.locationSource === 'current_location'
@@ -138,6 +144,7 @@ export default function BrowseItemsPage({
     setSearch('')
     setCategoryFilter('All')
     setStatusFilter('Available')
+    setListingTypeFilter('All')
     const resetPrefs = { ...readLocationPreferences(), city: '', locationSource: 'manual', latitude: null, longitude: null }
     writeLocationPreferences(resetPrefs)
     setLocationPrefs(resetPrefs)
@@ -194,6 +201,25 @@ export default function BrowseItemsPage({
               </button>
             ) : null}
           </div>
+        </div>
+
+        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:gap-2 md:overflow-visible md:pb-0">
+          {['All', 'Exchange'].map((type) => {
+            const isActive = listingTypeFilter === type
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setListingTypeFilter(type)}
+                className={[
+                  'he-chip px-3.5 py-1.5 md:px-4 md:py-2 text-[10px] md:text-[13px]',
+                  isActive ? 'he-chip-active' : '',
+                ].join(' ')}
+              >
+                {type === 'All' ? 'All listings' : 'Exchange'}
+              </button>
+            )
+          })}
         </div>
 
         <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:gap-2 md:overflow-visible md:pb-0">
