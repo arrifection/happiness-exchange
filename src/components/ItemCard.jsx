@@ -5,6 +5,7 @@ import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 import { isListingActive, isListingExpired } from '../lib/listingExpiration.js'
+import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { RatingStars } from './reputation.jsx'
 import TrustBadge from './TrustBadge.jsx'
@@ -191,13 +192,15 @@ export default function ItemCard({
       return null
     }
 
+    const isSwapOnly = !supportsGiveaway(item) && supportsExchange(item)
+
     return (
       <Button 
         variant="primary" 
         className="h-7 min-h-0 px-2.5 text-[9px]" 
         onClick={() => {
           if (!currentUser.is_verified) {
-            showFlash('Please verify your email to request an item.')
+            showFlash(isSwapOnly ? 'Please verify your email to propose a swap.' : 'Please verify your email to request an item.')
             return
           }
           if (userNeedsWhatsApp(currentUser)) {
@@ -207,7 +210,7 @@ export default function ItemCard({
           onCreateRequest(item)
         }}
       >
-        Interested
+        {isSwapOnly ? 'Propose Swap' : 'Interested'}
       </Button>
     )
   }

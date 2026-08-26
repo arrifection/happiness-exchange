@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # Local/dev only. Default FALSE. Ignored when the process is production.
     DEV_BYPASS_EMAIL_VERIFICATION: bool = False
 
+    # Local/dev only demo sandbox (seeded users + one-click user switching).
+    # Default FALSE. Ignored when the process is production.
+    LOCAL_DEMO_MODE: bool = False
+
     # Local SMTP sink (Mailpit). Unused in production — Resend remains the path.
     SMTP_HOST: str = ""
     SMTP_PORT: int = 1025
@@ -166,12 +170,23 @@ class Settings(BaseSettings):
             "DEV_BYPASS_EMAIL_VERIFICATION requested: %s",
             self.DEV_BYPASS_EMAIL_VERIFICATION,
         )
-        from app.core.runtime import email_verification_bypass_enabled, is_production_environment
+        from app.core.runtime import (
+            email_verification_bypass_enabled,
+            is_production_environment,
+            local_demo_mode_enabled,
+        )
 
         production = is_production_environment()
         bypass_active = email_verification_bypass_enabled()
         logger.info("is_production_environment: %s", production)
         logger.info("email_verification_bypass_enabled: %s", bypass_active)
+        logger.info("LOCAL_DEMO_MODE requested: %s", self.LOCAL_DEMO_MODE)
+        logger.info("local_demo_mode_enabled: %s", local_demo_mode_enabled())
+        if self.LOCAL_DEMO_MODE and production:
+            logger.error(
+                "LOCAL_DEMO_MODE is set in a production environment. The demo "
+                "sandbox is IGNORED and its endpoints are not mounted."
+            )
         if self.DEV_BYPASS_EMAIL_VERIFICATION and production:
             logger.error(
                 "DEV_BYPASS_EMAIL_VERIFICATION is set in a production environment. "

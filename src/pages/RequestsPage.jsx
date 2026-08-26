@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { asArray } from '../lib/api.js'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
+import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
 import IncomingRequestReview from '../components/IncomingRequestReview.jsx'
 import {
   Button,
@@ -37,6 +38,12 @@ function filterByStatus(requests, activeFilter) {
   return requests.filter((request) => request.status === activeFilter)
 }
 
+function isSwapOnlyRequest(request, item) {
+  const listing = { listing_mode: request.item_listing_mode ?? item?.listing_mode }
+  if (!request.item_listing_mode && !item?.listing_mode) return false
+  return !supportsGiveaway(listing) && supportsExchange(listing)
+}
+
 function RequestCardShell({ request, item, children }) {
   return (
     <article className="group flex overflow-hidden rounded-card border border-he-border bg-he-surface shadow-sm transition-all duration-300 hover:border-he-purple/30 hover:shadow-md">
@@ -46,7 +53,7 @@ function RequestCardShell({ request, item, children }) {
         aria-label={`View ${request.item_title}`}
       >
         <img
-          src={resolveItemImageUrl(item?.image_url)}
+          src={resolveItemImageUrl(request.item_image_url || item?.image_url)}
           alt={request.item_title}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(event) => {
@@ -91,6 +98,8 @@ export default function RequestsPage({
   requestsError,
   onRequestAction,
   onCancelRequest,
+  onDeleteRejectedRequest,
+  onProposeSwap,
   cancelPendingRequestId,
   loadRequestData,
 }) {
@@ -238,6 +247,7 @@ export default function RequestsPage({
               {visibleRequests.map((request) => {
                 if (activeView === 'mine') {
                   const reviewContext = getReviewContextForMyRequest?.(request)
+                  const swapOnly = isSwapOnlyRequest(request, itemLookup[request.item_id])
 
                   return (
                     <RequestCardShell
@@ -251,6 +261,11 @@ export default function RequestsPage({
                             <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-tight text-he-muted">
                               <span>Requested {formatRequestDate(request.created_at)}</span>
                             </div>
+                            {swapOnly ? (
+                              <p className="text-[9px] font-bold uppercase tracking-tight text-he-purple">
+                                Swap request — you offer an item in exchange
+                              </p>
+                            ) : null}
                             {request.reason ? (
                               <p className="line-clamp-3 text-[11px] italic leading-relaxed text-he-muted">
                                 &ldquo;{request.reason}&rdquo;
@@ -260,6 +275,14 @@ export default function RequestsPage({
                         ),
                         actions: (
                           <div className="mt-2 space-y-1.5 border-t border-he-border/60 pt-2">
+                            {request.status === 'pending' && swapOnly ? (
+                              <Button
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                                onClick={() => onProposeSwap?.(request)}
+                              >
+                                Send Swap Offer
+                              </Button>
+                            ) : null}
                             {request.status === 'pending' ? (
                               <Button
                                 className="h-7 min-h-0 w-full rounded-btn text-[10px]"
@@ -270,10 +293,33 @@ export default function RequestsPage({
                                 {cancelPendingRequestId === request.id ? 'Cancelling…' : 'Cancel Request'}
                               </Button>
                             ) : null}
-                            {request.status === 'approved' ? (
+                            {request.status === 'approved' && swapOnly ? (
+                              <>
+                                <p className="text-[10px] leading-relaxed text-he-muted">
+                                  The owner accepted your interest. Send your swap offer to choose what you are offering in exchange.
+                                </p>
+                                <Button
+                                  className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                                  onClick={() => onProposeSwap?.(request)}
+                                >
+                                  Continue to Swap
+                                </Button>
+                              </>
+                            ) : null}
+                            {request.status === 'approved' && !swapOnly ? (
                               <p className="text-[10px] leading-relaxed text-he-muted">
                                 Happiness Exchange admin will contact you via WhatsApp.
                               </p>
+                            ) : null}
+                            {request.status === 'rejected' ? (
+                              <Button
+                                className="h-7 min-h-0 w-full rounded-btn text-[10px]"
+                                variant="danger"
+                                disabled={cancelPendingRequestId === request.id}
+                                onClick={() => onDeleteRejectedRequest?.(request.id)}
+                              >
+                                {cancelPendingRequestId === request.id ? 'Removing…' : 'Delete Request'}
+                              </Button>
                             ) : null}
                             {reviewContext ? (
                               <Button
@@ -292,6 +338,7 @@ export default function RequestsPage({
                 }
 
                 const reviewContext = getReviewContextForOwnerRequest?.(request)
+                const swapOnly = isSwapOnlyRequest(request, itemLookup[request.item_id])
 
                 return (
                   <RequestCardShell
@@ -300,7 +347,16 @@ export default function RequestsPage({
                     item={itemLookup[request.item_id]}
                   >
                     {{
-                      meta: <IncomingRequestReview request={request} />,
+                      meta: (
+                        <div className="space-y-1">
+                          {swapOnly ? (
+                            <p className="text-[9px] font-bold uppercase tracking-tight text-he-purple">
+                              Swap request — swap-only listing
+                            </p>
+                          ) : null}
+                          <IncomingRequestReview request={request} />
+                        </div>
+                      ),
                       actions: (
                         <div className="mt-2 space-y-1.5 border-t border-he-border/60 pt-2">
                           {request.status === 'pending' ? (
@@ -313,7 +369,13 @@ export default function RequestsPage({
                               </Button>
                             </div>
                           ) : null}
-                          {request.status === 'approved' ? (
+                          {request.status === 'approved' && swapOnly ? (
+                            <p className="text-[10px] leading-relaxed text-he-muted">
+                              Waiting for their swap offer. Review it under{' '}
+                              <Link to="/swaps" className="font-bold text-he-purple hover:underline">Swaps</Link>.
+                            </p>
+                          ) : null}
+                          {request.status === 'approved' && !swapOnly ? (
                             <p className="text-[10px] leading-relaxed text-he-muted">
                               Happiness Exchange admin will contact both sides via WhatsApp.
                             </p>

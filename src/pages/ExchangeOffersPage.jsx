@@ -135,7 +135,7 @@ export default function ExchangeOffersPage({ currentUser, token }) {
           description={
             activeTab === 'incoming'
               ? 'When someone proposes a swap on your exchange listings, offers appear here.'
-              : 'Open a swap-enabled listing and click Propose a Swap to send your first offer.'
+              : 'This tab shows swap offers you send on other members’ listings — open one and click Propose a Swap. Your own exchange listings are not offers: when someone proposes a swap on them, it appears under Incoming Offers.'
           }
           action={<Button as="link" to="/browse">Find swap listings</Button>}
         />

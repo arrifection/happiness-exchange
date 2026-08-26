@@ -49,3 +49,23 @@ def email_verification_bypass_enabled(
     if bypass_flag is None:
         return bool(settings.DEV_BYPASS_EMAIL_VERIFICATION)
     return bool(bypass_flag)
+
+
+def local_demo_mode_enabled(
+    *,
+    demo_flag: bool | None = None,
+    environment: str | None = None,
+    space_id: str | None = None,
+) -> bool:
+    """Return True only for an explicit local demo sandbox.
+
+    The flag defaults to False. Production (including Hugging Face Spaces)
+    always returns False even if LOCAL_DEMO_MODE is set, so the demo login and
+    seeding endpoints can never exist on a deployed backend.
+    """
+    if is_production_environment(environment, space_id=space_id):
+        return False
+
+    if demo_flag is None:
+        return bool(settings.LOCAL_DEMO_MODE)
+    return bool(demo_flag)

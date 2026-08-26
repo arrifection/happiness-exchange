@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 import logging
 
@@ -28,6 +29,32 @@ from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def build_request_item_lookup(requests: list[dict]) -> dict[str, dict]:
+    """Map item_id -> listing photo and listing mode for request cards.
+
+    Missing entries mean the listing was deleted, so callers fall back to the
+    existing placeholder image and treat the mode as unknown.
+    """
+    item_ids = {str(request.get("item_id")) for request in requests if request.get("item_id")}
+    object_ids = [oid for oid in (parse_object_id(item_id) for item_id in item_ids) if oid is not None]
+    if not object_ids:
+        return {}
+
+    items_collection = await get_items_collection_async()
+    if items_collection is None:
+        return {}
+
+    cursor = items_collection.find({"_id": {"$in": object_ids}})
+    items = await cursor.to_list(length=len(object_ids))
+    return {
+        str(item["_id"]): {
+            "image_url": str(item["image_url"]) if item.get("image_url") else None,
+            "listing_mode": (item.get("listing_mode") or "GIVEAWAY").upper(),
+        }
+        for item in items
+    }
 
 
 @router.post("/requests/{item_id}", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
@@ -116,7 +143,6 @@ async def create_request(
     created_request = await requests_collection.find_one({"_id": result.inserted_id})
     
     # Notify item owner
-    import asyncio
     asyncio.create_task(
         create_notification(
             user_id=item["owner_id"],
@@ -127,7 +153,11 @@ async def create_request(
         )
     )
     
-    return serialize_request(created_request)
+    return serialize_request(
+        created_request,
+        item_image_url=str(item["image_url"]) if item.get("image_url") else None,
+        item_listing_mode=(item.get("listing_mode") or "GIVEAWAY").upper(),
+    )
 
 
 @router.get("/requests/my", response_model=list[RequestResponse])
@@ -144,7 +174,15 @@ async def list_my_requests(current_user: dict = Depends(get_current_user)):
         {"requester_id": current_user["id"]},
     ).sort("created_at", DESCENDING)
     requests = await cursor.to_list(length=100)
-    return [serialize_request(request) for request in requests]
+    item_lookup = await build_request_item_lookup(requests)
+    return [
+        serialize_request(
+            request,
+            item_image_url=item_lookup.get(str(request.get("item_id", "")), {}).get("image_url"),
+            item_listing_mode=item_lookup.get(str(request.get("item_id", "")), {}).get("listing_mode"),
+        )
+        for request in requests
+    ]
 
 
 @router.get("/requests/incoming", response_model=list[RequestResponse])
@@ -173,10 +211,13 @@ async def list_incoming_requests(current_user: dict = Depends(get_current_user))
             reviews_collection=reviews_collection,
         )
 
+    item_lookup = await build_request_item_lookup(requests)
     return [
         serialize_request(
             request,
             requester_reputation=reputation_lookup.get(str(request.get("requester_id", ""))),
+            item_image_url=item_lookup.get(str(request.get("item_id", "")), {}).get("image_url"),
+            item_listing_mode=item_lookup.get(str(request.get("item_id", "")), {}).get("listing_mode"),
         )
         for request in requests
     ]
@@ -218,7 +259,16 @@ async def list_item_requests(
 
     cursor = requests_collection.find({"item_id": item_id}).sort("created_at", DESCENDING)
     requests = await cursor.to_list(length=100)
-    return [serialize_request(request) for request in requests]
+    item_image_url = str(item["image_url"]) if item.get("image_url") else None
+    item_listing_mode = (item.get("listing_mode") or "GIVEAWAY").upper()
+    return [
+        serialize_request(
+            request,
+            item_image_url=item_image_url,
+            item_listing_mode=item_listing_mode,
+        )
+        for request in requests
+    ]
 
 
 @router.patch("/requests/{request_id}/{action}", response_model=RequestResponse)
@@ -227,7 +277,20 @@ async def update_request_status(
     action: str,
     current_user: dict = Depends(get_verified_user),
 ):
-    """Approve a request and reserve the related item."""
+    """Approve a request and reserve the related item.
+
+    This path also matches ``/requests/{id}/reject``, so declines are delegated
+    to the dedicated reject handler instead of falling through to approval.
+    """
+    if action == "reject":
+        return await reject_request(request_id, current_user)
+
+    if action != "approve":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported request action.",
+        )
+
     items_collection = await get_items_collection_async()
     requests_collection = await get_requests_collection_async()
     if items_collection is None or requests_collection is None:
@@ -293,6 +356,34 @@ async def update_request_status(
             detail="Give-away requests are paused while an exchange is in progress.",
         )
 
+    if not item_supports_giveaway(item):
+        # Exchange-only listing: approving invites the requester into the swap
+        # flow instead of the give-away flow. The listing deliberately stays
+        # available so the requester can still send an exchange offer, and the
+        # commitment happens when that offer is accepted.
+        await requests_collection.update_one(
+            {"_id": request_object_id},
+            {"$set": {"status": "approved"}},
+        )
+        asyncio.create_task(
+            create_notification(
+                user_id=request["requester_id"],
+                title="Swap Request Approved!",
+                message=(
+                    f"'{item.get('title')}' is a swap-only listing. Send your swap offer "
+                    "to choose what you are offering in exchange."
+                ),
+                type_="request_approved",
+                action_url="/requests",
+            )
+        )
+        updated_request = await requests_collection.find_one({"_id": request_object_id})
+        return serialize_request(
+            updated_request,
+            item_image_url=str(item["image_url"]) if item.get("image_url") else None,
+            item_listing_mode=(item.get("listing_mode") or "GIVEAWAY").upper(),
+        )
+
     conversations_collection = await get_conversations_collection_async()
     users_collection = await get_users_collection_async()
 
@@ -309,7 +400,6 @@ async def update_request_status(
     )
 
     # Notify requester
-    import asyncio
     asyncio.create_task(
         create_notification(
             user_id=request["requester_id"],
@@ -363,7 +453,7 @@ async def cancel_request(
     request_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    """Allow the requester to withdraw a pending request."""
+    """Allow the requester to withdraw a pending request or clear a rejected one."""
     requests_collection = await get_requests_collection_async()
     if requests_collection is None:
         raise HTTPException(
@@ -391,10 +481,10 @@ async def cancel_request(
             detail="Only the requester can cancel this request.",
         )
 
-    if request["status"] != "pending":
+    if request["status"] not in {"pending", "rejected"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending requests can be cancelled.",
+            detail="Only pending or declined requests can be removed.",
         )
 
     await requests_collection.delete_one({"_id": request_object_id})
@@ -446,7 +536,6 @@ async def reject_request(
     )
     
     # Notify requester
-    import asyncio
     asyncio.create_task(
         create_notification(
             user_id=request["requester_id"],

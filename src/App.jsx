@@ -24,8 +24,9 @@ import ExchangeTransactionPage from './pages/ExchangeTransactionPage.jsx'
 import ExchangeOffersPage from './pages/ExchangeOffersPage.jsx'
 import ShipmentTrackingPage from './pages/ShipmentTrackingPage.jsx'
 import MyDeliveriesPage from './pages/MyDeliveriesPage.jsx'
+import DeliveryComingSoonPage from './pages/DeliveryComingSoonPage.jsx'
 import RequestItemModal from './components/RequestItemModal.jsx'
-import CountrySelect from './components/CountrySelect.jsx'
+import ProposeSwapModal from './components/ProposeSwapModal.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
 import FlashBanner from './components/FlashBanner.jsx'
 import BackendWakeupBanner from './components/BackendWakeupBanner.jsx'
@@ -50,7 +51,9 @@ import { getPageMeta } from './lib/siteMeta.js'
 import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences, writeLocationPreferences } from './lib/locations.js'
 import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from './lib/whatsappRequirement.js'
-import { IS_LOCAL_DEV, LOCAL_TEST_USERS, loginLocalTestUser } from './lib/localDevAuth.js'
+import { supportsExchange, supportsGiveaway } from './lib/listingMode.js'
+import { PUBLIC_DELIVERY_ENABLED } from './lib/featureFlags.js'
+import LocalDemoBar from './components/LocalDemoBar.jsx'
 
 const API_BASE = resolveApiBase()
 const STATUS_ENDPOINT = `${API_BASE}/api/status`
@@ -166,6 +169,7 @@ export default function App() {
   const [requestsError, setRequestsError] = useState('')
   const [cancelPendingRequestId, setCancelPendingRequestId] = useState('')
   const [requestModalItem, setRequestModalItem] = useState(null)
+  const [swapModalItem, setSwapModalItem] = useState(null)
   const [requestSubmitting, setRequestSubmitting] = useState(false)
   const [requestSubmitError, setRequestSubmitError] = useState('')
 
@@ -191,7 +195,6 @@ export default function App() {
   const [reviewMessage, setReviewMessage] = useState('')
   const [reviewModalState, setReviewModalState] = useState(null)
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
-  const [localLoginBusy, setLocalLoginBusy] = useState('')
   const [localCountry, setLocalCountry] = useState(DEFAULT_COUNTRY)
   const userLoadGeneration = useRef(0)
 
@@ -288,20 +291,6 @@ export default function App() {
       if (res.ok) setCurrentUser(data)
     } catch {
       /* silent — verify page still shows success */
-    }
-  }
-
-  async function loginAsLocalDummy(user, nextPath = '/browse') {
-    setLocalLoginBusy(user.key)
-    setAuthError('')
-    try {
-      const data = await loginLocalTestUser(API_BASE, user, localCountry)
-      handleAuthSuccess(data)
-      navigate(nextPath, { replace: true })
-    } catch (error) {
-      setAuthError(error.message)
-    } finally {
-      setLocalLoginBusy('')
     }
   }
 
@@ -700,7 +689,30 @@ export default function App() {
       return
     }
     setRequestSubmitError('')
+    // Swap-only listings never accept give-away requests, so send the user
+    // straight into the existing exchange offer flow instead.
+    if (!supportsGiveaway(item) && supportsExchange(item)) {
+      setSwapModalItem(item)
+      return
+    }
     setRequestModalItem(item)
+  }
+
+  function openSwapModalForRequest(request) {
+    if (userNeedsWhatsApp(currentUser)) {
+      setProfileError('')
+      setWhatsappError('')
+      navigate('/profile', { state: { whatsappRequired: true } })
+      return
+    }
+    const knownItem = [...items, ...myItems].find((entry) => entry.id === request.item_id)
+    setSwapModalItem(
+      knownItem || {
+        id: request.item_id,
+        title: request.item_title,
+        listing_mode: request.item_listing_mode || 'EXCHANGE',
+      },
+    )
   }
 
   async function handleCreateRequest(itemId, reason, requesterCity) {
@@ -754,8 +766,14 @@ export default function App() {
     } catch (error) { setRequestsError(error.message); return null }
   }
 
-  async function handleCancelRequest(requestId) {
-    if (!window.confirm('Cancel this request? You can request the item again later if it is still available.')) {
+  async function handleCancelRequest(requestId, options = {}) {
+    const {
+      confirmText = 'Cancel this request? You can request the item again later if it is still available.',
+      successMessage = 'Request cancelled.',
+      errorMessage = 'Unable to cancel this request.',
+    } = options
+
+    if (!window.confirm(confirmText)) {
       return false
     }
 
@@ -772,11 +790,11 @@ export default function App() {
       if (!res.ok) {
         let errorData = null
         try { errorData = await res.json() } catch { errorData = null }
-        throw new Error(formatApiError(errorData, 'Unable to cancel this request.'))
+        throw new Error(formatApiError(errorData, errorMessage))
       }
 
       setMyRequests((current) => current.filter((request) => request.id !== requestId))
-      setRequestsMessage('Request cancelled.')
+      setRequestsMessage(successMessage)
       await loadItems()
       await loadRequestData()
       return true
@@ -786,6 +804,14 @@ export default function App() {
     } finally {
       setCancelPendingRequestId('')
     }
+  }
+
+  async function handleDeleteRejectedRequest(requestId) {
+    return handleCancelRequest(requestId, {
+      confirmText: 'Delete this declined request permanently? This only removes the request from your activity, not the listing.',
+      successMessage: 'Request removed.',
+      errorMessage: 'Unable to delete this request.',
+    })
   }
 
   async function handleDeleteItem(item) {
@@ -1064,37 +1090,14 @@ export default function App() {
 
         <div className="flex flex-1 flex-col">
           {import.meta.env.DEV ? (
-            <div className="border-b border-[#8b4cf6]/40 bg-[#efe7ff] px-4 py-2.5 text-center text-[13px] font-bold text-[#5a2fc4] flex items-center justify-center gap-3 flex-wrap">
-              <span>LOCAL APP — not the live website. API: {API_BASE}</span>
-              {IS_LOCAL_DEV ? (
-                <>
-                  <div className="w-full max-w-sm">
-                    <CountrySelect
-                      value={localCountry}
-                      onChange={setLocalCountry}
-                      disabled={Boolean(localLoginBusy)}
-                    />
-                  </div>
-                  {LOCAL_TEST_USERS.map((user) => (
-                    <button
-                      key={user.key}
-                      type="button"
-                      disabled={Boolean(localLoginBusy)}
-                      onClick={() => loginAsLocalDummy(user, user.key === 'A' ? '/browse' : '/swaps')}
-                      className="rounded-full bg-[#8b4cf6] px-3 py-1 text-[12px] font-bold uppercase tracking-wide text-white disabled:opacity-60"
-                    >
-                      {localLoginBusy === user.key ? 'Signing in…' : `Log in as User ${user.key}`}
-                    </button>
-                  ))}
-                </>
-              ) : null}
-              <NavLink to="/deliveries" className="underline">
-                Delivery
-              </NavLink>
-              <NavLink to="/swaps" className="underline">
-                Exchange
-              </NavLink>
-            </div>
+            <LocalDemoBar
+              apiBase={API_BASE}
+              currentUser={currentUser}
+              country={localCountry}
+              onCountryChange={setLocalCountry}
+              onAuthSuccess={handleAuthSuccess}
+              onError={setAuthError}
+            />
           ) : null}
 
           {currentUser && !currentUser.is_verified && !isAuthPage ? (
@@ -1354,7 +1357,9 @@ export default function App() {
               <Route
                 path="/deliveries"
                 element={
-                  <MyDeliveriesPage currentUser={currentUser} token={token} />
+                  PUBLIC_DELIVERY_ENABLED
+                    ? <MyDeliveriesPage currentUser={currentUser} token={token} />
+                    : <DeliveryComingSoonPage currentUser={currentUser} />
                 }
               />
               <Route
@@ -1408,6 +1413,8 @@ export default function App() {
                     requestsError={requestsError}
                     onRequestAction={handleRequestAction}
                     onCancelRequest={handleCancelRequest}
+                    onDeleteRejectedRequest={handleDeleteRejectedRequest}
+                    onProposeSwap={openSwapModalForRequest}
                     cancelPendingRequestId={cancelPendingRequestId}
                     loadRequestData={loadRequestData}
                   />
@@ -1517,6 +1524,20 @@ export default function App() {
           }
         }}
         onSubmit={handleCreateRequest}
+      />
+      <ProposeSwapModal
+        open={Boolean(swapModalItem)}
+        item={swapModalItem}
+        myItems={myItems}
+        token={token}
+        country={currentUser?.country}
+        onClose={() => setSwapModalItem(null)}
+        onSubmitted={async () => {
+          setSwapModalItem(null)
+          setRequestsMessage('Swap offer sent! Track it under Swaps.')
+          await loadItems()
+          await loadRequestData()
+        }}
       />
       </div>
     </NotificationProvider>
