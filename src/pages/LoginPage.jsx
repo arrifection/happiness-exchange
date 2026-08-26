@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
-import CountrySelect from '../components/CountrySelect.jsx'
-import { IS_LOCAL_DEV, LOCAL_TEST_USERS, loginLocalTestUser } from '../lib/localDevAuth.js'
-import { DEFAULT_COUNTRY } from '../lib/locations.js'
+import LocalDemoSignIn from '../components/LocalDemoSignIn.jsx'
 
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
@@ -16,11 +14,12 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
     email: '',
     password: '',
   })
-  const [dummyCountry, setDummyCountry] = useState(DEFAULT_COUNTRY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  if (currentUser && !IS_LOCAL_DEV) {
+  // Locally the page stays reachable while signed in, so the dev shortcuts can
+  // switch between test accounts without logging out first.
+  if (currentUser && !import.meta.env.DEV) {
     return <Navigate to="/" replace />
   }
 
@@ -47,7 +46,7 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
     }
 
     onSuccess(data)
-    if (IS_LOCAL_DEV) {
+    if (import.meta.env.DEV) {
       navigate(nextPath, { replace: true })
     }
   }
@@ -59,24 +58,6 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
 
     try {
       await completeLogin(formData.email, formData.password)
-    } catch (submitError) {
-      setError(
-        submitError.message === 'Failed to fetch'
-          ? `Cannot reach ${apiBase}. Stay on http://localhost:5173 — not the live website.`
-          : submitError.message,
-      )
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleLocalTestLogin(user) {
-    setSubmitting(true)
-    setError('')
-    try {
-      const data = await loginLocalTestUser(apiBase, user, dummyCountry)
-      onSuccess(data)
-      navigate('/browse', { replace: true })
     } catch (submitError) {
       setError(
         submitError.message === 'Failed to fetch'
@@ -106,45 +87,8 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
         </p>
       )}
     >
-      {IS_LOCAL_DEV ? (
-        <div className="mb-4 rounded-2xl border border-[#8b4cf6]/30 bg-[#efe7ff] p-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#5a2fc4]">
-            Local dummy login
-          </p>
-          {currentUser ? (
-            <p className="mt-1 text-[11px] leading-relaxed text-[#3d246e]">
-              Currently signed in as {currentUser.email}. Click User A or User B below to switch.
-            </p>
-          ) : (
-            <p className="mt-1 text-[11px] leading-relaxed text-[#3d246e]">
-            This is localhost, not happyexchange.net. Dummy login can override country for testing. Regular login uses the country saved on the account.
-            </p>
-          )}
-          <div className="mt-3">
-            <CountrySelect
-              value={dummyCountry}
-              onChange={setDummyCountry}
-              disabled={submitting}
-              label="Override country (dummy login only)"
-            />
-          </div>
-          <div className="mt-3 grid gap-2">
-            {LOCAL_TEST_USERS.map((user) => (
-              <button
-                key={user.key}
-                type="button"
-                disabled={submitting}
-                onClick={() => handleLocalTestLogin(user)}
-                className="rounded-xl bg-[#8b4cf6] px-3 py-2 text-left text-[12px] font-bold text-white disabled:opacity-60"
-              >
-                Log in as User {user.key}
-                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-white/80">
-                  {user.email} · {user.password}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {import.meta.env.DEV ? (
+        <LocalDemoSignIn apiBase={apiBase} currentUser={currentUser} onSuccess={onSuccess} />
       ) : null}
 
       <p className="mb-3 text-center text-[11px] text-[#68766d]">

@@ -1,9 +1,17 @@
-def serialize_request(request: dict, *, requester_reputation: dict | None = None) -> dict:
+def serialize_request(
+    request: dict,
+    *,
+    requester_reputation: dict | None = None,
+    item_image_url: str | None = None,
+    item_listing_mode: str | None = None,
+) -> dict:
     """Convert a MongoDB request document into an API-safe response shape."""
     payload = {
         "id": str(request["_id"]),
         "item_id": request["item_id"],
         "item_title": request["item_title"],
+        "item_image_url": str(item_image_url) if item_image_url else None,
+        "item_listing_mode": str(item_listing_mode).upper() if item_listing_mode else None,
         "requester_id": request["requester_id"],
         "requester_name": request["requester_name"],
         "requester_city": request.get("requester_city"),

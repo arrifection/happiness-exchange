@@ -36,6 +36,8 @@ class RequestResponse(BaseModel):
     id: str
     item_id: str
     item_title: str
+    item_image_url: str | None = None
+    item_listing_mode: str | None = None
     requester_id: str
     requester_name: str
     requester_city: str | None = None

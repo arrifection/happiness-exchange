@@ -43,6 +43,7 @@ from app.api.routes.admin.exchange import router as admin_exchange_router
 from app.api.routes.admin.shipments import router as admin_shipments_router
 from app.core.config import settings
 from app.core.middleware import RequestLoggingMiddleware
+from app.core.runtime import local_demo_mode_enabled
 from app.core.startup_checks import log_production_warnings
 from app.db.mongodb import (
     close_mongo_connection,
@@ -103,6 +104,17 @@ app.include_router(need_requests_router, prefix="/api", tags=["Need Requests"])
 app.include_router(exchange_offers_router, prefix="/api", tags=["Exchange Offers"])
 app.include_router(exchange_transactions_router, prefix="/api", tags=["Exchange Transactions"])
 app.include_router(shipments_router, prefix="/api", tags=["Shipments"])
+
+# ── Local demo sandbox (development only) ─────────────────────────────────────
+# Not mounted at all unless LOCAL_DEMO_MODE is on and the process is non-production.
+if local_demo_mode_enabled():
+    from app.api.routes.dev_demo import router as dev_demo_router
+
+    app.include_router(dev_demo_router, prefix="/api/dev", tags=["Dev · Demo"])
+    logger.warning(
+        "LOCAL_DEMO_MODE is enabled: /api/dev/demo/* is mounted. "
+        "This is a local-only sandbox and never runs in production."
+    )
 
 # ── Admin API ─────────────────────────────────────────────────────────────────
 app.include_router(admin_auth_router,      prefix="/api/admin/auth",      tags=["Admin · Auth"])

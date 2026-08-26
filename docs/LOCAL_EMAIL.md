@@ -97,6 +97,11 @@ If someone accidentally sets the bypass in production, the backend logs an error
 
 ## 4. Dummy users
 
+For a richer sandbox (two seeded users with listings, requests, and a swap offer,
+plus one-click user switching and no password step at all) see
+[LOCAL_DEMO_ENV.md](LOCAL_DEMO_ENV.md). The password-based dummy users below stay
+available either way.
+
 From the repo root, with local MongoDB running:
 
 ```bash
