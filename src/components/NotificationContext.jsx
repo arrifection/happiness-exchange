@@ -69,6 +69,23 @@ export function NotificationProvider({ token, children }) {
     }
   }
 
+  async function dismissNotification(id) {
+    if (!token) return false
+    try {
+      const res = await fetch(`${API_BASE}/api/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setRawNotifications((prev) => prev.filter((notification) => notification.id !== id))
+        return true
+      }
+    } catch {
+      // Keep the notification visible when the request fails.
+    }
+    return false
+  }
+
   useEffect(() => {
     fetchNotifications()
     if (token) {
@@ -79,7 +96,7 @@ export function NotificationProvider({ token, children }) {
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications }}
+      value={{ notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, fetchNotifications }}
     >
       {children}
     </NotificationContext.Provider>
@@ -91,6 +108,7 @@ const EMPTY_NOTIFICATIONS = {
   unreadCount: 0,
   markAsRead: async () => {},
   markAllAsRead: async () => {},
+  dismissNotification: async () => false,
   fetchNotifications: async () => {},
 }
 

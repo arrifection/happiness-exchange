@@ -3,11 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import GiveItemLocationModal, { hasGiveItemLocation } from './GiveItemLocationModal.jsx'
 import ImagePreviewModal from './ImagePreviewModal.jsx'
 import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
-import { ITEM_CATEGORIES, STORAGE_CONDITIONS } from '../lib/categories.js'
+import { ITEM_CATEGORIES, ITEM_CONDITIONS, STORAGE_CONDITIONS } from '../lib/categories.js'
 
 const CATEGORIES = ITEM_CATEGORIES
 
-const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
+const CONDITIONS = ITEM_CONDITIONS
 
 const fieldHelpText = {
   title: 'Give your item a clear, concise name.',

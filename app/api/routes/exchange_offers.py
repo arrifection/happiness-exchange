@@ -56,6 +56,17 @@ logger = logging.getLogger(__name__)
 EXCHANGE_ACCEPT_UNAVAILABLE_MESSAGE = "This exchange is no longer available. Please try again later."
 
 
+def _require_collections(*collections) -> None:
+    """Raise 503 when any required Mongo collection is unavailable.
+
+    Motor collections raise NotImplementedError from ``__bool__``, so they must
+    be compared with ``is None``. Passing them to ``all()``/``bool()`` crashes
+    the request with a 500 instead of reporting a database outage.
+    """
+    if any(collection is None for collection in collections):
+        raise HTTPException(status_code=503, detail="Database connection is not available.")
+
+
 async def _get_offer_or_404(offers_collection, offer_id: str):
     object_id = parse_object_id(offer_id)
     if object_id is None:
@@ -265,8 +276,13 @@ async def accept_offer(offer_id: str, current_user: dict = Depends(get_verified_
     transactions_collection = await get_exchange_transactions_collection_async()
     shipping_collection = await get_exchange_shipping_collection_async()
     users_collection = await get_users_collection_async()
-    if not all([offers_collection, items_collection, transactions_collection, shipping_collection, users_collection]):
-        raise HTTPException(status_code=503, detail="Database connection is not available.")
+    _require_collections(
+        offers_collection,
+        items_collection,
+        transactions_collection,
+        shipping_collection,
+        users_collection,
+    )
 
     offer = await _get_offer_or_404(offers_collection, offer_id)
     if offer["owner_user_id"] != current_user["id"]:
@@ -391,8 +407,13 @@ async def accept_counter_offer(offer_id: str, current_user: dict = Depends(get_v
     transactions_collection = await get_exchange_transactions_collection_async()
     shipping_collection = await get_exchange_shipping_collection_async()
     users_collection = await get_users_collection_async()
-    if not all([offers_collection, items_collection, transactions_collection, shipping_collection, users_collection]):
-        raise HTTPException(status_code=503, detail="Database connection is not available.")
+    _require_collections(
+        offers_collection,
+        items_collection,
+        transactions_collection,
+        shipping_collection,
+        users_collection,
+    )
 
     offer = await _get_offer_or_404(offers_collection, offer_id)
     if offer["offering_user_id"] != current_user["id"]:

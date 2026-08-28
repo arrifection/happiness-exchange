@@ -49,9 +49,10 @@ export default function GiveItemPage({
       return
     }
 
-    navigate('/item-listed-success', {
+    navigate('/browse', {
       state: {
         publishedItem: createdItem,
+        listingJustPublished: true,
       },
     })
   }

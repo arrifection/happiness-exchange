@@ -83,3 +83,29 @@ async def mark_all_as_read(
     )
 
     return {"status": "ok"}
+
+
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def dismiss_notification(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Dismiss one of the current user's notifications.
+
+    Ownership is required in the query so another user's id cannot be used to
+    delete someone else's notification. A miss returns 404 rather than 403 so
+    the caller cannot probe whether an id exists for another user.
+    """
+    col = await get_notifications_collection_async()
+    if col is None:
+        raise HTTPException(status_code=503, detail="Database unavailable.")
+
+    oid = parse_object_id(notification_id)
+    if oid is None:
+        raise HTTPException(status_code=400, detail="Invalid notification ID.")
+
+    result = await col.delete_one({"_id": oid, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+
+    return None

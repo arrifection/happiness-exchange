@@ -106,6 +106,22 @@ class AtomicFakeCollection:
         return _AsyncCursor(matched)
 
 
+class StrictFakeCollection(AtomicFakeCollection):
+    """Fake collection that refuses truth testing, exactly as Motor does.
+
+    Motor and PyMongo raise NotImplementedError from ``__bool__`` so callers are
+    forced to compare with ``is None``. The lenient base class above is shared
+    with other test modules, so only the exchange-offer routes exercised here
+    opt into the stricter behaviour.
+    """
+
+    def __bool__(self):
+        raise NotImplementedError(
+            "Collection objects do not implement truth value testing or bool(). "
+            "Please compare with None instead: collection is not None"
+        )
+
+
 class _AsyncCursor:
     def __init__(self, documents):
         self._documents = documents
@@ -168,19 +184,19 @@ def exchange_world():
     owner_oid, offerer_a_oid, offerer_b_oid, listing = _setup_listing_and_users()
     offer_a_id = ObjectId()
     offer_b_id = ObjectId()
-    items = AtomicFakeCollection([listing])
-    offers = AtomicFakeCollection([
+    items = StrictFakeCollection([listing])
+    offers = StrictFakeCollection([
         _offer_doc(offer_a_id, listing, offerer_a_oid),
         _offer_doc(offer_b_id, listing, offerer_b_oid),
     ])
-    transactions = AtomicFakeCollection([])
-    shipping = AtomicFakeCollection([])
-    users = AtomicFakeCollection([
+    transactions = StrictFakeCollection([])
+    shipping = StrictFakeCollection([])
+    users = StrictFakeCollection([
         {"_id": owner_oid, "name": "Owner"},
         {"_id": offerer_a_oid, "name": "Offerer A"},
         {"_id": offerer_b_oid, "name": "Offerer B"},
     ])
-    requests = AtomicFakeCollection([
+    requests = StrictFakeCollection([
         {
             "_id": ObjectId(),
             "item_id": str(listing["_id"]),
@@ -294,6 +310,77 @@ def _auth_app(current_user):
     app.dependency_overrides[auth_deps.get_verified_user] = lambda: current_user
     app.dependency_overrides[auth_deps.get_current_user] = lambda: current_user
     return app
+
+
+def _collection_patches(world):
+    return (
+        patch("app.api.routes.exchange_offers.get_exchange_offers_collection_async", AsyncMock(return_value=world.offers)),
+        patch("app.api.routes.exchange_offers.get_items_collection_async", AsyncMock(return_value=world.items)),
+        patch("app.api.routes.exchange_offers.get_exchange_transactions_collection_async", AsyncMock(return_value=world.transactions)),
+        patch("app.api.routes.exchange_offers.get_exchange_shipping_collection_async", AsyncMock(return_value=world.shipping)),
+        patch("app.api.routes.exchange_offers.get_users_collection_async", AsyncMock(return_value=world.users)),
+        patch("app.api.routes.exchange_offers.create_notification", AsyncMock()),
+        patch("app.services.exchange_workflow.create_notification", AsyncMock()),
+        patch("app.services.exchange_workflow.notify_admins", AsyncMock()),
+    )
+
+
+async def _owner_action(world, offer_id, action):
+    owner = {
+        "id": str(world.owner_oid),
+        "name": "Owner",
+        "email": "owner@example.com",
+        "is_verified": True,
+    }
+    patches = _collection_patches(world)
+    for patched in patches:
+        patched.start()
+    try:
+        transport = ASGITransport(app=_auth_app(owner))
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.patch(f"/api/exchange-offers/{offer_id}/{action}")
+    finally:
+        for patched in patches:
+            patched.stop()
+
+
+@pytest.mark.asyncio
+async def test_owner_accept_of_received_offer_succeeds(exchange_world):
+    """Accepting a received swap offer must set ACCEPTED, not fail the action.
+
+    The route previously passed Motor collections to ``all()`` for its database
+    availability guard. Motor raises NotImplementedError from ``__bool__``, so
+    every accept returned a 500 whose body carried no JSON ``detail`` and the UI
+    fell back to its generic "Action failed." message.
+    """
+    response = await _owner_action(exchange_world, exchange_world.offer_a_id, "accept")
+
+    assert response.status_code == 200, response.text
+    assert response.status_code != 500
+    body = response.json()
+    assert body["status"] == "ACCEPTED"
+    assert body["transaction_id"]
+
+    offer = await exchange_world.offers.find_one({"_id": exchange_world.offer_a_id})
+    assert offer["status"] == "ACCEPTED"
+    listing = await exchange_world.items.find_one({"_id": exchange_world.listing["_id"]})
+    assert listing["status"] == "exchange_reserved"
+    assert len(exchange_world.transactions.documents) == 1
+
+
+@pytest.mark.asyncio
+async def test_owner_decline_of_received_offer_still_succeeds(exchange_world):
+    """The decline path was never broken and must stay working after the fix."""
+    response = await _owner_action(exchange_world, exchange_world.offer_a_id, "decline")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "DECLINED"
+
+    offer = await exchange_world.offers.find_one({"_id": exchange_world.offer_a_id})
+    assert offer["status"] == "DECLINED"
+    listing = await exchange_world.items.find_one({"_id": exchange_world.listing["_id"]})
+    assert listing["status"] == "available"
+    assert len(exchange_world.transactions.documents) == 0
 
 
 @pytest.mark.asyncio
