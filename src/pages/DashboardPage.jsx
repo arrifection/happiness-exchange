@@ -1,4 +1,5 @@
 import { asArray } from '../lib/api.js'
+import { canDeletePreviousListing, selectPreviousListings } from '../lib/previousListings.js'
 import IncomingRequestReview from '../components/IncomingRequestReview.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
@@ -61,6 +62,103 @@ function RequestCard({ request, children }) {
   )
 }
 
+function PreviousListingCard({ item, onDelete, deletePending }) {
+  return (
+    <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <Link to={`/items/${item.id}`} className="min-w-0 transition hover:text-he-purple">
+            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">
+              {item.title}
+            </h3>
+          </Link>
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-he-muted">
+            {item.category || 'Listing'}
+          </p>
+        </div>
+        <div className="shrink-0 scale-90 origin-top-right">
+          <StatusBadge status={item.status} />
+        </div>
+      </div>
+
+      {canDeletePreviousListing(item) ? (
+        <div className="mt-2.5 border-t border-he-border/60 pt-2">
+          <Button
+            className="h-7 min-h-0 rounded-btn px-3 text-[10px] text-he-danger"
+            variant="ghost"
+            disabled={deletePending}
+            onClick={() => onDelete?.(item)}
+          >
+            Delete listing
+          </Button>
+        </div>
+      ) : null}
+    </article>
+  )
+}
+
+function SwapOfferCard({ offer, onAction, actionPending }) {
+  const offeredTitle = offer.offered_listing_title || offer.custom_item_title || 'Custom item'
+
+  return (
+    <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-he-purple">Swap offer</p>
+          <h3 className="min-w-0 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">
+            {offer.listing_title}
+          </h3>
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-he-muted">
+            {offer.offering_user_name ? `From: ${offer.offering_user_name.split(' ')[0]}` : 'Community member'}
+          </p>
+        </div>
+        <div className="shrink-0 scale-90 origin-top-right">
+          <StatusBadge status={String(offer.status || '').toLowerCase()} />
+        </div>
+      </div>
+
+      <div className="mt-2 border-t border-he-border/60 pt-2">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft">Offering</p>
+        <p className="text-[12px] font-semibold text-he-ink">{offeredTitle}</p>
+        {offer.message ? (
+          <p className="mt-1 line-clamp-3 text-[11px] italic leading-relaxed text-he-muted">&ldquo;{offer.message}&rdquo;</p>
+        ) : null}
+        {offer.cash_adjustment != null ? (
+          <p className="mt-1 text-[10px] font-bold text-he-purple">Cash adjustment: {offer.cash_adjustment}</p>
+        ) : null}
+      </div>
+
+      {offer.status === 'PENDING' ? (
+        <div className="mt-2.5 flex gap-1.5 border-t border-he-border/60 pt-2">
+          <Button
+            className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+            disabled={actionPending}
+            onClick={() => onAction?.(offer.id, 'accept')}
+          >
+            Accept
+          </Button>
+          <Button
+            className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
+            variant="secondary"
+            disabled={actionPending}
+            onClick={() => onAction?.(offer.id, 'decline')}
+          >
+            Decline
+          </Button>
+        </div>
+      ) : null}
+
+      {offer.transaction_id ? (
+        <div className="mt-1.5">
+          <Link to={`/exchange/${offer.transaction_id}`} className="text-[10px] font-bold text-he-purple hover:underline">
+            View exchange progress
+          </Link>
+        </div>
+      ) : null}
+    </article>
+  )
+}
+
 export default function DashboardPage({
   currentUser,
   items,
@@ -68,6 +166,13 @@ export default function DashboardPage({
   myItems,
   myRequests,
   ownerRequests,
+  ownerExchangeOffers,
+  onExchangeOfferAction,
+  exchangeOfferActionId,
+  onDeleteItem,
+  ownerActionItemId,
+  ownerItemsMessage,
+  ownerItemsError,
   onRequestAction,
   onOpenReview,
   onOpenChat,
@@ -81,6 +186,9 @@ export default function DashboardPage({
 }) {
   const requestList = asArray(myRequests)
   const incomingRequests = asArray(ownerRequests)
+  const incomingSwapOffers = asArray(ownerExchangeOffers)
+  const incomingTotal = incomingRequests.length + incomingSwapOffers.length
+  const previousListings = selectPreviousListings(myItems)
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
   const itemsSharedCount = myItems?.length || 0
@@ -267,17 +375,17 @@ export default function DashboardPage({
         <div className="shrink-0 space-y-4 md:space-y-5 lg:w-80">
           <SectionHeading
             title="Review incoming"
-            description="Approve or decline requests."
+            description="Approve or decline requests and swap offers."
             action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
           />
           <div className="flex flex-col gap-3">
-            {loadingRequests && incomingRequests.length === 0 ? (
+            {loadingRequests && incomingTotal === 0 ? (
               <RequestCardSkeletonList count={2} className="grid-cols-1" />
-            ) : incomingRequests.length === 0 ? (
+            ) : incomingTotal === 0 ? (
               <EmptyState
                 icon="requests"
                 title="No pending reviews"
-                description="When someone requests one of your items, you can approve or decline it here."
+                description="When someone requests one of your items or offers a swap, you can approve or decline it here."
                 action={<Button as="link" to="/give">View your listings</Button>}
               />
             ) : (
@@ -313,10 +421,51 @@ export default function DashboardPage({
                   </RequestCard>
                 )
               })}
+                {incomingSwapOffers.slice(0, 5).map((offer) => (
+                  <SwapOfferCard
+                    key={offer.id}
+                    offer={offer}
+                    onAction={onExchangeOfferAction}
+                    actionPending={exchangeOfferActionId === offer.id}
+                  />
+                ))}
               </>
             )}
           </div>
         </div>
+      </div>
+
+      {/* Previous listings */}
+      <div className="space-y-4 md:space-y-5">
+        <SectionHeading
+          title="Previous listings"
+          description="Listings you already completed. Delete the ones you no longer want to keep."
+        />
+        {ownerItemsMessage ? (
+          <p className="px-2 text-[10px] font-bold uppercase tracking-widest text-he-purple">{ownerItemsMessage}</p>
+        ) : null}
+        {ownerItemsError ? (
+          <p className="px-2 text-[10px] font-bold uppercase tracking-widest text-he-danger">{ownerItemsError}</p>
+        ) : null}
+        {previousListings.length === 0 ? (
+          <EmptyState
+            icon="items"
+            title="No previous listings yet"
+            description="Once a listing is successfully taken or swapped, it moves here so you can review or remove it."
+            action={<Button as="link" to="/give">List an item</Button>}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:gap-5 sm:grid-cols-2">
+            {previousListings.map((item) => (
+              <PreviousListingCard
+                key={item.id}
+                item={item}
+                onDelete={onDeleteItem}
+                deletePending={ownerActionItemId === item.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

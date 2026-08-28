@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 
 import ItemLocationMapModal from '../components/map/ItemLocationMapModal.jsx'
 import ImagePreviewModal, { normalizeItemImages } from '../components/ImagePreviewModal.jsx'
@@ -7,6 +7,7 @@ import ListingModeBadge from '../components/ListingModeBadge.jsx'
 import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
 import ProposeSwapModal from '../components/ProposeSwapModal.jsx'
 import ExchangeOffersPanel from '../components/ExchangeOffersPanel.jsx'
+import ReceivedRequestsPanel from '../components/ReceivedRequestsPanel.jsx'
 import { RatingStars } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import { Button, EmptyState, ErrorState, ItemCardSkeleton, StatusBadge } from '../components/ui.jsx'
@@ -15,7 +16,7 @@ import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { getPublicLocationLabel } from '../lib/locations.js'
 import { formatListingExpiryLabel, isListingExpired } from '../lib/listingExpiration.js'
-import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
+import { userNeedsWhatsApp } from '../lib/whatsappRequirement.js'
 import { safeString } from '../lib/safeValues.js'
 
 import './ItemDetailsPage.css'
@@ -39,6 +40,7 @@ export default function ItemDetailsPage({
   getMyRequestForItem,
   getReviewContextForItem,
   onCreateRequest,
+  onRequestAction,
   onOpenReview,
   onDeleteItem,
   onCompleteItem,
@@ -49,10 +51,17 @@ export default function ItemDetailsPage({
   onRefreshMyItems,
 }) {
   const { itemId } = useParams()
+  const location = useLocation()
   const [previewOpen, setPreviewOpen] = useState(false)
   const [mapOpen, setMapOpen] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   const [swapModalOpen, setSwapModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (location.state?.resumeSwapItemId && location.state.resumeSwapItemId === itemId) {
+      setSwapModalOpen(true)
+    }
+  }, [location.state, itemId])
 
   const item = useMemo(() => {
     const pool = [...(myItems || []), ...(items || [])]
@@ -197,10 +206,6 @@ export default function ItemDetailsPage({
                 showFlash('Please verify your email to request an item.')
                 return
               }
-              if (userNeedsWhatsApp(currentUser)) {
-                showFlash(WHATSAPP_REQUIRED_MESSAGE)
-                return
-              }
               onCreateRequest(item)
             }}
           >
@@ -215,10 +220,8 @@ export default function ItemDetailsPage({
                 showFlash('Please verify your email to propose a swap.')
                 return
               }
-              if (userNeedsWhatsApp(currentUser)) {
-                showFlash(WHATSAPP_REQUIRED_MESSAGE)
-                return
-              }
+              // Missing WhatsApp is handled inside ProposeSwapModal so the user
+              // stays on this listing instead of being sent backward.
               setSwapModalOpen(true)
             }}
           >
@@ -366,6 +369,18 @@ export default function ItemDetailsPage({
         </div>
       </section>
 
+      {isOwner ? (
+        <ReceivedRequestsPanel
+          item={item}
+          token={token}
+          onRequestAction={onRequestAction}
+          onUpdated={() => {
+            onRefreshItems?.()
+            onRefreshMyItems?.()
+          }}
+        />
+      ) : null}
+
       {isOwner && supportsExchangeListing ? (
         <ExchangeOffersPanel
           item={item}
@@ -384,6 +399,7 @@ export default function ItemDetailsPage({
         myItems={myItems}
         token={token}
         country={currentUser?.country}
+        missingWhatsApp={userNeedsWhatsApp(currentUser)}
         onSubmitted={() => {
           onRefreshItems?.()
           setSwapModalOpen(false)

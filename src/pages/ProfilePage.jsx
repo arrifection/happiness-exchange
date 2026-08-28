@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 
 import { RatingStars, ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
@@ -76,7 +76,10 @@ export default function ProfilePage({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [locationPrefs, setLocationPrefs] = useState(() => readLocationPreferences())
   const location = useLocation()
+  const navigate = useNavigate()
   const whatsappRequired = userNeedsWhatsApp(currentUser) || Boolean(location.state?.whatsappRequired)
+  const returnTo = typeof location.state?.returnTo === 'string' ? location.state.returnTo : ''
+  const resumeSwapItemId = location.state?.resumeSwapItemId || null
 
   useEffect(() => {
     setName(currentUser?.name || '')
@@ -122,7 +125,15 @@ export default function ProfilePage({
       return
     }
     setWhatsappInputError('')
-    await onUpdateWhatsApp?.(whatsappNumber.trim())
+    const updated = await onUpdateWhatsApp?.(whatsappNumber.trim())
+    if (updated && returnTo) {
+      navigate(returnTo, {
+        replace: true,
+        state: resumeSwapItemId
+          ? { resumeSwapItemId }
+          : undefined,
+      })
+    }
   }
 
   async function handleCountrySubmit(event) {

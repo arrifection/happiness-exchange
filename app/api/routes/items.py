@@ -8,6 +8,7 @@ from pymongo import DESCENDING
 
 from app.api.deps.auth import get_current_user, get_verified_user, get_whatsapp_user
 from app.db.mongodb import (
+    get_exchange_offers_collection_async,
     get_items_collection_async,
     get_requests_collection_async,
     get_reviews_collection_async,
@@ -28,6 +29,7 @@ from app.services.cloudinary import (
 )
 from app.core.slowapi_limiter import authenticated_user_key, limiter
 from app.services.image_validation import validate_and_sanitize_image
+from app.services.exchange_offers import is_listing_exchange_reserved, item_supports_exchange
 from app.services.items import build_item_document, serialize_item
 from app.services.listing_expiration import compute_listing_expires_at, is_listing_expired, utc_now
 from app.services.location import apply_keyset_cursor_filter, build_items_list_query, filter_and_sort_items, haversine_km
@@ -38,6 +40,22 @@ from app.core.rate_limit import check_user_rate_limit
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+LISTING_DELETE_EXCHANGE_ACTIVE_MESSAGE = (
+    "This listing has a swap in progress. Complete or cancel the exchange before deleting it."
+)
+
+# Requests that only exist to be answered die with the listing. Approved ones are
+# exchange history that reviews and reputation still read, so they are preserved.
+DISCARDABLE_REQUEST_STATUSES = ("pending", "rejected", "cancelled")
+
+# Offers nobody can act on once the listing is gone.
+WITHDRAWABLE_OFFER_STATUSES = ("PENDING", "UNDER_REVIEW", "COUNTERED")
+
+
+def listing_has_active_exchange(item: dict) -> bool:
+    """True when a swap for this listing is mid-flight and must not be broken."""
+    return is_listing_exchange_reserved(item) or bool(item.get("active_exchange_offer_id"))
 
 
 @router.post("/items", response_model=ItemResponse, status_code=status.HTTP_201_CREATED)
@@ -419,12 +437,34 @@ async def delete_item(
             detail="You do not have permission to delete this item.",
         )
 
+    if listing_has_active_exchange(item):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=LISTING_DELETE_EXCHANGE_ACTIVE_MESSAGE,
+        )
+
     await items_collection.delete_one({"_id": object_id})
 
-    # Clean up associated requests
     requests_collection = await get_requests_collection_async()
     if requests_collection is not None:
-        await requests_collection.delete_many({"item_id": item_id})
+        await requests_collection.delete_many({
+            "item_id": item_id,
+            "status": {"$in": list(DISCARDABLE_REQUEST_STATUSES)},
+        })
+        # Whatever survives is history: detach it from the removed listing so the
+        # activity and review flows keep working without a live item.
+        await requests_collection.update_many(
+            {"item_id": item_id},
+            {"$set": {"listing_deleted": True, "listing_deleted_at": utc_now()}},
+        )
+
+    if item_supports_exchange(item):
+        offers_collection = await get_exchange_offers_collection_async()
+        if offers_collection is not None:
+            await offers_collection.update_many(
+                {"listing_id": item_id, "status": {"$in": list(WITHDRAWABLE_OFFER_STATUSES)}},
+                {"$set": {"status": "CANCELLED", "updated_at": utc_now()}},
+            )
 
     return
 
