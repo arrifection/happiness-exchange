@@ -1,10 +1,6 @@
-import { Navigate } from 'react-router-dom'
-
 import { Button, Surface } from '../components/ui.jsx'
 
-export default function DeliveryComingSoonPage({ currentUser }) {
-  if (!currentUser) return <Navigate to="/login" replace />
-
+export default function DeliveryComingSoonPage() {
   return (
     <div className="app-shell mx-auto max-w-3xl space-y-4 px-4 py-6">
       <div>

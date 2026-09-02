@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
+import AppBootSkeleton from '../components/AppBootSkeleton.jsx'
 import LocalDemoSignIn from '../components/LocalDemoSignIn.jsx'
 
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
 }
 
-export default function LoginPage({ apiBase, onSuccess, currentUser }) {
+export default function LoginPage({ apiBase, onSuccess, currentUser, loadingUser, token }) {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
@@ -16,6 +17,10 @@ export default function LoginPage({ apiBase, onSuccess, currentUser }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  if (loadingUser || (token && !currentUser)) {
+    return <AppBootSkeleton />
+  }
 
   // Locally the page stays reachable while signed in, so the dev shortcuts can
   // switch between test accounts without logging out first.

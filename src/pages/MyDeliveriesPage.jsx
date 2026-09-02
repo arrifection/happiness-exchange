@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 
 import { Button, EmptyState, StatusBadge, Surface } from '../components/ui.jsx'
 import { apiUrl, asArray } from '../lib/api.js'
@@ -31,8 +30,6 @@ export default function MyDeliveriesPage({ currentUser, token }) {
     }
     load()
   }, [token])
-
-  if (!currentUser) return <Navigate to="/login" replace />
 
   return (
     <div className="app-shell mx-auto max-w-3xl space-y-4 px-4 py-6">

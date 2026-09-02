@@ -1,10 +1,25 @@
+import { copyFileSync, existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { resolve } from 'node:path'
+
+function copyIndexTo404() {
+  return {
+    name: 'copy-index-to-404',
+    closeBundle() {
+      const indexPath = resolve(__dirname, 'dist/index.html')
+      const notFoundPath = resolve(__dirname, 'dist/404.html')
+      if (existsSync(indexPath)) {
+        copyFileSync(indexPath, notFoundPath)
+      }
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), copyIndexTo404()],
   build: {
     sourcemap: false,
     rollupOptions: {
