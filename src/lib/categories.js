@@ -33,6 +33,8 @@ export const STORAGE_CONDITIONS = [
   { value: 'frozen', label: 'Frozen' },
 ]
 
+export const ITEM_CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
+
 export const NEED_URGENCIES = [
   { value: 'low', label: 'Low' },
   { value: 'normal', label: 'Normal' },

@@ -1,19 +1,45 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
+import { ITEM_CONDITIONS } from '../lib/categories.js'
 import { Button, SelectField, TextAreaField, TextField } from './ui.jsx'
 import CitySelector from './CitySelector.jsx'
 import RequesterShippingNotice, { REQUESTER_SHIPPING_NOTICE_KIND } from './RequesterShippingNotice.jsx'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { apiUrl } from '../lib/api.js'
 import { displayTransactionCity, DEFAULT_COUNTRY } from '../lib/locations.js'
+import {
+  isWhatsAppRequiredError,
+  loadProposeSwapDraft,
+  saveProposeSwapDraft,
+  clearProposeSwapDraft,
+  SWAP_WHATSAPP_REQUIRED_MESSAGE,
+  WHATSAPP_REQUIRED_MESSAGE,
+} from '../lib/whatsappRequirement.js'
 
-const CONDITIONS = ['New', 'Like New', 'Good', 'Gently Used', 'Used']
+const CONDITIONS = ITEM_CONDITIONS
 
 const STEPS = ['Choose source', 'Item details', 'Review', 'Submit']
 
 function itemSupportsExchange(item) {
   const mode = (item?.listing_mode || 'GIVEAWAY').toUpperCase()
   return mode === 'EXCHANGE' || mode === 'BOTH'
+}
+
+function emptyFormState() {
+  return {
+    step: 0,
+    sourceType: 'listing',
+    offeredListingId: '',
+    customTitle: '',
+    customDescription: '',
+    customCondition: '',
+    customEstimatedValue: '',
+    customImageUrl: '',
+    message: '',
+    cashAdjustment: '',
+    offeringCity: '',
+  }
 }
 
 export default function ProposeSwapModal({
@@ -23,8 +49,10 @@ export default function ProposeSwapModal({
   myItems = [],
   token,
   country = DEFAULT_COUNTRY,
+  missingWhatsApp = false,
   onSubmitted,
 }) {
+  const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [sourceType, setSourceType] = useState('listing')
   const [offeredListingId, setOfferedListingId] = useState('')
@@ -40,6 +68,7 @@ export default function ProposeSwapModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showShippingNotice, setShowShippingNotice] = useState(false)
+  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false)
 
   const availableMyItems = useMemo(
     () => (myItems || []).filter(
@@ -50,22 +79,70 @@ export default function ProposeSwapModal({
 
   useEffect(() => {
     if (!open) return
-    setStep(0)
-    setSourceType('listing')
-    setOfferedListingId('')
-    setCustomTitle('')
-    setCustomDescription('')
-    setCustomCondition('')
-    setCustomEstimatedValue('')
-    setCustomImageUrl('')
-    setMessage('')
-    setCashAdjustment('')
-    setOfferingCity('')
+
+    const draft = loadProposeSwapDraft(item?.id)
+    if (draft) {
+      setStep(typeof draft.step === 'number' ? draft.step : 0)
+      setSourceType(draft.sourceType || 'listing')
+      setOfferedListingId(draft.offeredListingId || '')
+      setCustomTitle(draft.customTitle || '')
+      setCustomDescription(draft.customDescription || '')
+      setCustomCondition(draft.customCondition || '')
+      setCustomEstimatedValue(draft.customEstimatedValue || '')
+      setCustomImageUrl(draft.customImageUrl || '')
+      setMessage(draft.message || '')
+      setCashAdjustment(draft.cashAdjustment || '')
+      setOfferingCity(draft.offeringCity || '')
+    } else {
+      const empty = emptyFormState()
+      setStep(empty.step)
+      setSourceType(empty.sourceType)
+      setOfferedListingId(empty.offeredListingId)
+      setCustomTitle(empty.customTitle)
+      setCustomDescription(empty.customDescription)
+      setCustomCondition(empty.customCondition)
+      setCustomEstimatedValue(empty.customEstimatedValue)
+      setCustomImageUrl(empty.customImageUrl)
+      setMessage(empty.message)
+      setCashAdjustment(empty.cashAdjustment)
+      setOfferingCity(empty.offeringCity)
+    }
+
     setError('')
     setShowShippingNotice(false)
-  }, [open, item?.id])
+    // Missing WhatsApp opens the in-place popup immediately so the user never
+    // has to leave the swap flow to discover the requirement.
+    setShowWhatsAppPopup(Boolean(missingWhatsApp))
+  }, [open, item?.id, missingWhatsApp])
 
   if (!open || !item) return null
+
+  function currentDraft() {
+    return {
+      step,
+      sourceType,
+      offeredListingId,
+      customTitle,
+      customDescription,
+      customCondition,
+      customEstimatedValue,
+      customImageUrl,
+      message,
+      cashAdjustment,
+      offeringCity,
+    }
+  }
+
+  function openWhatsAppSettings() {
+    saveProposeSwapDraft(item.id, currentDraft())
+    navigate('/profile', {
+      state: {
+        whatsappRequired: true,
+        returnTo: `/items/${item.id}`,
+        resumeSwapItemId: item.id,
+      },
+    })
+  }
 
   async function handleCustomImageUpload(event) {
     const file = event.target.files?.[0]
@@ -117,12 +194,21 @@ export default function ProposeSwapModal({
   }
 
   function handleRequestSendOffer() {
-    if (submitting || showShippingNotice) return
+    if (submitting || showShippingNotice || showWhatsAppPopup) return
+    if (missingWhatsApp) {
+      setShowWhatsAppPopup(true)
+      return
+    }
     if (!validateStep(1)) return
     setShowShippingNotice(true)
   }
 
   async function handleSubmit() {
+    if (missingWhatsApp) {
+      setShowShippingNotice(false)
+      setShowWhatsAppPopup(true)
+      return
+    }
     if (!validateStep(1)) return
     setShowShippingNotice(false)
     setSubmitting(true)
@@ -154,7 +240,17 @@ export default function ProposeSwapModal({
         body: JSON.stringify(payload),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not send swap offer.')
+      if (!res.ok) {
+        const detail = typeof data.detail === 'string' ? data.detail : 'Could not send swap offer.'
+        // Backend WhatsApp guard still applies; surface it in-place instead of
+        // navigating away or treating it as a generic failure.
+        if (isWhatsAppRequiredError(detail) || detail === WHATSAPP_REQUIRED_MESSAGE) {
+          setShowWhatsAppPopup(true)
+          return
+        }
+        throw new Error(detail)
+      }
+      clearProposeSwapDraft(item.id)
       onSubmitted?.(data)
       onClose?.()
     } catch (submitError) {
@@ -231,10 +327,16 @@ export default function ProposeSwapModal({
               <div className="space-y-3">
                 <TextField label="Product name" value={customTitle} onChange={(event) => setCustomTitle(event.target.value)} />
                 <TextAreaField label="Description" value={customDescription} onChange={(event) => setCustomDescription(event.target.value)} rows={3} />
-                <SelectField label="Condition" value={customCondition} onChange={(event) => setCustomCondition(event.target.value)}>
-                  <option value="">Select condition</option>
-                  {CONDITIONS.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-                </SelectField>
+                <SelectField
+                  id="swap-custom-condition"
+                  name="custom_item_condition"
+                  label="Condition"
+                  value={customCondition}
+                  onChange={(event) => setCustomCondition(event.target.value)}
+                  options={CONDITIONS}
+                  placeholder="Select condition"
+                  required
+                />
                 <TextField label="Optional estimated value" value={customEstimatedValue} onChange={(event) => setCustomEstimatedValue(event.target.value)} />
                 <div>
                   <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[#a07d22]">Item image</label>
@@ -295,15 +397,50 @@ export default function ProposeSwapModal({
               Continue
             </Button>
           ) : (
-            <Button disabled={submitting || !offeringCity} onClick={handleRequestSendOffer}>
+            <Button disabled={submitting || !offeringCity || showWhatsAppPopup} onClick={handleRequestSendOffer}>
               {submitting ? 'Sending…' : 'Send Swap Offer'}
             </Button>
           )}
         </div>
       </div>
     </div>
+
+    {showWhatsAppPopup ? (
+      <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div
+          className="w-full max-w-md rounded-2xl border border-he-border bg-he-surface p-5 shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="swap-whatsapp-required-title"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest text-he-purple">WhatsApp required</p>
+          <h2
+            id="swap-whatsapp-required-title"
+            className="mt-1 font-['Plus_Jakarta_Sans',sans-serif] text-lg font-bold text-he-ink"
+          >
+            WhatsApp number required
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-he-muted">
+            {SWAP_WHATSAPP_REQUIRED_MESSAGE}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button className="flex-1" onClick={openWhatsAppSettings}>
+              Add WhatsApp Number
+            </Button>
+            <Button
+              className="flex-1"
+              variant="secondary"
+              onClick={() => setShowWhatsAppPopup(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    ) : null}
+
     <RequesterShippingNotice
-      open={showShippingNotice}
+      open={showShippingNotice && !showWhatsAppPopup}
       kind={REQUESTER_SHIPPING_NOTICE_KIND.exchange}
       confirming={submitting}
       onCancel={() => setShowShippingNotice(false)}

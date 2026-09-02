@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNotifications } from './NotificationContext.jsx'
 import { USER_NOTIFICATION_EMPTY_DESCRIPTION, USER_NOTIFICATION_EMPTY_TITLE } from '../lib/notificationFilters.js'
+import { resolveNotificationTarget } from '../lib/notificationTargets.js'
 import { useNavigate } from 'react-router-dom'
 
 function timeAgo(dateString) {
@@ -17,17 +18,10 @@ function timeAgo(dateString) {
   return date.toLocaleDateString()
 }
 
-function normalizeActionUrl(url) {
-  if (!url) return null
-  if (url.startsWith('/messages')) return '/requests'
-  const queryMatch = url.match(/[?&]conversation=([^&]+)/)
-  if (queryMatch) return '/requests'
-  return url
-}
-
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
+  const [dismissingId, setDismissingId] = useState('')
   const dropdownRef = useRef(null)
   const navigate = useNavigate()
 
@@ -50,8 +44,18 @@ export default function NotificationBell() {
       await markAsRead(notification.id)
     }
     setIsOpen(false)
-    if (notification.action_url) {
-      navigate(normalizeActionUrl(notification.action_url))
+    navigate(resolveNotificationTarget(notification))
+  }
+
+  const handleDismiss = async (event, notification) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (dismissingId === notification.id) return
+    setDismissingId(notification.id)
+    try {
+      await dismissNotification(notification.id)
+    } finally {
+      setDismissingId('')
     }
   }
 
@@ -121,6 +125,17 @@ export default function NotificationBell() {
                         {timeAgo(notif.created_at)}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      aria-label="Dismiss notification"
+                      disabled={dismissingId === notif.id}
+                      onClick={(event) => handleDismiss(event, notif)}
+                      className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-he-soft transition hover:bg-he-elevated hover:text-he-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-he-purple/20 disabled:opacity-50"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </li>
                 ))}
               </ul>

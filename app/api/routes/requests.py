@@ -149,7 +149,7 @@ async def create_request(
             title="New Request Received",
             message=f"{current_user.get('name')} requested your item '{item.get('title')}' and shared why they need it.",
             type_="request_received",
-            action_url=f"/requests/incoming"
+            action_url="/requests"
         )
     )
     
@@ -542,7 +542,7 @@ async def reject_request(
             title="Request Declined",
             message=f"Your request was declined by the owner.",
             type_="request_rejected",
-            action_url=f"/requests/my"
+            action_url="/requests"
         )
     )
     

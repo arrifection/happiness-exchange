@@ -54,6 +54,7 @@ import { usePageMeta } from './lib/usePageMeta.js'
 import { buildItemsQueryParams, DEFAULT_COUNTRY, readLocationPreferences, writeLocationPreferences } from './lib/locations.js'
 import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from './lib/whatsappRequirement.js'
 import { supportsExchange, supportsGiveaway } from './lib/listingMode.js'
+import { exchangeActionErrorMessage } from './lib/exchangeErrors.js'
 import { PUBLIC_DELIVERY_ENABLED } from './lib/featureFlags.js'
 import LocalDemoBar from './components/LocalDemoBar.jsx'
 
@@ -64,6 +65,7 @@ const ITEMS_ENDPOINT = `${API_BASE}/api/items`
 const ITEM_IMAGE_UPLOAD_ENDPOINT = `${API_BASE}/api/items/upload-image`
 const MY_ITEMS_ENDPOINT = `${API_BASE}/api/items/my`
 const MY_REQUESTS_ENDPOINT = `${API_BASE}/api/requests/my`
+const INCOMING_EXCHANGE_OFFERS_ENDPOINT = `${API_BASE}/api/exchange-offers/incoming`
 const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
@@ -166,6 +168,8 @@ export default function App() {
 
   const [myRequests, setMyRequests] = useState([])
   const [ownerRequests, setOwnerRequests] = useState([])
+  const [ownerExchangeOffers, setOwnerExchangeOffers] = useState([])
+  const [exchangeOfferActionId, setExchangeOfferActionId] = useState('')
   const [loadingRequests, setLoadingRequests] = useState(false)
   const [requestsMessage, setRequestsMessage] = useState('')
   const [requestsError, setRequestsError] = useState('')
@@ -414,9 +418,10 @@ export default function App() {
     if (!currentUser) return
     setLoadingRequests(true); setRequestsError('')
     try {
-      const [myRes, ownerRes] = await Promise.all([
+      const [myRes, ownerRes, incomingOffers] = await Promise.all([
         fetch(MY_REQUESTS_ENDPOINT, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE}/api/requests/incoming`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetchIncomingExchangeOffers(),
       ])
       const [myData, ownerData] = await Promise.all([myRes.json(), ownerRes.json()])
       if (myRes.ok && ownerRes.ok) {
@@ -424,8 +429,51 @@ export default function App() {
         setOwnerRequests(asArray(ownerData))
       }
       else setRequestsError('Failed to sync activity.')
+      if (incomingOffers) setOwnerExchangeOffers(incomingOffers)
     } catch { setRequestsError('Unable to sync activity.') }
     finally { setLoadingRequests(false) }
+  }
+
+  // Swap offers live in the exchange-offers collection, so incoming ones are a
+  // separate read. Returning null on failure keeps give-away activity intact
+  // while the exchange service is still warming up.
+  async function fetchIncomingExchangeOffers() {
+    if (!token) return null
+    try {
+      const res = await fetch(INCOMING_EXCHANGE_OFFERS_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return asArray(data?.offers)
+    } catch {
+      return null
+    }
+  }
+
+  async function handleExchangeOfferAction(offerId, action) {
+    setRequestsError(''); setRequestsMessage('')
+    setExchangeOfferActionId(offerId)
+    try {
+      const res = await fetch(`${API_BASE}/api/exchange-offers/${offerId}/${action}`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${token}` },
+      })
+      let data = null
+      try { data = await res.json() } catch { data = null }
+      if (!res.ok) throw new Error(exchangeActionErrorMessage(res.status, data?.detail))
+      setRequestsMessage(
+        action === 'accept'
+          ? 'Swap offer accepted. Track the exchange under Swaps.'
+          : 'That swap offer has been declined.',
+      )
+      await loadItems(); await loadMyItems(); await loadRequestData()
+      return data
+    } catch (error) {
+      setRequestsError(error.message)
+      return null
+    } finally {
+      setExchangeOfferActionId('')
+    }
   }
 
   async function loadMyReputation() {
@@ -461,7 +509,7 @@ export default function App() {
     }
     setToken('')
     setCurrentUser(null)
-    setMyItems([]); setMyRequests([]); setOwnerRequests([])
+    setMyItems([]); setMyRequests([]); setOwnerRequests([]); setOwnerExchangeOffers([])
     setOwnerItemsMessage(''); setOwnerItemsError(''); setOwnerActionItemId('')
     setUploadingItemImage(false); setImageUploadMessage(''); setImageUploadError('')
     setItemMessage(''); setItemError('')
@@ -684,15 +732,10 @@ export default function App() {
   }
 
   function openRequestModal(item) {
-    if (userNeedsWhatsApp(currentUser)) {
-      setProfileError('')
-      setWhatsappError('')
-      navigate('/profile', { state: { whatsappRequired: true } })
-      return
-    }
     setRequestSubmitError('')
     // Swap-only listings never accept give-away requests, so send the user
-    // straight into the existing exchange offer flow instead.
+    // straight into the existing exchange offer flow instead. Missing WhatsApp
+    // is handled in-place inside ProposeSwapModal — do not navigate away.
     if (!supportsGiveaway(item) && supportsExchange(item)) {
       setSwapModalItem(item)
       return
@@ -701,12 +744,6 @@ export default function App() {
   }
 
   function openSwapModalForRequest(request) {
-    if (userNeedsWhatsApp(currentUser)) {
-      setProfileError('')
-      setWhatsappError('')
-      navigate('/profile', { state: { whatsappRequired: true } })
-      return
-    }
     const knownItem = [...items, ...myItems].find((entry) => entry.id === request.item_id)
     setSwapModalItem(
       knownItem || {
@@ -831,6 +868,7 @@ export default function App() {
       setItems((c) => c.filter((i) => i.id !== item.id))
       setMyItems((c) => c.filter((i) => i.id !== item.id))
       setOwnerRequests((c) => c.filter((r) => r.item_id !== item.id))
+      setOwnerExchangeOffers((c) => c.filter((o) => o.listing_id !== item.id))
       setOwnerItemsMessage(`"${item.title}" was deleted successfully.`)
       await loadMyReputation(); return true
     } catch (error) { setOwnerItemsError(error.message); return false }
@@ -1361,6 +1399,7 @@ export default function App() {
                     token={token}
                     getMyRequestForItem={getMyRequestForItem} getReviewContextForItem={getReviewContextForItem}
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
+                    onRequestAction={handleRequestAction}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
                     onRenewItem={handleRenewItem}
                     onChangeListingMode={handleChangeListingMode}
@@ -1400,6 +1439,13 @@ export default function App() {
                   <DashboardPage
                     currentUser={currentUser} items={items} myReputation={myReputation}
                     myItems={myItems} myRequests={myRequests} ownerRequests={ownerRequests}
+                    ownerExchangeOffers={ownerExchangeOffers}
+                    onExchangeOfferAction={handleExchangeOfferAction}
+                    exchangeOfferActionId={exchangeOfferActionId}
+                    onDeleteItem={handleDeleteItem}
+                    ownerActionItemId={ownerActionItemId}
+                    ownerItemsMessage={ownerItemsMessage}
+                    ownerItemsError={ownerItemsError}
                     loadRequestData={loadRequestData}
                     onRequestAction={handleRequestAction} onOpenReview={openReviewModal}
                     getReviewContextForMyRequest={getReviewContextForMyRequest}
@@ -1563,6 +1609,7 @@ export default function App() {
         myItems={myItems}
         token={token}
         country={currentUser?.country}
+        missingWhatsApp={userNeedsWhatsApp(currentUser)}
         onClose={() => setSwapModalItem(null)}
         onSubmitted={async () => {
           setSwapModalItem(null)

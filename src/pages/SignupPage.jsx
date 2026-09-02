@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import { AuthShell } from '../components/AuthShell.jsx'
 import CountrySelect from '../components/CountrySelect.jsx'
+import PasswordField from '../components/PasswordField.jsx'
 import { validateWhatsAppInput } from '../lib/whatsappRequirement.js'
 import { DEFAULT_COUNTRY } from '../lib/locations.js'
 
@@ -22,8 +23,6 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
 
   if (currentUser) {
     return <Navigate to="/" replace />
@@ -207,52 +206,30 @@ export default function SignupPage({ apiBase, onSuccess, currentUser }) {
 
         <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-password">Password</label>
-          <div className="relative">
-            <input
-              id="signup-password"
-              name="password"
-              type={showPass ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              required
-              className={`${inputClass} pr-10`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#8c755f] hover:text-[#8b4cf6]"
-              tabIndex={-1}
-            >
-              {showPass ? 'Hide' : 'Show'}
-            </button>
-          </div>
+          <PasswordField
+            id="signup-password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+            required
+            className={inputClass}
+          />
         </div>
 
         <div className="he-auth-signup-field">
           <label className={labelClass} htmlFor="signup-confirm">Confirm Password</label>
-          <div className="relative">
-            <input
-              id="signup-confirm"
-              name="confirmPassword"
-              type={showConfirm ? 'text' : 'password'}
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Re-enter your password"
-              autoComplete="new-password"
-              required
-              className={`${inputClass} pr-10`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#8c755f] hover:text-[#8b4cf6]"
-              tabIndex={-1}
-            >
-              {showConfirm ? 'Hide' : 'Show'}
-            </button>
-          </div>
+          <PasswordField
+            id="signup-confirm"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Re-enter your password"
+            autoComplete="new-password"
+            required
+            className={inputClass}
+          />
           {formData.confirmPassword && formData.password !== formData.confirmPassword ? (
             <p className="text-[9px] font-bold text-[#c65d4a]">Passwords don&apos;t match yet.</p>
           ) : null}
