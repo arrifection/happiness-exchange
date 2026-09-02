@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
-import { userNeedsWhatsApp, WHATSAPP_REQUIRED_MESSAGE } from '../lib/whatsappRequirement.js'
 import { isListingActive, isListingExpired } from '../lib/listingExpiration.js'
 import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
@@ -203,10 +202,8 @@ export default function ItemCard({
             showFlash(isSwapOnly ? 'Please verify your email to propose a swap.' : 'Please verify your email to request an item.')
             return
           }
-          if (userNeedsWhatsApp(currentUser)) {
-            showFlash(WHATSAPP_REQUIRED_MESSAGE)
-            return
-          }
+          // WhatsApp is enforced inside RequestItemModal / ProposeSwapModal so the
+          // user stays on this browse card context instead of being sent away.
           onCreateRequest(item)
         }}
       >

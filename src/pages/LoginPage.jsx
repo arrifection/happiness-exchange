@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell.jsx'
 import AppBootSkeleton from '../components/AppBootSkeleton.jsx'
 import LocalDemoSignIn from '../components/LocalDemoSignIn.jsx'
+import PasswordField from '../components/PasswordField.jsx'
 
 function formatApiError(errorData, fallbackMessage) {
   return typeof errorData?.detail === 'string' ? errorData.detail : fallbackMessage
@@ -125,10 +126,9 @@ export default function LoginPage({ apiBase, onSuccess, currentUser, loadingUser
           <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="login-password">
             Password
           </label>
-          <input
+          <PasswordField
             id="login-password"
             name="password"
-            type="password"
             value={formData.password}
             onChange={handleChange}
             placeholder="••••••••"

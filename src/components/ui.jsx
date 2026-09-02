@@ -375,6 +375,7 @@ export function SelectField({
   required = false,
   placeholder,
   disabled = false,
+  children,
 }) {
   return (
     <label className="grid gap-1.5" htmlFor={id}>
@@ -397,6 +398,7 @@ export function SelectField({
               <option key={optionValue} value={optionValue}>{optionLabel}</option>
             )
           })}
+          {children}
         </select>
         <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-he-soft/50">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
