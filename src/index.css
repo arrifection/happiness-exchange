@@ -274,6 +274,7 @@ html.dark {
 
   .he-nav-shell {
     @apply sticky top-0 z-50 border-b border-he-border bg-he-surface;
+    background-color: var(--color-he-surface);
   }
 
   html.dark .he-nav-shell {

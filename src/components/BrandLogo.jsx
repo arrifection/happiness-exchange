@@ -4,7 +4,7 @@ function classes(...values) {
   return values.filter(Boolean).join(' ')
 }
 
-const MARK_WIDTH = { sm: 36, md: 44, lg: 72 }
+const MARK_WIDTH = { sm: 32, md: 44, lg: 72 }
 
 export default function BrandLogo({
   showText = true,
@@ -33,28 +33,39 @@ export default function BrandLogo({
       </div>
 
       {showText ? (
-        <div className="hidden min-w-0 flex-col sm:flex">
+        <>
           <span
             className={classes(
-              "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#8C57F5] dark:text-[#c4b5fd]",
-              textSizes[size],
-              textClassName,
+              "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#8C57F5] dark:text-[#c4b5fd] sm:hidden",
+              'text-[11px] whitespace-nowrap',
               animated ? 'animate-[he-slideIn_0.55s_ease_0.35s_both]' : '',
             )}
           >
-            Happiness
+            HappinessExchange
           </span>
-          <span
-            className={classes(
-              "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#8C57F5] dark:text-[#c4b5fd]",
-              textSizes[size],
-              textClassName,
-              animated ? 'animate-[he-slideIn_0.55s_ease_0.55s_both]' : '',
-            )}
-          >
-            Exchange
-          </span>
-        </div>
+          <div className="hidden min-w-0 flex-col sm:flex">
+            <span
+              className={classes(
+                "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#8C57F5] dark:text-[#c4b5fd]",
+                textSizes[size],
+                textClassName,
+                animated ? 'animate-[he-slideIn_0.55s_ease_0.35s_both]' : '',
+              )}
+            >
+              Happiness
+            </span>
+            <span
+              className={classes(
+                "font-['Plus_Jakarta_Sans',sans-serif] font-bold tracking-tight text-[#8C57F5] dark:text-[#c4b5fd]",
+                textSizes[size],
+                textClassName,
+                animated ? 'animate-[he-slideIn_0.55s_ease_0.55s_both]' : '',
+              )}
+            >
+              Exchange
+            </span>
+          </div>
+        </>
       ) : null}
     </div>
   )

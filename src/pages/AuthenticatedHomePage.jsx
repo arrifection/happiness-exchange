@@ -172,7 +172,7 @@ export default function AuthenticatedHomePage({
 
           <div className="he-auth-stats">
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Listed Items</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft/70">Community items</p>
               <p className="text-xs font-bold text-he-ink">{items.length}</p>
             </div>
             <div className="hidden h-3 w-px bg-he-border sm:block" />

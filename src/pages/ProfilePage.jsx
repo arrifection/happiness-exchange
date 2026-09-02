@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
 import { RatingStars, ReviewEmptyState, StarRatingDisplay } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
@@ -90,10 +90,6 @@ export default function ProfilePage({
     [currentUser?.created_at],
   )
   const normalizedName = name.trim().replace(/\s+/g, ' ')
-
-  if (!currentUser) {
-    return <Navigate to="/login" replace />
-  }
 
   function validateName(value) {
     const trimmed = value.trim().replace(/\s+/g, ' ')

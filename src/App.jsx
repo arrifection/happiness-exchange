@@ -25,6 +25,7 @@ import ExchangeOffersPage from './pages/ExchangeOffersPage.jsx'
 import ShipmentTrackingPage from './pages/ShipmentTrackingPage.jsx'
 import MyDeliveriesPage from './pages/MyDeliveriesPage.jsx'
 import DeliveryComingSoonPage from './pages/DeliveryComingSoonPage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
 import RequestItemModal from './components/RequestItemModal.jsx'
 import ProposeSwapModal from './components/ProposeSwapModal.jsx'
 import BrandLogo from './components/BrandLogo.jsx'
@@ -34,6 +35,7 @@ import NotificationBell from './components/NotificationBell.jsx'
 import { ReviewModal } from './components/reputation.jsx'
 import SplashScreen from './components/SplashScreen.jsx'
 import AppBootSkeleton from './components/AppBootSkeleton.jsx'
+import RequireAuth from './components/RequireAuth.jsx'
 import { Button, Surface } from './components/ui.jsx'
 import { NotificationProvider } from './components/NotificationContext.jsx'
 import {
@@ -1024,7 +1026,8 @@ export default function App() {
     return { itemId: request.item_id, itemTitle: request.item_title, reviewedUserId: request.requester_id, reviewedUserName: request.requester_name }
   }
 
-  const bottomTabItems = [
+  const bottomTabItems = useMemo(() => {
+    const items = [
     {
       to: '/',
       label: 'Home',
@@ -1081,7 +1084,33 @@ export default function App() {
         </svg>
       ),
     },
-  ]
+    ]
+
+    if (!PUBLIC_DELIVERY_ENABLED) {
+      return items.filter((item) => item.to !== '/deliveries')
+    }
+
+    return items
+  }, [])
+
+  const desktopNavItems = useMemo(() => {
+    const items = [
+      { to: '/', label: 'Home' },
+      { to: '/browse', label: 'Browse' },
+      { to: '/needs', label: 'Needs' },
+      { to: '/give', label: 'Give Item' },
+      { to: '/swaps', label: 'Exchange' },
+      { to: '/deliveries', label: 'Delivery' },
+      { to: '/requests', label: 'Activity' },
+      { to: '/dashboard', label: 'Dashboard' },
+    ]
+
+    if (!PUBLIC_DELIVERY_ENABLED) {
+      return items.filter((item) => item.to !== '/deliveries')
+    }
+
+    return items
+  }, [])
 
   return (
     <NotificationProvider token={currentUser && token && !isAuthPage ? token : ''}>
@@ -1183,16 +1212,7 @@ export default function App() {
 
                 {/* Desktop Nav */}
                 <nav className="hidden md:flex items-center justify-center gap-1.5">
-                  {[
-                    { to: '/', label: 'Home' },
-                    { to: '/browse', label: 'Browse' },
-                    { to: '/needs', label: 'Needs' },
-                    { to: '/give', label: 'Give Item' },
-                    { to: '/swaps', label: 'Exchange' },
-                    { to: '/deliveries', label: 'Delivery' },
-                    { to: '/requests', label: 'Activity' },
-                    { to: '/dashboard', label: 'Dashboard' },
-                  ].map((nav) => (
+                  {desktopNavItems.map((nav) => (
                     <NavLink
                       key={nav.to}
                       to={nav.to}
@@ -1357,9 +1377,11 @@ export default function App() {
               <Route
                 path="/deliveries"
                 element={
-                  PUBLIC_DELIVERY_ENABLED
-                    ? <MyDeliveriesPage currentUser={currentUser} token={token} />
-                    : <DeliveryComingSoonPage currentUser={currentUser} />
+                  <RequireAuth token={token} currentUser={currentUser} loadingUser={loadingUser}>
+                    {PUBLIC_DELIVERY_ENABLED
+                      ? <MyDeliveriesPage currentUser={currentUser} token={token} />
+                      : <DeliveryComingSoonPage />}
+                  </RequireAuth>
                 }
               />
               <Route
@@ -1437,28 +1459,38 @@ export default function App() {
               <Route
                 path="/profile"
                 element={
-                  <ProfilePage
-                    currentUser={currentUser} myReputation={myReputation}
-                    loadingReputation={loadingReputation} reputationError={reputationError}
-                    profileReviews={profileReviews} loadingProfileReviews={loadingProfileReviews}
-                    profileReviewsError={profileReviewsError}
-                    onUpdateProfile={handleProfileUpdate} profileUpdating={profileUpdating}
-                    profileMessage={profileMessage} profileError={profileError}
-                    onUpdateWhatsApp={handleWhatsAppUpdate} whatsappUpdating={whatsappUpdating}
-                    whatsappMessage={whatsappMessage} whatsappError={whatsappError}
-                    onUpdateCountry={handleCountryUpdate} countryUpdating={countryUpdating}
-                    countryMessage={countryMessage} countryError={countryError}
-                    onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
-                    accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
-                    myItems={myItems} myRequests={myRequests}
-                    onLocationPrefsUpdated={loadItems}
-                  />
+                  <RequireAuth token={token} currentUser={currentUser} loadingUser={loadingUser}>
+                    <ProfilePage
+                      currentUser={currentUser} myReputation={myReputation}
+                      loadingReputation={loadingReputation} reputationError={reputationError}
+                      profileReviews={profileReviews} loadingProfileReviews={loadingProfileReviews}
+                      profileReviewsError={profileReviewsError}
+                      onUpdateProfile={handleProfileUpdate} profileUpdating={profileUpdating}
+                      profileMessage={profileMessage} profileError={profileError}
+                      onUpdateWhatsApp={handleWhatsAppUpdate} whatsappUpdating={whatsappUpdating}
+                      whatsappMessage={whatsappMessage} whatsappError={whatsappError}
+                      onUpdateCountry={handleCountryUpdate} countryUpdating={countryUpdating}
+                      countryMessage={countryMessage} countryError={countryError}
+                      onLogout={handleLogout} onDeleteAccount={handleDeleteAccount}
+                      accountDeleting={accountDeleting} accountDeleteError={accountDeleteError}
+                      myItems={myItems} myRequests={myRequests}
+                      onLocationPrefsUpdated={loadItems}
+                    />
+                  </RequireAuth>
                 }
               />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
               <Route
                 path="/login"
-                element={<LoginPage apiBase={API_BASE} onSuccess={handleAuthSuccess} currentUser={currentUser} />}
+                element={
+                  <LoginPage
+                    apiBase={API_BASE}
+                    onSuccess={handleAuthSuccess}
+                    currentUser={currentUser}
+                    loadingUser={loadingUser}
+                    token={token}
+                  />
+                }
               />
               <Route
                 path="/signup"
@@ -1467,7 +1499,7 @@ export default function App() {
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
 
