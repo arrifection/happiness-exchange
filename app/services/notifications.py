@@ -9,9 +9,46 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.db.mongodb import get_notifications_collection_async, get_users_collection_async
-from app.core.roles import UserRole, ADMIN_ROLES, has_role
+from app.core.roles import UserRole
 
 logger = logging.getLogger(__name__)
+
+# Keep in sync with src/lib/notificationFilters.js (staff/platform alert types).
+STAFF_ALERT_TYPES = frozenset(
+    {
+        "new_user_signup",
+        "new_item_listed",
+        "low_rating_review",
+        "suspicious_activity",
+        "delivery_match_created",
+        "exchange_admin_action",
+    }
+)
+
+
+def is_staff_alert_type(type_: str | None) -> bool:
+    """True for moderator/admin/platform alerts that must not inflate the user bell badge."""
+    normalized = str(type_ or "").strip().lower()
+    if not normalized:
+        return False
+    if normalized in STAFF_ALERT_TYPES:
+        return True
+    return normalized.endswith("_reported")
+
+
+def user_unread_count_query(user_id: str) -> dict[str, Any]:
+    """
+    Indexed-friendly unread badge filter.
+
+    Prefer equality on is_staff_alert + type $nin (no title regex). Legacy docs without
+    is_staff_alert still exclude known staff types via $nin.
+    """
+    return {
+        "user_id": user_id,
+        "read": False,
+        "is_staff_alert": {"$ne": True},
+        "type": {"$nin": list(STAFF_ALERT_TYPES)},
+    }
 
 
 async def create_notification(
@@ -45,6 +82,7 @@ async def create_notification(
             if existing is not None:
                 return
 
+        staff_alert = is_staff_alert_type(type_)
         doc = {
             "user_id": user_id,
             "title": title,
@@ -52,6 +90,7 @@ async def create_notification(
             "type": type_,
             "action_url": action_url,
             "read": False,
+            "is_staff_alert": staff_alert,
             "created_at": datetime.now(timezone.utc),
         }
         if dedupe_key:
@@ -83,8 +122,9 @@ async def notify_roles(
         # Find all users with one of these roles who are not banned
         role_values = [r.value for r in roles]
         cursor = users_col.find({"role": {"$in": role_values}, "is_banned": {"$ne": True}})
-        
+
         now = datetime.now(timezone.utc)
+        staff_alert = True  # role fan-out is always staff/platform traffic
         docs = []
         async for user in cursor:
             docs.append({
@@ -94,12 +134,13 @@ async def notify_roles(
                 "type": type_,
                 "action_url": action_url,
                 "read": False,
+                "is_staff_alert": staff_alert,
                 "created_at": now,
             })
 
         if docs:
             await notifications_col.insert_many(docs)
-            
+
     except Exception as exc:
         logger.error("notify_roles failed: %s", exc)
 
@@ -150,5 +191,3 @@ async def notify_suspicious_activity(
 ) -> None:
     """Placeholder helper to alert admins of suspicious activity."""
     await notify_admins(title, message, "suspicious_activity", action_url)
-
-

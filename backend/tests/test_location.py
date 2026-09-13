@@ -9,34 +9,60 @@ from fastapi.testclient import TestClient
 
 from app.api.routes import items as items_routes
 from app.services.location import (
+    GEO_CANDIDATE_LIMIT,
+    apply_geo_bounds_to_query,
     build_items_list_query,
     build_item_location_payload,
     enrich_item_location,
     filter_and_sort_items,
+    geo_bounding_box,
     get_city_coordinates,
     item_matches_country,
 )
 
 
 def _value_matches(actual, expected) -> bool:
-    if isinstance(expected, dict):
-        if "$exists" in expected:
-            exists = actual is not None
-            return exists if expected["$exists"] else not exists
-        if "$in" in expected:
-            return actual in expected["$in"]
-        if "$ne" in expected:
-            return actual != expected["$ne"]
-        if "$lt" in expected:
-            return actual is not None and actual < expected["$lt"]
-        if "$gt" in expected:
-            return actual is not None and actual > expected["$gt"]
-        if "$regex" in expected:
-            if actual is None:
+    if isinstance(expected, dict) and any(str(key).startswith("$") for key in expected):
+        for op, value in expected.items():
+            if op == "$exists":
+                exists = actual is not None
+                if not (exists if value else not exists):
+                    return False
+            elif op == "$in":
+                if actual not in value:
+                    return False
+            elif op == "$nin":
+                if actual in value:
+                    return False
+            elif op == "$ne":
+                if actual == value:
+                    return False
+            elif op == "$lt":
+                if actual is None or not (actual < value):
+                    return False
+            elif op == "$lte":
+                if actual is None or not (actual <= value):
+                    return False
+            elif op == "$gt":
+                if actual is None or not (actual > value):
+                    return False
+            elif op == "$gte":
+                if actual is None or not (actual >= value):
+                    return False
+            elif op == "$regex":
+                if actual is None:
+                    return False
+                flags = re.I if expected.get("$options", "").find("i") >= 0 else 0
+                if not re.search(value, str(actual), flags):
+                    return False
+            elif op == "$options":
+                continue
+            elif op == "$not":
+                if _value_matches(actual, value):
+                    return False
+            else:
                 return False
-            flags = re.I if expected.get("$options", "").find("i") >= 0 else 0
-            return re.search(expected["$regex"], str(actual), flags) is not None
-        return False
+        return True
     return actual == expected
 
 
@@ -202,6 +228,32 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
         self.assertIsNotNone(coords)
         self.assertAlmostEqual(coords[0], 31.5497, places=3)
 
+    def test_geo_bounding_box_contains_center(self):
+        box = geo_bounding_box(31.5497, 74.3436, 50)
+        self.assertLess(box["min_lat"], 31.5497)
+        self.assertGreater(box["max_lat"], 31.5497)
+        self.assertLess(box["min_lng"], 74.3436)
+        self.assertGreater(box["max_lng"], 74.3436)
+
+    def test_apply_geo_bounds_to_query_adds_lat_lng_ranges(self):
+        base = build_items_list_query(country="Pakistan", status="available")
+        geo_query = apply_geo_bounds_to_query(
+            base,
+            near_lat=31.5497,
+            near_lng=74.3436,
+            radius_km=25,
+        )
+        self.assertEqual(GEO_CANDIDATE_LIMIT, 1000)
+        # Bounds live in $and when country filters already use $and.
+        and_clauses = geo_query.get("$and") or []
+        lat_lng_clause = next(
+            (clause for clause in and_clauses if "latitude" in clause and "longitude" in clause),
+            None,
+        )
+        self.assertIsNotNone(lat_lng_clause)
+        self.assertIn("$gte", lat_lng_clause["latitude"])
+        self.assertIn("$lte", lat_lng_clause["latitude"])
+
 
 class LocationApiTests(IsolatedAsyncioTestCase):
     def setUp(self):
@@ -228,6 +280,8 @@ class LocationApiTests(IsolatedAsyncioTestCase):
                     "city": "Lahore",
                     "location_source": "manual",
                     "location_display": "Lahore, Pakistan",
+                    "latitude": 31.5497,
+                    "longitude": 74.3436,
                     "status": "available",
                     "owner_id": self.owner_id,
                     "owner_name": self.owner_user["name"],
@@ -244,6 +298,8 @@ class LocationApiTests(IsolatedAsyncioTestCase):
                     "city": "Riyadh",
                     "location_source": "manual",
                     "location_display": "Riyadh, Saudi Arabia",
+                    "latitude": 24.7136,
+                    "longitude": 46.6753,
                     "status": "available",
                     "owner_id": self.owner_id,
                     "owner_name": self.owner_user["name"],
@@ -260,7 +316,27 @@ class LocationApiTests(IsolatedAsyncioTestCase):
                     "city": "Lahore",
                     "location_source": "manual",
                     "location_display": "Lahore, Pakistan",
+                    "latitude": 31.5497,
+                    "longitude": 74.3436,
                     "status": "completed",
+                    "owner_id": self.owner_id,
+                    "owner_name": self.owner_user["name"],
+                    "created_at": self.now,
+                },
+                {
+                    "_id": ObjectId(),
+                    "title": "Far Away Item",
+                    "description": "Karachi item should be outside a tight Lahore radius.",
+                    "category": "Home",
+                    "condition": "Good",
+                    "location": "Karachi",
+                    "country": "Pakistan",
+                    "city": "Karachi",
+                    "location_source": "manual",
+                    "location_display": "Karachi, Pakistan",
+                    "latitude": 24.8607,
+                    "longitude": 67.0011,
+                    "status": "available",
                     "owner_id": self.owner_id,
                     "owner_name": self.owner_user["name"],
                     "created_at": self.now,
@@ -324,3 +400,88 @@ class LocationApiTests(IsolatedAsyncioTestCase):
         self.assertGreaterEqual(payload["total"], 1)
         self.assertGreaterEqual(payload["total_pages"], 1)
         self.assertEqual(len(payload["items"]), 1)
+
+    def test_list_items_geo_zero_results(self):
+        response = self.client.get(
+            "/api/items",
+            params={
+                "near_lat": 0.0,
+                "near_lng": 0.0,
+                "radius_km": 5,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["items"], [])
+        self.assertEqual(payload["total"], 0)
+
+    def test_list_items_geo_nearby_lahore(self):
+        response = self.client.get(
+            "/api/items",
+            params={
+                "country": "Pakistan",
+                "near_lat": 31.5497,
+                "near_lng": 74.3436,
+                "radius_km": 30,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        titles = [item["title"] for item in payload["items"]]
+        self.assertIn("Pakistan Lamp", titles)
+        self.assertNotIn("Far Away Item", titles)
+        self.assertNotIn("Saudi Desk", titles)
+        self.assertNotIn("Completed Chair", titles)
+
+    def test_list_items_geo_pagination(self):
+        response = self.client.get(
+            "/api/items",
+            params={
+                "country": "Pakistan",
+                "near_lat": 31.5497,
+                "near_lng": 74.3436,
+                "radius_km": 30,
+                "limit": 1,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertEqual(payload["limit"], 1)
+        self.assertIn("distance_km", payload["items"][0])
+
+    def test_list_items_geo_does_not_load_unbounded_candidates(self):
+        # Add many far items; geo path must still return quickly with a bounded find.
+        for index in range(50):
+            self.items_collection.documents.append(
+                {
+                    "_id": ObjectId(),
+                    "title": f"Noise {index}",
+                    "description": "Far noise listing",
+                    "category": "Home",
+                    "condition": "Good",
+                    "location": "Karachi",
+                    "country": "Pakistan",
+                    "city": "Karachi",
+                    "latitude": 24.8607,
+                    "longitude": 67.0011,
+                    "status": "available",
+                    "owner_id": self.owner_id,
+                    "owner_name": self.owner_user["name"],
+                    "created_at": self.now,
+                }
+            )
+        response = self.client.get(
+            "/api/items",
+            params={
+                "near_lat": 31.5497,
+                "near_lng": 74.3436,
+                "radius_km": 20,
+                "limit": 20,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        titles = [item["title"] for item in payload["items"]]
+        self.assertTrue(all(not title.startswith("Noise ") for title in titles))
+        self.assertIn("Pakistan Lamp", titles)

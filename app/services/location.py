@@ -13,6 +13,12 @@ UNKNOWN_COUNTRY = "Unknown"
 
 SUPPORTED_COUNTRIES = frozenset({"Pakistan", "Saudi Arabia"})
 
+# Geo browse: cap in-memory candidates after a Mongo bounding-box prefilter.
+# Avoids unbounded to_list(None) while keeping nearby listings discoverable.
+DEFAULT_GEO_RADIUS_KM = 50.0
+GEO_CANDIDATE_LIMIT = 1000
+_EARTH_KM_PER_DEG_LAT = 111.0
+
 PAKISTAN_CITIES = frozenset({
     "Lahore", "Islamabad", "Karachi", "Rawalpindi", "Faisalabad", "Multan",
     "Gujrat", "Mandi Bahauddin", "Gujranwala", "Sialkot", "Peshawar", "Quetta",
@@ -333,6 +339,51 @@ def build_items_list_query(
         query["$and"] = and_clauses
 
     return query
+
+
+def geo_bounding_box(
+    near_lat: float,
+    near_lng: float,
+    radius_km: float,
+) -> dict[str, float]:
+    """Approximate lat/lng bounds for a radius (not exact; refined by haversine)."""
+    effective_radius = radius_km if radius_km and radius_km > 0 else DEFAULT_GEO_RADIUS_KM
+    lat_delta = effective_radius / _EARTH_KM_PER_DEG_LAT
+    cos_lat = max(0.01, abs(math.cos(math.radians(near_lat))))
+    lng_delta = effective_radius / (_EARTH_KM_PER_DEG_LAT * cos_lat)
+    return {
+        "min_lat": max(-90.0, near_lat - lat_delta),
+        "max_lat": min(90.0, near_lat + lat_delta),
+        "min_lng": max(-180.0, near_lng - lng_delta),
+        "max_lng": min(180.0, near_lng + lng_delta),
+    }
+
+
+def apply_geo_bounds_to_query(
+    mongo_query: dict[str, Any],
+    *,
+    near_lat: float,
+    near_lng: float,
+    radius_km: float | None = None,
+) -> dict[str, Any]:
+    """
+    Restrict browse candidates to a lat/lng bounding box before in-memory haversine.
+
+    Preserves nearby results better than "newest N docs" alone, and avoids loading
+    the full matching collection into memory.
+    """
+    box = geo_bounding_box(
+        near_lat,
+        near_lng,
+        radius_km if radius_km is not None else DEFAULT_GEO_RADIUS_KM,
+    )
+    geo_clause = {
+        "latitude": {"$gte": box["min_lat"], "$lte": box["max_lat"]},
+        "longitude": {"$gte": box["min_lng"], "$lte": box["max_lng"]},
+    }
+    if "$and" in mongo_query:
+        return {**mongo_query, "$and": [*mongo_query["$and"], geo_clause]}
+    return {**mongo_query, **geo_clause}
 
 
 def apply_keyset_cursor_filter(

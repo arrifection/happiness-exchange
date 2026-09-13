@@ -29,5 +29,11 @@ RUN apt-get update \
 # Hugging Face Spaces requires port 7860
 EXPOSE 7860
 
+# Keep a SINGLE Uvicorn worker. Multi-worker is NOT safe yet because:
+# - app/core/rate_limit.py uses process-local in-memory buckets
+# - SlowAPI Limiter defaults to in-memory storage (limits would not be shared)
+# - community impact cache is process-local
+# - lifespan starts one exchange-offer expiration loop per process
+# Enable --workers only after shared rate-limit storage and a single job leader.
 # Entry point: api/index.py exports `app`
 CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "7860"]

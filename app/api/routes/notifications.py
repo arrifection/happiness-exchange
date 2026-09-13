@@ -5,6 +5,7 @@ from app.api.deps.auth import get_current_user
 from app.db.mongodb import get_notifications_collection_async
 from app.schemas.notifications import NotificationResponse, UnreadCountResponse
 from app.services.auth import parse_object_id
+from app.services.notifications import user_unread_count_query
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ async def list_notifications(
 
     cursor = col.find({"user_id": current_user["id"]}).sort("created_at", DESCENDING).limit(limit)
     docs = await cursor.to_list(length=limit)
-    
+
     # Serialize
     for d in docs:
         d["id"] = str(d.pop("_id"))
@@ -37,10 +38,8 @@ async def get_unread_count(
     if col is None:
         raise HTTPException(status_code=503, detail="Database unavailable.")
 
-    count = await col.count_documents({
-        "user_id": current_user["id"],
-        "read": False
-    })
+    # Count only user-facing unread notifications (exclude staff/platform alerts).
+    count = await col.count_documents(user_unread_count_query(current_user["id"]))
     return {"count": count}
 
 

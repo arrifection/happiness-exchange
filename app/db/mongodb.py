@@ -48,6 +48,15 @@ async def _ensure_indexes(database) -> None:
         name="country_city_category_status",
     )
     await database.items.create_index([("owner_id", ASCENDING), ("status", ASCENDING)])
+    # Supports geo browse bounding-box prefilter (status + lat/lng ranges).
+    await database.items.create_index(
+        [("status", ASCENDING), ("latitude", ASCENDING), ("longitude", ASCENDING)],
+        name="status_latitude_longitude",
+        partialFilterExpression={
+            "latitude": {"$type": "number"},
+            "longitude": {"$type": "number"},
+        },
+    )
     await database.requests.create_index(
         [("item_id", 1), ("requester_id", 1)],
         unique=True,
@@ -104,6 +113,11 @@ async def _ensure_indexes(database) -> None:
     await database.notifications.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
     await database.notifications.create_index([("user_id", ASCENDING), ("read", ASCENDING)])
     await database.notifications.create_index([("user_id", ASCENDING), ("read", ASCENDING), ("created_at", DESCENDING)])
+    # Hot path: GET /api/notifications/unread-count filters on user_id + read + is_staff_alert.
+    await database.notifications.create_index(
+        [("user_id", ASCENDING), ("read", ASCENDING), ("is_staff_alert", ASCENDING)],
+        name="user_read_staff_alert",
+    )
     # Deliveries indexes
     await database.deliveries.create_index("request_id", unique=True)
     await database.deliveries.create_index("giver_id")
@@ -160,6 +174,8 @@ async def _create_client_and_ping() -> AsyncIOMotorClient:
             settings.MONGODB_URI,
             serverSelectionTimeoutMS=8000,
             connectTimeoutMS=8000,
+            # Single uvicorn worker: keep the pool modest (default 100 is oversized).
+            maxPoolSize=50,
         )
         try:
             await pending_client.admin.command("ping")

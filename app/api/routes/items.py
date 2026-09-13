@@ -32,7 +32,14 @@ from app.services.image_validation import validate_and_sanitize_image
 from app.services.exchange_offers import is_listing_exchange_reserved, item_supports_exchange
 from app.services.items import build_item_document, serialize_item
 from app.services.listing_expiration import compute_listing_expires_at, is_listing_expired, utc_now
-from app.services.location import apply_keyset_cursor_filter, build_items_list_query, filter_and_sort_items, haversine_km
+from app.services.location import (
+    GEO_CANDIDATE_LIMIT,
+    apply_geo_bounds_to_query,
+    apply_keyset_cursor_filter,
+    build_items_list_query,
+    filter_and_sort_items,
+    haversine_km,
+)
 from app.services.reputation import build_public_reputation_lookup, calculate_reputation_summary
 from app.services.trust import award_completed_donation
 from app.services.notifications import notify_moderators, create_notification
@@ -192,13 +199,24 @@ async def list_items(
     )
     geo_mode = near_lat is not None and near_lng is not None
     location_prefiltered = bool(country or city)
-    total = await items_collection.count_documents(mongo_query)
     sort_keys = [("created_at", DESCENDING), ("_id", DESCENDING)]
 
     # Browse path: filter in MongoDB (indexed) → optional geo sort in app → paginate.
     # Keyset cursor pagination avoids skip/offset gaps when listings change between fetches.
     if geo_mode:
-        candidate_items = await items_collection.find(mongo_query).sort(sort_keys).to_list(length=None)
+        # Bounding box in Mongo + hard candidate cap — never load the full collection.
+        geo_query = apply_geo_bounds_to_query(
+            mongo_query,
+            near_lat=near_lat,
+            near_lng=near_lng,
+            radius_km=radius_km,
+        )
+        candidate_items = (
+            await items_collection.find(geo_query)
+            .sort(sort_keys)
+            .limit(GEO_CANDIDATE_LIMIT)
+            .to_list(length=GEO_CANDIDATE_LIMIT)
+        )
         filtered_items = filter_and_sort_items(
             candidate_items,
             near_lat=near_lat,
@@ -230,6 +248,7 @@ async def list_items(
             has_more=has_more,
         )
 
+    total = await items_collection.count_documents(mongo_query)
     list_query = dict(mongo_query)
     effective_page = page
 
