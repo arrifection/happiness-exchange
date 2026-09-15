@@ -243,7 +243,7 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
             near_lng=74.3436,
             radius_km=25,
         )
-        self.assertEqual(GEO_CANDIDATE_LIMIT, 1000)
+        self.assertEqual(GEO_CANDIDATE_LIMIT, 2000)
         # Bounds live in $and when country filters already use $and.
         and_clauses = geo_query.get("$and") or []
         lat_lng_clause = next(
@@ -485,3 +485,58 @@ class LocationApiTests(IsolatedAsyncioTestCase):
         titles = [item["title"] for item in payload["items"]]
         self.assertTrue(all(not title.startswith("Noise ") for title in titles))
         self.assertIn("Pakistan Lamp", titles)
+
+    def test_geo_candidate_cap_hit_logs_only_when_truncated(self):
+        original_cap = items_routes.GEO_CANDIDATE_LIMIT
+        try:
+            # Below-cap path: default fixtures are far under the real cap.
+            with self.assertNoLogs("app.api.routes.items", level="WARNING"):
+                response = self.client.get(
+                    "/api/items",
+                    params={
+                        "near_lat": 31.5497,
+                        "near_lng": 74.3436,
+                        "radius_km": 20,
+                        "limit": 20,
+                    },
+                )
+            self.assertEqual(response.status_code, 200)
+
+            # At-cap path: shrink the imported route constant so few nearby docs trigger it.
+            items_routes.GEO_CANDIDATE_LIMIT = 1
+            for index in range(3):
+                self.items_collection.documents.append(
+                    {
+                        "_id": ObjectId(),
+                        "title": f"Nearby Cap {index}",
+                        "description": "Extra Lahore listing for cap logging",
+                        "category": "Home",
+                        "condition": "Good",
+                        "location": "Lahore",
+                        "country": "Pakistan",
+                        "city": "Lahore",
+                        "latitude": 31.5497 + index * 0.001,
+                        "longitude": 74.3436 + index * 0.001,
+                        "status": "available",
+                        "owner_id": self.owner_id,
+                        "owner_name": self.owner_user["name"],
+                        "created_at": self.now,
+                    }
+                )
+            with self.assertLogs("app.api.routes.items", level="WARNING") as at_cap_logs:
+                response = self.client.get(
+                    "/api/items",
+                    params={
+                        "near_lat": 31.5497,
+                        "near_lng": 74.3436,
+                        "radius_km": 20,
+                        "limit": 20,
+                    },
+                )
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(
+                any("geo_candidate_cap_hit" in message for message in at_cap_logs.output),
+                at_cap_logs.output,
+            )
+        finally:
+            items_routes.GEO_CANDIDATE_LIMIT = original_cap

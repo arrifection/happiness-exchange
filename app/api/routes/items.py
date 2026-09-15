@@ -217,6 +217,19 @@ async def list_items(
             .limit(GEO_CANDIDATE_LIMIT)
             .to_list(length=GEO_CANDIDATE_LIMIT)
         )
+        # Returned count == cap means Mongo had at least that many bbox hits; older
+        # nearby listings may have been dropped by the recency sort + truncate.
+        if len(candidate_items) >= GEO_CANDIDATE_LIMIT:
+            logger.warning(
+                "geo_candidate_cap_hit near_lat=%s near_lng=%s radius_km=%s "
+                "candidate_count=%s cap=%s geo_query=%s",
+                near_lat,
+                near_lng,
+                radius_km,
+                len(candidate_items),
+                GEO_CANDIDATE_LIMIT,
+                geo_query,
+            )
         filtered_items = filter_and_sort_items(
             candidate_items,
             near_lat=near_lat,

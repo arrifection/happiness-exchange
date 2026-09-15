@@ -16,7 +16,10 @@ SUPPORTED_COUNTRIES = frozenset({"Pakistan", "Saudi Arabia"})
 # Geo browse: cap in-memory candidates after a Mongo bounding-box prefilter.
 # Avoids unbounded to_list(None) while keeping nearby listings discoverable.
 DEFAULT_GEO_RADIUS_KM = 50.0
-GEO_CANDIDATE_LIMIT = 1000
+# Hard cap after Mongo bounding-box prefilter — never load the full collection.
+GEO_CANDIDATE_LIMIT = 2000
+# Pad the AABB slightly so projection/rounding never excludes a point inside the radius.
+_GEO_BOX_PAD = 1.05
 _EARTH_KM_PER_DEG_LAT = 111.0
 
 PAKISTAN_CITIES = frozenset({
@@ -346,11 +349,17 @@ def geo_bounding_box(
     near_lng: float,
     radius_km: float,
 ) -> dict[str, float]:
-    """Approximate lat/lng bounds for a radius (not exact; refined by haversine)."""
+    """
+    Approximate lat/lng AABB that fully contains the search circle.
+
+    Half-extents use the radius (plus a small pad) so the box is never tighter
+    than the circle; haversine still does the exact filter afterward.
+    """
     effective_radius = radius_km if radius_km and radius_km > 0 else DEFAULT_GEO_RADIUS_KM
-    lat_delta = effective_radius / _EARTH_KM_PER_DEG_LAT
+    padded_radius = effective_radius * _GEO_BOX_PAD
+    lat_delta = padded_radius / _EARTH_KM_PER_DEG_LAT
     cos_lat = max(0.01, abs(math.cos(math.radians(near_lat))))
-    lng_delta = effective_radius / (_EARTH_KM_PER_DEG_LAT * cos_lat)
+    lng_delta = padded_radius / (_EARTH_KM_PER_DEG_LAT * cos_lat)
     return {
         "min_lat": max(-90.0, near_lat - lat_delta),
         "max_lat": min(90.0, near_lat + lat_delta),
