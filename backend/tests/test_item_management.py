@@ -30,9 +30,18 @@ class FakeCursor:
     def __init__(self, documents):
         self.documents = list(documents)
 
-    def sort(self, key, direction):
-        reverse = direction == -1
-        self.documents.sort(key=lambda document: document.get(key), reverse=reverse)
+    def sort(self, key, direction=None):
+        if isinstance(key, list):
+            sort_keys = key
+        else:
+            sort_keys = [(key, direction)]
+        for sort_key, dir_value in reversed(sort_keys):
+            reverse = dir_value == -1
+            self.documents.sort(key=lambda document, sk=sort_key: document.get(sk), reverse=reverse)
+        return self
+
+    def limit(self, count):
+        self.documents = self.documents[:count]
         return self
 
     async def to_list(self, length=100):
@@ -155,6 +164,17 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
             ]
         )
         self.reviews_collection = FakeCollection([])
+        self.users_collection = FakeCollection(
+            [
+                {
+                    "_id": ObjectId(self.owner_id),
+                    "name": self.owner_user["name"],
+                    "email": self.owner_user["email"],
+                    "trust_score": 0,
+                }
+            ]
+        )
+        self.trust_events_collection = FakeCollection([])
 
         async def get_items_collection_async():
             return self.items_collection
@@ -165,8 +185,19 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         async def get_reviews_collection_async():
             return self.reviews_collection
 
+        async def get_users_collection_async():
+            return self.users_collection
+
+        async def get_trust_events_collection_async():
+            return self.trust_events_collection
+
         async def fake_award_completed_donation(user_id, item_id):
             return True
+
+        from app.services import reputation as reputation_service
+
+        self._original_rep_users = reputation_service.get_users_collection_async
+        self._original_rep_trust = reputation_service.get_trust_events_collection_async
 
         items_routes.get_items_collection_async = get_items_collection_async
         items_routes.get_requests_collection_async = get_requests_collection_async
@@ -174,10 +205,20 @@ class ItemManagementApiTests(IsolatedAsyncioTestCase):
         items_routes.award_completed_donation = fake_award_completed_donation
         requests_routes.get_items_collection_async = get_items_collection_async
         requests_routes.get_requests_collection_async = get_requests_collection_async
+        # complete_item → calculate_reputation_summary reads users/trust via reputation module.
+        reputation_service.get_users_collection_async = get_users_collection_async
+        reputation_service.get_trust_events_collection_async = get_trust_events_collection_async
 
         self.app = FastAPI()
         self.app.include_router(items_routes.router, prefix="/api")
         self.app.include_router(requests_routes.router, prefix="/api")
+
+    def tearDown(self):
+        from app.services import reputation as reputation_service
+
+        self.app.dependency_overrides.clear()
+        reputation_service.get_users_collection_async = self._original_rep_users
+        reputation_service.get_trust_events_collection_async = self._original_rep_trust
 
     def make_client(self, user):
         self.app.dependency_overrides[auth_deps.get_current_user] = lambda: user

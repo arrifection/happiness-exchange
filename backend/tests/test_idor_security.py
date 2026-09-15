@@ -15,6 +15,8 @@ from app.api.routes import conversations as conversations_routes
 from app.api.routes import items as items_routes
 from app.api.routes import requests as requests_routes
 from app.api.routes import reviews as reviews_routes
+from app.services import conversation_messages as conversation_messages_service
+from app.services import reputation as reputation_service
 
 
 def match_query(document, query):
@@ -197,6 +199,13 @@ class IdorSecurityTests(TestCase):
         self.reviews_collection = FakeCollection([])
         self.users_collection = FakeCollection([])
 
+        self._original_cm_create_notification = conversation_messages_service.create_notification
+        self._original_cm_conversations = conversation_messages_service.get_conversations_collection_async
+        self._original_cm_messages = conversation_messages_service.get_messages_collection_async
+        self._original_cm_users = conversation_messages_service.get_users_collection_async
+        self._original_rep_users = reputation_service.get_users_collection_async
+        self._original_rep_trust = reputation_service.get_trust_events_collection_async
+
         def bind(module, name, collection):
             async def getter():
                 return collection
@@ -211,14 +220,32 @@ class IdorSecurityTests(TestCase):
         bind(conversations_routes, "get_conversations_collection_async", self.conversations_collection)
         bind(conversations_routes, "get_messages_collection_async", self.messages_collection)
         bind(conversations_routes, "get_users_collection_async", self.users_collection)
+        # send_message delegates to conversation_messages, which imports getters from app.db.mongodb.
+        bind(conversation_messages_service, "get_conversations_collection_async", self.conversations_collection)
+        bind(conversation_messages_service, "get_messages_collection_async", self.messages_collection)
+        bind(conversation_messages_service, "get_users_collection_async", self.users_collection)
         bind(reviews_routes, "get_items_collection_async", self.items_collection)
         bind(reviews_routes, "get_requests_collection_async", self.requests_collection)
         bind(reviews_routes, "get_reviews_collection_async", self.reviews_collection)
 
         items_routes.award_completed_donation = lambda *args, **kwargs: None
         requests_routes.check_user_rate_limit = lambda *args, **kwargs: None
-        conversations_routes.create_notification = lambda *args, **kwargs: None
+
+        async def fake_create_notification(*args, **kwargs):
+            return None
+
+        conversations_routes.create_notification = fake_create_notification
+        conversation_messages_service.create_notification = fake_create_notification
         reviews_routes.award_positive_review = lambda *args, **kwargs: None
+
+        async def get_users_for_reputation():
+            return self.users_collection
+
+        async def get_trust_events_for_reputation():
+            return FakeCollection([])
+
+        reputation_service.get_users_collection_async = get_users_for_reputation
+        reputation_service.get_trust_events_collection_async = get_trust_events_for_reputation
 
         self.app = FastAPI()
         self.app.include_router(conversations_routes.router, prefix="/api")
@@ -228,6 +255,12 @@ class IdorSecurityTests(TestCase):
 
     def tearDown(self):
         self.app.dependency_overrides.clear()
+        conversation_messages_service.create_notification = self._original_cm_create_notification
+        conversation_messages_service.get_conversations_collection_async = self._original_cm_conversations
+        conversation_messages_service.get_messages_collection_async = self._original_cm_messages
+        conversation_messages_service.get_users_collection_async = self._original_cm_users
+        reputation_service.get_users_collection_async = self._original_rep_users
+        reputation_service.get_trust_events_collection_async = self._original_rep_trust
 
     def client_as(self, user):
         self.app.dependency_overrides[auth_deps.get_current_user] = lambda: user

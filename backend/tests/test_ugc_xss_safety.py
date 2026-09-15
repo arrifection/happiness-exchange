@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from app.api.deps import auth as auth_deps
 from app.api.routes import conversations as conversations_routes
 from app.schemas.items import ItemCreateRequest
+from app.services import conversation_messages as conversation_messages_service
 from app.services.items import build_item_document, serialize_item
 
 SCRIPT_PAYLOAD = "<script>alert(1)</script>"
@@ -95,11 +96,28 @@ class UgcXssSafetyTests(IsolatedAsyncioTestCase):
                 messages.append(stored)
                 return SimpleNamespace(inserted_id=stored["_id"])
 
-            async def find_one(self, query):
+            async def find_one(self, query, projection=None, sort=None):
                 for message in messages:
                     if message["_id"] == query.get("_id"):
                         return message
+                    if all(message.get(k) == v for k, v in query.items() if not isinstance(v, dict)):
+                        if "sender_role" in query and message.get("sender_role") != query.get("sender_role"):
+                            continue
+                        return None
                 return None
+
+            def find(self, query):
+                class _Cursor:
+                    def sort(self, *args, **kwargs):
+                        return self
+
+                    def limit(self, *args, **kwargs):
+                        return self
+
+                    async def to_list(self, length=100):
+                        return []
+
+                return _Cursor()
 
         class FakeUsersCollection:
             async def find_one(self, query):
@@ -130,6 +148,17 @@ class UgcXssSafetyTests(IsolatedAsyncioTestCase):
         conversations_routes.get_users_collection_async = get_users_collection_async
         conversations_routes.create_notification = fake_create_notification
 
+        original_cm = {
+            "conversations": conversation_messages_service.get_conversations_collection_async,
+            "messages": conversation_messages_service.get_messages_collection_async,
+            "users": conversation_messages_service.get_users_collection_async,
+            "notify": conversation_messages_service.create_notification,
+        }
+        conversation_messages_service.get_conversations_collection_async = get_conversations_collection_async
+        conversation_messages_service.get_messages_collection_async = get_messages_collection_async
+        conversation_messages_service.get_users_collection_async = get_users_collection_async
+        conversation_messages_service.create_notification = fake_create_notification
+
         app = FastAPI()
         app.include_router(conversations_routes.router, prefix="/api")
         app.dependency_overrides[auth_deps.get_verified_user] = lambda: {
@@ -140,11 +169,17 @@ class UgcXssSafetyTests(IsolatedAsyncioTestCase):
             "whatsapp_number": "+923001234567",
         }
 
-        with TestClient(app) as client:
-            response = client.post(
-                f"/api/conversations/{conversation_id}/message",
-                json={"text": HTML_PAYLOAD, "message_type": "text"},
-            )
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    f"/api/conversations/{conversation_id}/message",
+                    json={"text": HTML_PAYLOAD, "message_type": "text"},
+                )
+        finally:
+            conversation_messages_service.get_conversations_collection_async = original_cm["conversations"]
+            conversation_messages_service.get_messages_collection_async = original_cm["messages"]
+            conversation_messages_service.get_users_collection_async = original_cm["users"]
+            conversation_messages_service.create_notification = original_cm["notify"]
 
         self.assertIn(response.status_code, (200, 201), response.text)
         self.assertEqual(messages[0]["text"], HTML_PAYLOAD)
