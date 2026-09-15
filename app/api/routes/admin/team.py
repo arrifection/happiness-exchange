@@ -22,7 +22,7 @@ from app.db.mongodb import get_users_collection_async
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import (
     generate_verification_token,
-    hash_password,
+    hash_password_async,
     hash_verification_token,
     normalize_name,
     parse_object_id,
@@ -135,7 +135,7 @@ async def _create_invited_staff_user(
     raw_token = generate_verification_token()
     token_hash = hash_verification_token(raw_token)
     token_expiry = now + timedelta(days=7)
-    placeholder_password = hash_password(secrets.token_urlsafe(32))
+    placeholder_password = await hash_password_async(secrets.token_urlsafe(32))
 
     user_document = {
         "name": " ".join(display_name.strip().split()),

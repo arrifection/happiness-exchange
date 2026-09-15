@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -29,6 +30,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         plain_password.encode("utf-8"),
         hashed_password.encode("utf-8"),
     )
+
+
+async def hash_password_async(password: str) -> str:
+    """Run bcrypt hashing off the event loop (async request paths)."""
+    return await asyncio.to_thread(hash_password, password)
+
+
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    """Run bcrypt verification off the event loop (async request paths)."""
+    return await asyncio.to_thread(verify_password, plain_password, hashed_password)
 
 
 def generate_verification_token() -> str:

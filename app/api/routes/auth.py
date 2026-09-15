@@ -11,11 +11,11 @@ from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, VerifyE
 from app.services.auth import (
     create_access_token,
     generate_verification_token,
-    hash_password,
+    hash_password_async,
     hash_verification_token,
     normalize_name,
     serialize_user,
-    verify_password,
+    verify_password_async,
 )
 from app.core.config import settings
 from app.core.runtime import email_verification_bypass_enabled
@@ -106,7 +106,7 @@ async def signup(
         "email": normalized_email,
         "whatsapp_number": payload.whatsapp_number,
         "country": payload.country,
-        "hashed_password": hash_password(payload.password),
+        "hashed_password": await hash_password_async(payload.password),
         "role": UserRole.USER,          # default role for all public signups
         "account_type": "member",
         "is_verified": locally_verified,
@@ -192,7 +192,9 @@ async def login(
 
     normalized_email = payload.email.strip().lower()
     user = await users_collection.find_one({"email": normalized_email})
-    if user is None or not verify_password(payload.password, user["hashed_password"]):
+    if user is None or not await verify_password_async(
+        payload.password, user["hashed_password"]
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",

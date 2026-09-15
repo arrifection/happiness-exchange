@@ -16,10 +16,10 @@ from app.schemas.auth import (
 from app.services.audit import AuditAction, write_audit_log
 from app.services.auth import (
     create_access_token,
-    hash_password,
+    hash_password_async,
     hash_verification_token,
     serialize_user,
-    verify_password,
+    verify_password_async,
 )
 from app.core.roles import is_admin_role
 
@@ -95,7 +95,7 @@ async def accept_admin_invite(request: Request, payload: AcceptInviteRequest):
         {"_id": user["_id"]},
         {
             "$set": {
-                "hashed_password": hash_password(payload.password),
+                "hashed_password": await hash_password_async(payload.password),
                 "updated_at": now,
                 "last_admin_login_at": now,
             },
@@ -150,7 +150,9 @@ async def admin_login(request: Request, payload: LoginRequest):
 
     # Deliberate: use the same error message for both "not found" and "wrong password"
     # to prevent user enumeration attacks.
-    if user is None or not verify_password(payload.password, user["hashed_password"]):
+    if user is None or not await verify_password_async(
+        payload.password, user["hashed_password"]
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
