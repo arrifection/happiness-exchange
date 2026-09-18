@@ -123,9 +123,17 @@ export default function LoginPage({ apiBase, onSuccess, currentUser, loadingUser
         </div>
 
         <div className="grid gap-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="login-password">
-            Password
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-[9px] font-bold uppercase tracking-widest text-[#8c755f]/80" htmlFor="login-password">
+              Password
+            </label>
+            <Link
+              to="/forgot-password"
+              className="text-[10px] font-semibold text-[#8b4cf6] hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <PasswordField
             id="login-password"
             name="password"

@@ -19,7 +19,8 @@ function timeAgo(dateString) {
 }
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification } = useNotifications()
+  const { notifications, unreadCount, loadingNotifications, fetchNotifications, markAsRead, markAllAsRead, dismissNotification } =
+    useNotifications()
   const [isOpen, setIsOpen] = useState(false)
   const [dismissingId, setDismissingId] = useState('')
   const dropdownRef = useRef(null)
@@ -37,6 +38,12 @@ export default function NotificationBell() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    // Load full notification list only when the dropdown is opened.
+    fetchNotifications()
   }, [isOpen])
 
   const handleNotificationClick = async (notification) => {
@@ -91,7 +98,12 @@ export default function NotificationBell() {
           </div>
           
           <div className="flex-1 overflow-y-auto min-h-[100px]">
-            {notifications.length === 0 ? (
+            {loadingNotifications ? (
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                <div className="mb-3 h-12 w-12 animate-spin rounded-full border-2 border-he-border border-t-he-purple" />
+                <p className="text-sm font-medium text-he-muted">Loading notifications…</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-he-surface-soft">
                   <svg className="h-6 w-6 text-he-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">

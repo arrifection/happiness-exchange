@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
 import { asArray } from '../lib/api.js'
 import { resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
@@ -103,8 +103,19 @@ export default function RequestsPage({
   cancelPendingRequestId,
   loadRequestData,
 }) {
-  const [activeView, setActiveView] = useState('mine')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeView = searchParams.get('view') === 'incoming' ? 'incoming' : 'mine'
   const [activeFilter, setActiveFilter] = useState('all')
+
+  function setActiveView(view) {
+    const next = new URLSearchParams(searchParams)
+    if (view === 'incoming') {
+      next.set('view', 'incoming')
+    } else {
+      next.delete('view')
+    }
+    setSearchParams(next, { replace: true })
+  }
 
   const safeMyRequests = asArray(myRequests)
   const safeOwnerRequests = asArray(ownerRequests)
@@ -236,7 +247,7 @@ export default function RequestsPage({
               action={
                 activeView === 'mine'
                   ? <Button as="link" to="/browse">Browse items</Button>
-                  : <Button as="link" to="/give">View your listings</Button>
+                  : <Button as="link" to="/dashboard#my-listings">View your listings</Button>
               }
             />
           </div>

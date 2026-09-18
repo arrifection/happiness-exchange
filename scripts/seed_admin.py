@@ -27,18 +27,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load environment variables
 load_dotenv()
+load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 from app.core.roles import UserRole
 from app.db.mongodb import close_mongo_connection, connect_to_mongo, get_users_collection_async
 from app.services.auth import hash_password
 
-SEED_EMAIL    = os.getenv("ADMIN_EMAIL")
+SEED_EMAIL    = os.getenv("ADMIN_EMAIL", "").strip().lower() or None
 SEED_PASSWORD = os.getenv("ADMIN_PASSWORD")
 SEED_NAME     = os.getenv("ADMIN_NAME", "Platform Admin")
 SEED_ROLE     = UserRole.SUPER_ADMIN
 
 
-async def seed_admin(remove: bool = False) -> None:
+async def seed_admin(remove: bool = False, reset_password: bool = False) -> None:
     if not SEED_EMAIL:
         print("ERROR: ADMIN_EMAIL environment variable must be set.")
         sys.exit(1)
@@ -69,15 +70,31 @@ async def seed_admin(remove: bool = False) -> None:
     # ── Seed mode ─────────────────────────────────────────────────────────────
     if existing is not None:
         print(f"INFO: Account '{SEED_EMAIL}' already exists.")
+        updates = {
+            "role": SEED_ROLE,
+            "account_type": "admin",
+            "is_verified": True,
+            "is_banned": False,
+            "is_seed_account": True,
+            "role_updated_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if reset_password:
+            updates["hashed_password"] = hash_password(SEED_PASSWORD)
+        await users_col.update_one(
+            {"_id": existing["_id"]},
+            {
+                "$set": updates,
+                "$unset": {
+                    "admin_invite_token_hash": "",
+                    "admin_invite_expires_at": "",
+                },
+            },
+        )
         current_role = existing.get("role", "user")
-        if current_role != SEED_ROLE:
-            await users_col.update_one(
-                {"_id": existing["_id"]},
-                {"$set": {"role": SEED_ROLE, "role_updated_at": datetime.now(timezone.utc)}},
-            )
-            print(f"  - Role updated from '{current_role}' to '{SEED_ROLE}'.")
-        else:
-            print(f"  - Role is already '{SEED_ROLE}'. No changes made.")
+        print(f"  - Role set to '{SEED_ROLE.value}' (was '{current_role}').")
+        if reset_password:
+            print("  - Password updated.")
         await close_mongo_connection()
         return
 
@@ -110,5 +127,10 @@ async def seed_admin(remove: bool = False) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed or remove the test super_admin account.")
     parser.add_argument("--remove", action="store_true", help="Remove the seeded admin account.")
+    parser.add_argument(
+        "--set-password",
+        action="store_true",
+        help="If the account already exists, update its password from ADMIN_PASSWORD.",
+    )
     args = parser.parse_args()
-    asyncio.run(seed_admin(remove=args.remove))
+    asyncio.run(seed_admin(remove=args.remove, reset_password=args.set_password))

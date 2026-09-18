@@ -298,6 +298,8 @@ async def test_offering_user_does_not_see_own_offer_as_incoming(offer_world):
 def test_dashboard_reads_incoming_swap_offers_and_reuses_existing_actions():
     app_source = (REPO_ROOT / "src" / "App.jsx").read_text(encoding="utf-8")
     dashboard_source = (REPO_ROOT / "src" / "pages" / "DashboardPage.jsx").read_text(encoding="utf-8")
+    requests_source = (REPO_ROOT / "src" / "pages" / "RequestsPage.jsx").read_text(encoding="utf-8")
+    exchange_offers_source = (REPO_ROOT / "src" / "pages" / "ExchangeOffersPage.jsx").read_text(encoding="utf-8")
 
     assert "/api/exchange-offers/incoming" in app_source
     assert "ownerExchangeOffers={ownerExchangeOffers}" in app_source
@@ -305,14 +307,18 @@ def test_dashboard_reads_incoming_swap_offers_and_reuses_existing_actions():
     # Accept/decline must go to the existing exchange-offer endpoints.
     assert "/api/exchange-offers/${offerId}/${action}" in app_source
 
+    # Dashboard summarizes incoming swap offers and routes review to Activity.
     assert "ownerExchangeOffers" in dashboard_source
-    assert "SwapOfferCard" in dashboard_source
-    assert "Swap offer" in dashboard_source
-    assert "onAction?.(offer.id, 'accept')" in dashboard_source
-    assert "onAction?.(offer.id, 'decline')" in dashboard_source
-    # Give-away request cards must stay wired to the existing request handler.
-    assert "onRequestAction?.(request.id, 'approve')" in dashboard_source
-    assert "onRequestAction?.(request.id, 'reject')" in dashboard_source
+    assert "incomingSwapOffers" in dashboard_source
+    assert "Review in Activity" in dashboard_source
+    assert "/requests?view=incoming" in dashboard_source
+
+    # Give-away request cards keep the existing request handler on Activity.
+    assert "onRequestAction(request.id, 'approve')" in requests_source
+    assert "onRequestAction(request.id, 'reject')" in requests_source
+
+    # Swap-offer accept/decline remain available on the offers page.
+    assert "/api/exchange-offers/${offerId}/${action}" in exchange_offers_source
 
 
 # ── Issue #3 — owner-only offers below the listing ───────────────────────────

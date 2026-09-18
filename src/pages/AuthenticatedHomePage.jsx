@@ -78,7 +78,6 @@ export default function AuthenticatedHomePage({
   myRequests,
   onDeleteItem,
   onCompleteItem,
-  onRenewItem,
   onChangeListingMode,
   ownerActionItemId,
 }) {
@@ -232,7 +231,6 @@ export default function AuthenticatedHomePage({
               onOpenReview={onOpenReview}
               onDeleteItem={onDeleteItem}
               onCompleteItem={onCompleteItem}
-              onRenewItem={onRenewItem}
               onChangeListingMode={onChangeListingMode}
               ownerActionPending={ownerActionItemId === item.id}
               compact

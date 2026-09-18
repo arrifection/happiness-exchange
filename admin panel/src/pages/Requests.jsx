@@ -133,6 +133,7 @@ function RequestDetailModal({ request, onClose }) {
               </h4>
               <p className="font-medium text-surface-800">{request.requester_name || '—'}</p>
               <p className="text-xs text-surface-500 break-all">{request.requester_email || '—'}</p>
+              <p className="text-xs text-surface-500">City: {request.requester_city || '—'}</p>
               <WhatsAppContact number={request.requester_whatsapp_number} label="Requester WhatsApp" />
               <p className="text-xs text-surface-400 font-mono">{request.requester_id}</p>
             </section>
@@ -348,6 +349,7 @@ export default function RequestsPage() {
                       <td>
                         <p className="text-surface-700 text-sm font-medium">{req.requester_name || '—'}</p>
                         <p className="text-surface-500 text-xs truncate max-w-[140px]">{req.requester_email || ''}</p>
+                        <p className="text-surface-400 text-xs">{req.requester_city || '—'}</p>
                       </td>
 
                       {/* Owner */}

@@ -1,3 +1,5 @@
+/** Listings no longer expire; helpers kept for call-site compatibility. */
+
 export const LISTING_ACTIVE_DAYS = 14
 
 export function resolveListingExpiresAt(item) {
@@ -15,28 +17,15 @@ export function resolveListingExpiresAt(item) {
   return null
 }
 
-export function isListingExpired(item) {
-  if (item?.is_expired != null) return Boolean(item.is_expired)
-  if (item?.status === 'completed') return false
-  const expiresAt = resolveListingExpiresAt(item)
-  if (!expiresAt || Number.isNaN(expiresAt.getTime())) return false
-  return expiresAt.getTime() <= Date.now()
+export function isListingExpired(_item) {
+  return false
 }
 
 export function isListingActive(item) {
   if (item?.listing_active != null) return Boolean(item.listing_active)
-  if (item?.status !== 'available') return false
-  return !isListingExpired(item)
+  return item?.status === 'available'
 }
 
-export function formatListingExpiryLabel(item) {
-  if (isListingExpired(item)) return 'Expired'
-  const expiresAt = resolveListingExpiresAt(item)
-  if (!expiresAt || Number.isNaN(expiresAt.getTime())) return 'Active'
-  return `Active until ${expiresAt.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })}`
+export function formatListingExpiryLabel(_item) {
+  return 'Active'
 }

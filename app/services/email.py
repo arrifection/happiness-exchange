@@ -348,6 +348,47 @@ def send_verification_email(to_email: str, token: str) -> None:
     )
 
 
+def build_password_reset_email_content(token: str) -> dict[str, str]:
+    """Build password-reset email fields without sending."""
+    reset_link = f"{settings.APP_BASE_URL.rstrip('/')}/reset-password?token={token}"
+    plain_text = (
+        "We received a request to reset your Happiness Exchange password.\n\n"
+        f"{reset_link}\n\n"
+        "This link expires in 60 minutes. If you did not request a reset, you can ignore this email."
+    )
+    html = f"""
+    <html>
+      <body style="font-family: sans-serif; line-height: 1.6; color: #1f1f1f;">
+        <h2 style="color: #8b4cf6;">Reset your password</h2>
+        <p>We received a request to reset your Happiness Exchange password.</p>
+        <div style="margin-top: 24px; margin-bottom: 24px;">
+            <a href="{reset_link}" style="background-color: #8b4cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset password</a>
+        </div>
+        <p style="font-size: 12px; color: #68766d;">This link expires in 60 minutes.</p>
+        <p style="font-size: 12px; color: #68766d;">If you did not request a reset, you can ignore this email.</p>
+        <p style="font-size: 12px; color: #68766d;">If the button above does not work, copy and paste this link into your browser:<br/>{reset_link}</p>
+      </body>
+    </html>
+    """
+    return {
+        "subject": "Reset your Happiness Exchange password",
+        "reset_link": reset_link,
+        "html": html,
+        "text": plain_text,
+    }
+
+
+def send_password_reset_email(to_email: str, token: str) -> None:
+    """Send a password-reset email (same delivery path as verification)."""
+    content = build_password_reset_email_content(token)
+    _deliver_email(
+        to_email,
+        content["subject"],
+        content["html"],
+        content["text"],
+    )
+
+
 def _team_invite_html(
     *,
     recipient_name: str,

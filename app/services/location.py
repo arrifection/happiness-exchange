@@ -17,7 +17,7 @@ SUPPORTED_COUNTRIES = frozenset({"Pakistan", "Saudi Arabia"})
 # Avoids unbounded to_list(None) while keeping nearby listings discoverable.
 DEFAULT_GEO_RADIUS_KM = 50.0
 # Hard cap after Mongo bounding-box prefilter — never load the full collection.
-GEO_CANDIDATE_LIMIT = 2000
+GEO_CANDIDATE_LIMIT = 1000
 # Pad the AABB slightly so projection/rounding never excludes a point inside the radius.
 _GEO_BOX_PAD = 1.05
 _EARTH_KM_PER_DEG_LAT = 111.0

@@ -25,10 +25,27 @@ ITEM_CONDITIONS = ["New", "Like New", "Good", "Gently Used", "Used"]
 
 def match_query(document, query):
     for key, expected in query.items():
+        if key == "$nor":
+            # `$nor`: document matches if none of the clauses match.
+            clauses = expected or []
+            if any(match_query(document, clause) for clause in clauses):
+                return False
+            continue
+
         actual = document.get(key)
         if isinstance(expected, dict):
             if "$in" in expected and actual not in expected["$in"]:
                 return False
+            if "$regex" in expected:
+                import re
+
+                pattern = expected["$regex"]
+                options = expected.get("$options", "")
+                flags = re.IGNORECASE if "i" in options else 0
+                if actual is None:
+                    return False
+                if not re.search(pattern, str(actual), flags=flags):
+                    return False
             continue
         if actual != expected:
             return False

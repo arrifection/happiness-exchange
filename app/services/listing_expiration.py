@@ -1,9 +1,10 @@
-"""14-day listing visibility helpers — all times in UTC."""
+"""Listing visibility helpers — listings no longer expire."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+# Retained for schema/response compatibility; expiry is no longer enforced.
 LISTING_ACTIVE_DAYS = 14
 
 
@@ -20,6 +21,7 @@ def ensure_utc(value: datetime | None) -> datetime | None:
 
 
 def compute_listing_expires_at(from_time: datetime | None = None) -> datetime:
+    """Kept for document shape compatibility; value is unused for visibility."""
     base = ensure_utc(from_time) or utc_now()
     return base + timedelta(days=LISTING_ACTIVE_DAYS)
 
@@ -35,30 +37,18 @@ def resolve_listing_expires_at(item: dict) -> datetime:
 
 
 def is_listing_expired(item: dict, now: datetime | None = None) -> bool:
-    if item.get("status") == "completed":
-        return False
-    reference = ensure_utc(now) or utc_now()
-    return resolve_listing_expires_at(item) <= reference
+    """Listings never expire."""
+    del item, now
+    return False
 
 
 def is_listing_publicly_active(item: dict, now: datetime | None = None) -> bool:
-    if item.get("status") != "available":
-        return False
-    return not is_listing_expired(item, now=now)
+    """Available listings are always publicly active (no expiry gate)."""
+    del now
+    return item.get("status") == "available"
 
 
 def active_listings_mongo_clause(now: datetime | None = None) -> dict:
-    """Mongo filter: listing still within its 14-day active window."""
-    reference = ensure_utc(now) or utc_now()
-    legacy_cutoff = reference - timedelta(days=LISTING_ACTIVE_DAYS)
-    return {
-        "$or": [
-            {"listing_expires_at": {"$gt": reference}},
-            {
-                "$and": [
-                    {"listing_expires_at": {"$exists": False}},
-                    {"created_at": {"$gt": legacy_cutoff}},
-                ]
-            },
-        ]
-    }
+    """No expiry filter — browse relies on status (and other callers) alone."""
+    del now
+    return {}

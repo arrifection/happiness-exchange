@@ -1,7 +1,8 @@
 import logging
+import asyncio
 import os
 import re
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, Request
@@ -43,8 +44,9 @@ from app.api.routes.admin.exchange import router as admin_exchange_router
 from app.api.routes.admin.shipments import router as admin_shipments_router
 from app.core.config import settings
 from app.core.middleware import RequestLoggingMiddleware
-from app.core.runtime import local_demo_mode_enabled
+from app.core.runtime import is_production_environment, local_demo_mode_enabled
 from app.core.startup_checks import log_production_warnings
+from app.services.exchange_offer_expiration import run_exchange_offer_expiration_safely
 from app.db.mongodb import (
     close_mongo_connection,
     connect_to_mongo,
@@ -61,7 +63,27 @@ async def lifespan(app: FastAPI):
     settings.log_startup_info()
     log_production_warnings()
     await connect_to_mongo()
+
+    expiration_task = None
+    if is_production_environment():
+        EXCHANGE_OFFER_SWEEP_INTERVAL_SECONDS = 600  # keep-alive used to call /api/status every ~10m
+
+        async def _offer_expiration_loop() -> None:
+            while True:
+                try:
+                    await run_exchange_offer_expiration_safely()
+                except Exception:
+                    logger.exception("Scheduled exchange offer expiration failed.")
+                await asyncio.sleep(EXCHANGE_OFFER_SWEEP_INTERVAL_SECONDS)
+
+        expiration_task = asyncio.create_task(_offer_expiration_loop())
+
     yield
+
+    if expiration_task is not None:
+        expiration_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await expiration_task
     await close_mongo_connection()
 
 

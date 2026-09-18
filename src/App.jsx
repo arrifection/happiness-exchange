@@ -14,6 +14,8 @@ import HomePage from './pages/HomePage.jsx'
 import ItemDetailsPage from './pages/ItemDetailsPage.jsx'
 import ItemListedSuccessPage from './pages/ItemListedSuccessPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 import ReputationPage from './pages/ReputationPage.jsx'
 import RequestsPage from './pages/RequestsPage.jsx'
@@ -70,8 +72,8 @@ const MY_REPUTATION_ENDPOINT = `${API_BASE}/api/me/reputation`
 const REVIEWS_ENDPOINT = `${API_BASE}/api/reviews`
 const NEED_REQUESTS_ENDPOINT = `${API_BASE}/api/need-requests`
 const TOKEN_KEY = 'happiness_exchange_token'
-const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup']
-const AUTH_PAGE_PATTERN = /^\/(login|signup)\/?$/
+const AUTH_FLOW_PATHS = ['/verify-email', '/check-email', '/login', '/signup', '/forgot-password', '/reset-password']
+const AUTH_PAGE_PATTERN = /^\/(login|signup|forgot-password|reset-password)\/?$/
 const MAX_ITEM_IMAGE_BYTES = 5 * 1024 * 1024
 
 function isAuthPagePath(pathname) {
@@ -893,22 +895,6 @@ export default function App() {
     finally { setOwnerActionItemId('') }
   }
 
-  async function handleRenewItem(item) {
-    setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
-    try {
-      const res = await fetch(`${ITEMS_ENDPOINT}/${item.id}/renew`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(formatApiError(data, 'Unable to renew this listing.'))
-      setItems((c) => c.map((i) => (i.id === data.id ? data : i)))
-      setMyItems((c) => c.map((i) => (i.id === data.id ? data : i)))
-      setOwnerItemsMessage(`"${item.title}" is active again for 14 days.`)
-      await loadItems(); await loadMyItems()
-      return data
-    } catch (error) { setOwnerItemsError(error.message); return null }
-    finally { setOwnerActionItemId('') }
-  }
 
   async function handleCompleteItem(item) {
     setOwnerActionItemId(item.id); setOwnerItemsError(''); setOwnerItemsMessage('')
@@ -1313,7 +1299,7 @@ export default function App() {
                       onRefreshItems={loadItems}
                       myRequests={myRequests} ownerRequests={ownerRequests}
                       onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
-                      onRenewItem={handleRenewItem} onChangeListingMode={handleChangeListingMode}
+                      onChangeListingMode={handleChangeListingMode}
                       ownerActionItemId={ownerActionItemId}
                     />
                   ) : (
@@ -1401,7 +1387,7 @@ export default function App() {
                     onCreateRequest={openRequestModal} onOpenReview={openReviewModal}
                     onRequestAction={handleRequestAction}
                     onDeleteItem={handleDeleteItem} onCompleteItem={handleCompleteItem}
-                    onRenewItem={handleRenewItem}
+                   
                     onChangeListingMode={handleChangeListingMode}
                     ownerActionItemId={ownerActionItemId}
                   />
@@ -1537,6 +1523,14 @@ export default function App() {
                     token={token}
                   />
                 }
+              />
+              <Route
+                path="/forgot-password"
+                element={<ForgotPasswordPage apiBase={API_BASE} />}
+              />
+              <Route
+                path="/reset-password"
+                element={<ResetPasswordPage apiBase={API_BASE} />}
               />
               <Route
                 path="/signup"

@@ -31,7 +31,7 @@ from app.core.slowapi_limiter import authenticated_user_key, limiter
 from app.services.image_validation import validate_and_sanitize_image
 from app.services.exchange_offers import is_listing_exchange_reserved, item_supports_exchange
 from app.services.items import build_item_document, serialize_item
-from app.services.listing_expiration import compute_listing_expires_at, is_listing_expired, utc_now
+from app.services.listing_expiration import utc_now
 from app.services.location import (
     GEO_CANDIDATE_LIMIT,
     apply_geo_bounds_to_query,
@@ -593,12 +593,6 @@ async def complete_item(
             detail="You do not have permission to modify this item.",
         )
 
-    if is_listing_expired(item):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This listing has expired. Renew it before marking it as completed.",
-        )
-
     result = await items_collection.update_one(
         {"_id": object_id},
         {"$set": {"status": "completed"}},
@@ -657,66 +651,9 @@ async def renew_item(
     item_id: str,
     current_user: dict = Depends(get_verified_user),
 ):
-    """Renew an expired listing for another 14 days. Owner only."""
-    items_collection = await get_items_collection_async()
-    requests_collection = await get_requests_collection_async()
-    reviews_collection = await get_reviews_collection_async()
-    if items_collection is None or requests_collection is None or reviews_collection is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection is not available.",
-        )
-
-    object_id = parse_object_id(item_id)
-    if object_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid item id.",
-        )
-
-    item = await items_collection.find_one({"_id": object_id})
-    if item is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Item not found.",
-        )
-
-    if item["owner_id"] != current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to renew this item.",
-        )
-
-    if item.get("status") == "completed":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Completed listings cannot be renewed.",
-        )
-
-    if not is_listing_expired(item):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This listing is still active.",
-        )
-
-    renewed_at = utc_now()
-    new_expiry = compute_listing_expires_at(renewed_at)
-    await items_collection.update_one(
-        {"_id": object_id},
-        {
-            "$set": {
-                "listing_expires_at": new_expiry,
-                "status": "available",
-                "listing_renewed_at": renewed_at,
-            }
-        },
+    """No-op compatibility endpoint — listings no longer expire or need renewal."""
+    del item_id, current_user
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Listing renewal is no longer available. Listings do not expire.",
     )
-
-    updated_item = await items_collection.find_one({"_id": object_id})
-    owner_reputation = await calculate_reputation_summary(
-        current_user["id"],
-        items_collection=items_collection,
-        requests_collection=requests_collection,
-        reviews_collection=reviews_collection,
-    )
-    return serialize_item(updated_item, owner_reputation=owner_reputation)

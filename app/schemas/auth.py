@@ -91,6 +91,25 @@ class ResendVerificationResponse(BaseModel):
     status: str = "sent"  # "sent" | "already_verified"
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    status: str = "sent"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=128)
+    password: str = Field(min_length=8, max_length=72)
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str
+    status: str = "reset"
+
+
 class TokenPayload(BaseModel):
     sub: str
     email: EmailStr

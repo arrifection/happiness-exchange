@@ -152,7 +152,7 @@ export const deliveriesApi = {
 
 // ── Exchange / shipping endpoints (Admin — PERMISSION_DELIVERIES) ────────────
 export const exchangeAdminApi = {
-  listTransactions: () => api.get('/api/admin/exchange-transactions'),
+  listTransactions: (params) => api.get('/api/admin/exchange-transactions', { params }),
   getTransaction: (id) => api.get(`/api/admin/exchange-transactions/${id}`),
   getShipping: (id) => api.get(`/api/admin/exchange-shipping/${id}`),
   updateShipping: (id, data) => api.patch(`/api/admin/exchange-shipping/${id}`, data),

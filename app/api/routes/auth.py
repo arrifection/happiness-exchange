@@ -7,7 +7,17 @@ from pymongo.errors import DuplicateKeyError
 from app.core.roles import UserRole
 from app.core.slowapi_limiter import limiter
 from app.db.mongodb import get_users_collection_async
-from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, VerifyEmailResponse, ResendVerificationResponse
+from app.schemas.auth import (
+    LoginRequest,
+    SignupRequest,
+    TokenResponse,
+    VerifyEmailResponse,
+    ResendVerificationResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
+)
 from app.services.auth import (
     create_access_token,
     generate_verification_token,
@@ -19,7 +29,12 @@ from app.services.auth import (
 )
 from app.core.config import settings
 from app.core.runtime import email_verification_bypass_enabled
-from app.services.email import EmailSendError, get_email_diagnostics, send_verification_email
+from app.services.email import (
+    EmailSendError,
+    get_email_diagnostics,
+    send_password_reset_email,
+    send_verification_email,
+)
 from app.services.notifications import notify_admins
 from app.api.deps.auth import get_current_user, get_optional_current_user
 
@@ -347,4 +362,109 @@ async def resend_verification(
     return {
         "message": "New verification email sent. Please check your inbox.",
         "status": "sent",
+    }
+
+
+PASSWORD_RESET_TTL = timedelta(minutes=60)
+_GENERIC_FORGOT_RESPONSE = {
+    "message": "If an account exists for that email, a password reset link has been sent.",
+    "status": "sent",
+}
+
+
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
+@limiter.limit("5/minute")
+async def forgot_password(request: Request, payload: ForgotPasswordRequest):
+    """Request a password reset email. Always returns a generic success body."""
+    del request
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    normalized_email = payload.email.strip().lower()
+    user = await users_collection.find_one({"email": normalized_email})
+    if user is None or user.get("is_banned"):
+        return _GENERIC_FORGOT_RESPONSE
+
+    raw_token = generate_verification_token()
+    token_hash = hash_verification_token(raw_token)
+    now = datetime.now(timezone.utc)
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "password_reset_token_hash": token_hash,
+                "password_reset_expires_at": now + PASSWORD_RESET_TTL,
+                "updated_at": now,
+            }
+        },
+    )
+
+    try:
+        send_password_reset_email(normalized_email, raw_token)
+    except EmailSendError as exc:
+        # Do not leak whether the account exists via a different status code.
+        logger.warning(
+            "Password reset email failed for user id %s: %s",
+            user["_id"],
+            exc.message,
+        )
+    return _GENERIC_FORGOT_RESPONSE
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+@limiter.limit("5/minute")
+async def reset_password(request: Request, payload: ResetPasswordRequest):
+    """Confirm a password reset with a single-use token."""
+    del request
+    users_collection = await get_users_collection_async()
+    if users_collection is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not available.",
+        )
+
+    token_hash = hash_verification_token(payload.token.strip())
+    user = await users_collection.find_one({"password_reset_token_hash": token_hash})
+    if user is None or user.get("is_banned"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or expired.",
+        )
+
+    now = datetime.now(timezone.utc)
+    expires_at = user.get("password_reset_expires_at")
+    if expires_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or expired.",
+        )
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if now > expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password reset link is invalid or expired.",
+        )
+
+    hashed = await hash_password_async(payload.password)
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {
+                "hashed_password": hashed,
+                "updated_at": now,
+            },
+            "$unset": {
+                "password_reset_token_hash": "",
+                "password_reset_expires_at": "",
+            },
+        },
+    )
+    return {
+        "message": "Your password has been reset. You can sign in with your new password.",
+        "status": "reset",
     }

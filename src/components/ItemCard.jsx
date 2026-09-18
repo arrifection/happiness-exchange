@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
-import { isListingActive, isListingExpired } from '../lib/listingExpiration.js'
+import { isListingActive } from '../lib/listingExpiration.js'
 import { supportsExchange, supportsGiveaway } from '../lib/listingMode.js'
 import ImagePreviewModal, { normalizeItemImages } from './ImagePreviewModal.jsx'
 import { RatingStars } from './reputation.jsx'
@@ -11,7 +11,7 @@ import TrustBadge from './TrustBadge.jsx'
 import ListingModeBadge from './ListingModeBadge.jsx'
 import { Button, StatusBadge } from './ui.jsx'
 
-function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, onChangeListingMode, ownerActionPending }) {
+function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onChangeListingMode, ownerActionPending }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -67,17 +67,7 @@ function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, onC
 
       {menuOpen ? (
         <div className="absolute right-0 top-11 z-20 w-48 overflow-hidden rounded-2xl border border-he-border bg-he-surface p-1.5 shadow-xl shadow-black/20">
-          {isListingExpired(item) ? (
-            <button
-              type="button"
-              onClick={() => handleAction(onRenewItem)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[11px] font-bold uppercase tracking-widest text-[#7340d2] transition hover:bg-[#f5efff]"
-            >
-              Renew for 14 days
-            </button>
-          ) : null}
-
-          {item.status !== 'completed' && !isListingExpired(item) && onChangeListingMode && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
+          {item.status !== 'completed' && onChangeListingMode && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
             <button
               type="button"
               onClick={() => handleAction(() => onChangeListingMode(item, 'EXCHANGE'))}
@@ -87,7 +77,7 @@ function OwnerActionsMenu({ item, onDeleteItem, onCompleteItem, onRenewItem, onC
             </button>
           ) : null}
 
-          {item.status !== 'completed' && !isListingExpired(item) ? (
+          {item.status !== 'completed' ? (
             <button
               type="button"
               onClick={() => handleAction(onCompleteItem)}
@@ -125,7 +115,6 @@ export default function ItemCard({
   onOpenReview,
   onDeleteItem,
   onCompleteItem,
-  onRenewItem,
   onChangeListingMode,
   ownerActionPending = false,
   compact = false,
@@ -149,7 +138,6 @@ export default function ItemCard({
           item={item}
           onDeleteItem={onDeleteItem}
           onCompleteItem={onCompleteItem}
-          onRenewItem={onRenewItem}
           onChangeListingMode={onChangeListingMode}
           ownerActionPending={ownerActionPending}
         />
@@ -218,10 +206,6 @@ export default function ItemCard({
         {item.status !== 'available' ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
             <StatusBadge status={item.status} className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
-          </div>
-        ) : isOwner && isListingExpired(item) ? (
-          <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">
-            <StatusBadge status="expired" className="border-0 bg-he-surface/95 shadow-xs backdrop-blur-xs" />
           </div>
         ) : isOwner ? (
           <div className="absolute left-1.5 top-1.5 z-10 origin-top-left scale-85">

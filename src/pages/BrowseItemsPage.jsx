@@ -203,49 +203,53 @@ export default function BrowseItemsPage({
           </div>
         </div>
 
-        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:gap-2 md:overflow-visible md:pb-0">
-          {['All', 'Exchange'].map((type) => {
-            const isActive = listingTypeFilter === type
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setListingTypeFilter(type)}
-                className={[
-                  'he-chip px-3.5 py-1.5 md:px-4 md:py-2 text-[10px] md:text-[13px]',
-                  isActive ? 'he-chip-active' : '',
-                ].join(' ')}
-              >
-                {type === 'All' ? 'All listings' : 'Exchange'}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-1 no-scrollbar md:flex-wrap md:gap-2 md:overflow-visible md:pb-0">
-          {CATEGORIES.map((cat) => {
-            const isActive = categoryFilter === cat
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCategoryFilter(cat)}
-                className={[
-                  'he-chip px-3.5 py-1.5 md:px-4 md:py-2 text-[10px] md:text-[13px]',
-                  isActive ? 'he-chip-active' : '',
-                ].join(' ')}
-              >
-                {cat === 'All' ? 'All Categories' : cat}
-              </button>
-            )
-          })}
-        </div>
-
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="relative min-w-[140px] flex-1 md:flex-none md:w-44">
+          <div className="inline-flex shrink-0 rounded-full border border-he-border bg-he-surface-soft p-0.5">
+            {['All', 'Exchange'].map((type) => {
+              const isActive = listingTypeFilter === type
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setListingTypeFilter(type)}
+                  className={[
+                    'rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all md:px-3.5 md:text-[11px]',
+                    isActive
+                      ? 'bg-he-purple text-white shadow-sm'
+                      : 'text-he-soft hover:text-he-ink',
+                  ].join(' ')}
+                >
+                  {type === 'All' ? 'All listings' : 'Exchange'}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="relative min-w-[140px] flex-1 sm:flex-none sm:w-40 md:w-44">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              aria-label="Category"
+              className="he-field h-9 w-full appearance-none px-3 pr-8 text-[11px] font-bold text-he-soft md:h-10 md:text-[13px]"
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat === 'All' ? 'All categories' : cat}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8c755f]/50">
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="relative min-w-[140px] flex-1 sm:flex-none sm:w-40 md:w-44">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Status"
               className="he-field h-9 w-full appearance-none px-3 pr-8 text-[11px] font-bold text-he-soft md:h-10 md:text-[13px]"
             >
               {STATUSES.map((stat) => (
@@ -261,10 +265,11 @@ export default function BrowseItemsPage({
             </div>
           </div>
 
-          <div className="relative min-w-[140px] flex-1 md:flex-none md:w-44">
+          <div className="relative min-w-[140px] flex-1 sm:flex-none sm:w-40 md:w-44">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
+              aria-label="Sort"
               className="he-field h-9 w-full appearance-none px-3 pr-8 text-[11px] font-bold text-he-soft md:h-10 md:text-[13px]"
             >
               {SORT_OPTIONS.map((opt) => (
@@ -296,7 +301,7 @@ export default function BrowseItemsPage({
             </button>
           ) : null}
 
-          <span className="ml-auto hidden text-[10px] text-he-muted sm:inline">
+          <span className="ml-auto text-[10px] text-he-muted">
             {itemsPagination.total || filteredItems.length} listing{(itemsPagination.total || filteredItems.length) === 1 ? '' : 's'}
           </span>
         </div>

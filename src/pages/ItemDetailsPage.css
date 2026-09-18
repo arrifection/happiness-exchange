@@ -4,25 +4,34 @@
   gap: 1rem;
 }
 
-.he-item-details-hero {
+.he-item-details-card-compact {
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 20px;
   border: 1px solid rgba(237, 233, 255, 0.95);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 245, 255, 0.92) 100%);
   box-shadow:
     0 18px 48px -28px rgba(140, 87, 245, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  padding: 0.85rem;
 }
 
-.he-item-details-image-wrap {
+.he-item-details-compact-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.he-item-details-thumb {
   position: relative;
-  aspect-ratio: 16 / 10;
-  width: 100%;
+  flex-shrink: 0;
+  width: 150px;
+  height: 150px;
   overflow: hidden;
+  border-radius: 14px;
   background: #f3f0ff;
 }
 
-.he-item-details-image-wrap button {
+.he-item-details-thumb button {
   display: block;
   height: 100%;
   width: 100%;
@@ -32,45 +41,90 @@
   cursor: zoom-in;
 }
 
-.he-item-details-image-wrap img {
+.he-item-details-thumb img {
   display: block;
   height: 100%;
   width: 100%;
   object-fit: cover;
 }
 
-.he-item-details-body {
-  padding: 1.1rem 1.15rem 1.25rem;
+.he-item-details-compact-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.he-item-details-compact-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem 0.75rem;
 }
 
 .he-item-details-title {
   margin: 0;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: clamp(1.25rem, 4vw, 1.65rem);
+  font-size: clamp(1.1rem, 3.5vw, 1.45rem);
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.25;
   letter-spacing: -0.02em;
   color: #1a1a2e;
 }
 
-.he-item-details-meta {
-  margin-top: 0.55rem;
+.he-item-details-meta-lines {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem 0.75rem;
-  font-size: 0.68rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.he-item-details-meta-line {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.he-item-details-meta-label {
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #8c755f;
 }
 
+.he-item-details-meta-value {
+  font-weight: 600;
+  color: #1a1a2e;
+  word-break: break-word;
+}
+
 .he-item-details-actions {
-  margin-top: 1rem;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.he-item-details-action-row {
   display: flex;
+  gap: 0.55rem;
+}
+
+.he-item-details-action-row--split > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.he-item-details-action-row--wrap {
   flex-wrap: wrap;
-  gap: 0.65rem;
+}
+
+.he-item-details-below {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .he-item-details-location {
@@ -144,7 +198,7 @@
   border-top: 1px solid rgba(237, 233, 255, 0.9);
 }
 
-html.dark .he-item-details-hero,
+html.dark .he-item-details-card-compact,
 html.dark .he-item-details-location,
 html.dark .he-item-details-card {
   border-color: rgba(139, 92, 246, 0.2);
@@ -153,8 +207,13 @@ html.dark .he-item-details-card {
 }
 
 html.dark .he-item-details-title,
+html.dark .he-item-details-meta-value,
 html.dark .he-item-details-location-label p:last-child {
   color: #f8fafc;
+}
+
+html.dark .he-item-details-thumb {
+  background: #2a243a;
 }
 
 html.dark .he-item-details-map-btn {
@@ -163,15 +222,30 @@ html.dark .he-item-details-map-btn {
 }
 
 @media (max-width: 640px) {
-  .he-item-details-body {
-    padding: 1rem;
+  .he-item-details-card-compact {
+    padding: 0.75rem;
   }
 
-  .he-item-details-actions {
+  .he-item-details-compact-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .he-item-details-thumb {
+    width: 150px;
+    height: 150px;
+    margin-inline: auto;
+  }
+
+  .he-item-details-meta-line {
+    grid-template-columns: 5rem minmax(0, 1fr);
+  }
+
+  .he-item-details-action-row--split {
     flex-direction: column;
   }
 
-  .he-item-details-actions > * {
+  .he-item-details-action-row--split > * {
     width: 100%;
   }
 

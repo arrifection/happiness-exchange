@@ -24,6 +24,9 @@ def _admin_row(shipping: dict) -> dict:
     return payload
 
 
+SHIPMENTS_CANDIDATE_LIMIT = 1000
+
+
 @router.get("/shipments")
 async def admin_list_shipments(
     q: str = Query("", description="Search shipment id, tracking number, user name, or user id"),
@@ -48,7 +51,11 @@ async def admin_list_shipments(
 
     results = []
     needle = q.strip().lower()
-    async for shipping in collection.find(query).sort("updated_at", DESCENDING):
+    # Hard cap — never load an unbounded collection into memory.
+    # Trade-off: in-memory text search (`q`) only scans up to this cap of the
+    # newest rows (by updated_at). Matches older than the cap can be missed.
+    cursor = collection.find(query).sort("updated_at", DESCENDING).limit(SHIPMENTS_CANDIDATE_LIMIT)
+    async for shipping in cursor:
         row = _admin_row(shipping)
         if needle:
             haystack = " ".join([
@@ -69,7 +76,13 @@ async def admin_list_shipments(
     for row in results:
         key = f"{row.get('transaction_type')}:{row.get('transaction_id')}"
         grouped.setdefault(key, []).append(row)
-    return {"shipments": results, "groups": grouped, "total": len(results)}
+    return {
+        "shipments": results,
+        "groups": grouped,
+        "total": len(results),
+        "candidate_cap": SHIPMENTS_CANDIDATE_LIMIT,
+        "capped": len(results) >= SHIPMENTS_CANDIDATE_LIMIT and not needle,
+    }
 
 
 @router.get("/shipments/{shipment_id}")

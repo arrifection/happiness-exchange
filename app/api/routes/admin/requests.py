@@ -51,6 +51,7 @@ def _serialize_request_admin(req: dict, user_lookup: dict, item_lookup: dict) ->
         "requester_id": requester_id,
         "requester_name": req.get("requester_name") or requester.get("name") or "—",
         "requester_email": requester.get("email") or "—",
+        "requester_city": req.get("requester_city") or None,
         "requester_whatsapp_number": requester.get("whatsapp_number"),
         "owner_id": owner_id,
         "owner_name": req.get("owner_name") or owner.get("name") or "—",

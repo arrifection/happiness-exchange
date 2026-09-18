@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo import DESCENDING
 
 from app.api.deps.admin import require_permission
@@ -80,6 +80,8 @@ async def _admin_transaction_summary(
 
 @router.get("/exchange-transactions")
 async def admin_list_exchange_transactions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     admin: dict = Depends(require_permission(PERMISSION_DELIVERIES)),
 ):
     del admin
@@ -90,8 +92,15 @@ async def admin_list_exchange_transactions(
     if transactions_collection is None or shipping_collection is None:
         raise HTTPException(status_code=503, detail="Database connection is not available.")
 
+    query: dict = {}
+    total = await transactions_collection.count_documents(query)
     results = []
-    cursor = transactions_collection.find({}).sort("created_at", DESCENDING)
+    cursor = (
+        transactions_collection.find(query)
+        .sort("created_at", DESCENDING)
+        .skip(skip)
+        .limit(limit)
+    )
     async for transaction in cursor:
         transaction_id = str(transaction["_id"])
         shipping_records = await _load_shipping_records(shipping_collection, transaction_id)
@@ -101,7 +110,12 @@ async def admin_list_exchange_transactions(
             items_collection,
             offers_collection,
         ))
-    return {"transactions": results, "total": len(results)}
+    return {
+        "transactions": results,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+    }
 
 
 @router.get("/exchange-transactions/{transaction_id}")

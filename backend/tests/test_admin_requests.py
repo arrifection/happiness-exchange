@@ -216,11 +216,44 @@ class AdminRequestsTests(IsolatedAsyncioTestCase):
         req = data["requests"][0]
         for field in (
             "id", "item_id", "item_title", "item_image_url",
-            "requester_id", "requester_name", "requester_email",
+            "requester_id", "requester_name", "requester_email", "requester_city",
             "owner_id", "owner_name", "owner_email",
             "reason", "status", "created_at",
         ):
             self.assertIn(field, req, f"Missing field: {field}")
+
+    def test_admin_requests_include_requester_city_when_present(self):
+        with_city = _make_request_doc(requester_city="Lahore")
+        without_city = _make_request_doc()
+        app = self._make_app(request_docs=[with_city, without_city])
+        with self._as_moderator(app) as client:
+            response = client.get("/api/admin/requests")
+
+        self.assertEqual(response.status_code, 200)
+        by_id = {req["id"]: req for req in response.json()["requests"]}
+        self.assertEqual(by_id[str(with_city["_id"])]["requester_city"], "Lahore")
+        self.assertIsNone(by_id[str(without_city["_id"])]["requester_city"])
+
+    def test_get_single_request_includes_requester_city(self):
+        doc = _make_request_doc(requester_city="Karachi", reason="Need this for school.")
+        app = self._make_app(request_docs=[doc])
+
+        async def fake_requests_col_with_find_one():
+            col = FakeRequestsCollection([doc])
+
+            async def find_one(q):
+                return doc
+
+            col.find_one = find_one
+            return col
+
+        admin_requests_routes.get_requests_collection_async = fake_requests_col_with_find_one
+
+        with self._as_moderator(app) as client:
+            response = client.get(f"/api/admin/requests/{str(doc['_id'])}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["requester_city"], "Karachi")
 
     def test_total_matches_request_count(self):
         docs = [_make_request_doc() for _ in range(5)]

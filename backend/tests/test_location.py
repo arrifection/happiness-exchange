@@ -243,7 +243,7 @@ class LocationServiceTests(IsolatedAsyncioTestCase):
             near_lng=74.3436,
             radius_km=25,
         )
-        self.assertEqual(GEO_CANDIDATE_LIMIT, 2000)
+        self.assertEqual(GEO_CANDIDATE_LIMIT, 1000)
         # Bounds live in $and when country filters already use $and.
         and_clauses = geo_query.get("$and") or []
         lat_lng_clause = next(

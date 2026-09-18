@@ -101,6 +101,9 @@ class AtomicFakeCollection:
                 self.documents.append(stored)
             return SimpleNamespace(inserted_ids=[d["_id"] for d in self.documents[-len(documents):]])
 
+    async def count_documents(self, query):
+        return len([document for document in self.documents if match_query(document, query)])
+
     def find(self, query):
         matched = [dict(document) for document in self.documents if match_query(document, query)]
         return _AsyncCursor(matched)
@@ -130,6 +133,14 @@ class _AsyncCursor:
     def sort(self, *args, **kwargs):
         return self
 
+    def skip(self, count):
+        self._documents = self._documents[count:]
+        return self
+
+    def limit(self, count):
+        self._documents = self._documents[:count]
+        return self
+
     def __aiter__(self):
         return self
 
@@ -139,6 +150,11 @@ class _AsyncCursor:
         document = self._documents[self._index]
         self._index += 1
         return document
+
+    async def to_list(self, length=None):
+        if length is None:
+            return list(self._documents)
+        return list(self._documents[:length])
 
 
 def _now():

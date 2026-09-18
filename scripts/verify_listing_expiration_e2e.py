@@ -1,4 +1,8 @@
-"""One-off E2E verification for 14-day listing expiration (controlled timestamps)."""
+"""OBSOLETE — listings no longer expire.
+
+Kept only as a historical reference. Do not treat failures here as regressions;
+see backend/tests/test_listing_expiration.py for the current no-expiry contract.
+"""
 
 from __future__ import annotations
 

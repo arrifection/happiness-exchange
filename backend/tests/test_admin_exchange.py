@@ -191,6 +191,58 @@ async def test_admin_can_list_exchange_transactions_without_pii(exchange_admin_w
 
 
 @pytest.mark.asyncio
+async def test_admin_exchange_transactions_pagination(exchange_admin_world):
+    now = datetime.now(timezone.utc)
+    extra = []
+    for index in range(5):
+        extra.append(
+            {
+                "_id": ObjectId(),
+                "exchange_offer_id": str(ObjectId()),
+                "listing_id": str(ObjectId()),
+                "listing_title": f"Extra Swap {index}",
+                "user_a_id": str(ObjectId()),
+                "user_a_name": f"A{index}",
+                "user_b_id": str(ObjectId()),
+                "user_b_name": f"B{index}",
+                "status": "COLLECTING_SHIPPING",
+                "created_at": now,
+                "updated_at": now,
+                "completed_at": None,
+            }
+        )
+    exchange_admin_world["transactions"].documents.extend(extra)
+
+    app = _app(_staff("admin"))
+    patches = _patches(exchange_admin_world)
+    for patched in patches:
+        patched.start()
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            page1 = await client.get("/api/admin/exchange-transactions", params={"skip": 0, "limit": 2})
+            page2 = await client.get("/api/admin/exchange-transactions", params={"skip": 2, "limit": 2})
+    finally:
+        for patched in patches:
+            patched.stop()
+
+    assert page1.status_code == 200
+    assert page2.status_code == 200
+    body1 = page1.json()
+    body2 = page2.json()
+    assert body1["total"] == 6
+    assert body1["skip"] == 0
+    assert body1["limit"] == 2
+    assert len(body1["transactions"]) == 2
+    assert body2["total"] == 6
+    assert body2["skip"] == 2
+    assert len(body2["transactions"]) == 2
+    ids1 = {tx["id"] for tx in body1["transactions"]}
+    ids2 = {tx["id"] for tx in body2["transactions"]}
+    assert ids1.isdisjoint(ids2)
+
+
+@pytest.mark.asyncio
 async def test_admin_can_open_exchange_detail(exchange_admin_world):
     app = _app(_staff("super_admin"))
     patches = _patches(exchange_admin_world)

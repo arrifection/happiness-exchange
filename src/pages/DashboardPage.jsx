@@ -1,12 +1,15 @@
+import { useEffect } from 'react'
 import { asArray } from '../lib/api.js'
 import { canDeletePreviousListing, selectPreviousListings } from '../lib/previousListings.js'
-import IncomingRequestReview from '../components/IncomingRequestReview.jsx'
 import LevelProgressBar from '../components/LevelProgressBar.jsx'
 import { RatingStars, ReviewEmptyState } from '../components/reputation.jsx'
 import TrustBadge from '../components/TrustBadge.jsx'
 import TrustLevelLadder from '../components/TrustLevelLadder.jsx'
 import { Button, EmptyState, ErrorState, RequestCardSkeletonList, SectionHeading, StatusBadge, Surface, InlineLoadingNotice } from '../components/ui.jsx'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+
+const MY_LISTINGS_HASH = 'my-listings'
+export const MY_LISTINGS_PATH = `/dashboard#${MY_LISTINGS_HASH}`
 
 function StatCard({ label, value, onClick, highlight, to }) {
   const navigate = useNavigate()
@@ -62,6 +65,28 @@ function RequestCard({ request, children }) {
   )
 }
 
+function MyListingCard({ item }) {
+  return (
+    <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <Link to={`/items/${item.id}`} className="min-w-0 transition hover:text-he-purple">
+            <h3 className="line-clamp-1 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">
+              {item.title}
+            </h3>
+          </Link>
+          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-he-muted">
+            {item.category || 'Listing'}
+          </p>
+        </div>
+        <div className="shrink-0 scale-90 origin-top-right">
+          <StatusBadge status={item.status} />
+        </div>
+      </div>
+    </article>
+  )
+}
+
 function PreviousListingCard({ item, onDelete, deletePending }) {
   return (
     <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
@@ -97,106 +122,50 @@ function PreviousListingCard({ item, onDelete, deletePending }) {
   )
 }
 
-function SwapOfferCard({ offer, onAction, actionPending }) {
-  const offeredTitle = offer.offered_listing_title || offer.custom_item_title || 'Custom item'
-
-  return (
-    <article className="he-card rounded-card p-3.5 transition-colors hover:bg-he-surface-soft">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-he-purple">Swap offer</p>
-          <h3 className="min-w-0 font-['Plus_Jakarta_Sans',sans-serif] text-[13px] font-bold text-he-ink">
-            {offer.listing_title}
-          </h3>
-          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-he-muted">
-            {offer.offering_user_name ? `From: ${offer.offering_user_name.split(' ')[0]}` : 'Community member'}
-          </p>
-        </div>
-        <div className="shrink-0 scale-90 origin-top-right">
-          <StatusBadge status={String(offer.status || '').toLowerCase()} />
-        </div>
-      </div>
-
-      <div className="mt-2 border-t border-he-border/60 pt-2">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-he-soft">Offering</p>
-        <p className="text-[12px] font-semibold text-he-ink">{offeredTitle}</p>
-        {offer.message ? (
-          <p className="mt-1 line-clamp-3 text-[11px] italic leading-relaxed text-he-muted">&ldquo;{offer.message}&rdquo;</p>
-        ) : null}
-        {offer.cash_adjustment != null ? (
-          <p className="mt-1 text-[10px] font-bold text-he-purple">Cash adjustment: {offer.cash_adjustment}</p>
-        ) : null}
-      </div>
-
-      {offer.status === 'PENDING' ? (
-        <div className="mt-2.5 flex gap-1.5 border-t border-he-border/60 pt-2">
-          <Button
-            className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
-            disabled={actionPending}
-            onClick={() => onAction?.(offer.id, 'accept')}
-          >
-            Accept
-          </Button>
-          <Button
-            className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
-            variant="secondary"
-            disabled={actionPending}
-            onClick={() => onAction?.(offer.id, 'decline')}
-          >
-            Decline
-          </Button>
-        </div>
-      ) : null}
-
-      {offer.transaction_id ? (
-        <div className="mt-1.5">
-          <Link to={`/exchange/${offer.transaction_id}`} className="text-[10px] font-bold text-he-purple hover:underline">
-            View exchange progress
-          </Link>
-        </div>
-      ) : null}
-    </article>
-  )
-}
-
 export default function DashboardPage({
   currentUser,
-  items,
   myReputation,
   myItems,
   myRequests,
   ownerRequests,
   ownerExchangeOffers,
-  onExchangeOfferAction,
-  exchangeOfferActionId,
   onDeleteItem,
   ownerActionItemId,
   ownerItemsMessage,
   ownerItemsError,
-  onRequestAction,
   onOpenReview,
-  onOpenChat,
   getReviewContextForMyRequest,
-  getReviewContextForOwnerRequest,
-  getChatConversationForRequest,
   loadingRequests,
   requestsMessage,
   requestsError,
   loadRequestData,
 }) {
+  const location = useLocation()
   const requestList = asArray(myRequests)
   const incomingRequests = asArray(ownerRequests)
   const incomingSwapOffers = asArray(ownerExchangeOffers)
   const incomingTotal = incomingRequests.length + incomingSwapOffers.length
+  const pendingIncomingCount = incomingRequests.filter((r) => r.status === 'pending').length
+    + incomingSwapOffers.filter((o) => String(o.status || '').toLowerCase() === 'pending').length
   const previousListings = selectPreviousListings(myItems)
+  const safeMyItems = asArray(myItems)
   const displayName = currentUser?.name?.split(' ')[0] || 'Friend'
 
-  const itemsSharedCount = myItems?.length || 0
+  const itemsSharedCount = safeMyItems.length || 0
   const itemsRequestedCount = requestList.length
   const completedExchangesCount = myReputation?.completed_exchange_count || 0
   const trustPoints = myReputation?.trust_score || 0
   const reviewCount = myReputation?.review_count || 0
   const trustLevel = myReputation?.level || 'New Member'
+
+  useEffect(() => {
+    if (location.hash !== `#${MY_LISTINGS_HASH}`) return
+    const target = document.getElementById(MY_LISTINGS_HASH)
+    if (!target) return
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [location.hash, safeMyItems.length])
 
   if (!currentUser) {
     return (
@@ -269,7 +238,7 @@ export default function DashboardPage({
           <StatCard
             label="Items Shared"
             value={itemsSharedCount}
-            to="/give"
+            to={MY_LISTINGS_PATH}
           />
           <StatCard
             label="Requested"
@@ -371,68 +340,65 @@ export default function DashboardPage({
           </div>
         </div>
 
-        {/* Incoming Requests */}
+        {/* Incoming Requests — compact summary */}
         <div className="shrink-0 space-y-4 md:space-y-5 lg:w-80">
           <SectionHeading
             title="Review incoming"
             description="Approve or decline requests and swap offers."
-            action={<Button as="link" to="/requests" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">View all</Button>}
           />
-          <div className="flex flex-col gap-3">
+          <Surface className="p-4">
             {loadingRequests && incomingTotal === 0 ? (
-              <RequestCardSkeletonList count={2} className="grid-cols-1" />
+              <p className="text-[11px] text-he-muted">Checking incoming activity…</p>
             ) : incomingTotal === 0 ? (
               <EmptyState
                 icon="requests"
                 title="No pending reviews"
-                description="When someone requests one of your items or offers a swap, you can approve or decline it here."
-                action={<Button as="link" to="/give">View your listings</Button>}
+                description="When someone requests one of your items or offers a swap, review it in Activity."
+                action={<Button as="link" to={MY_LISTINGS_PATH}>View your listings</Button>}
               />
             ) : (
-              <>
-                {loadingRequests ? <InlineLoadingNotice label="Updating incoming requests…" /> : null}
-                {incomingRequests.slice(0, 5).map((request) => {
-                const reviewContext = getReviewContextForOwnerRequest?.(request)
-                return (
-                  <RequestCard key={request.id} request={request}>
-                    <IncomingRequestReview request={request} />
-                    {request.status === 'pending' ? (
-                      <div className="mt-2.5 flex gap-1.5 border-t border-he-border/60 pt-2">
-                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" onClick={() => onRequestAction?.(request.id, 'approve')}>Approve</Button>
-                        <Button className="h-7 min-h-0 flex-1 rounded-btn text-[10px]" variant="secondary" onClick={() => onRequestAction?.(request.id, 'reject')}>Decline</Button>
-                      </div>
-                    ) : null}
-                    {request.status === 'approved' ? (
-                      <p className="mt-2 text-[10px] leading-relaxed text-he-muted border-t border-he-border/60 pt-2">
-                        Happiness Exchange admin will contact both sides via WhatsApp.
-                      </p>
-                    ) : null}
-                    {reviewContext ? (
-                      <div className="mt-1.5 flex gap-1.5">
-                        <Button
-                          className="h-7 min-h-0 flex-1 rounded-btn text-[10px]"
-                          variant="secondary"
-                          onClick={() => onOpenReview?.(reviewContext)}
-                        >
-                          Leave Review
-                        </Button>
-                      </div>
-                    ) : null}
-                  </RequestCard>
-                )
-              })}
-                {incomingSwapOffers.slice(0, 5).map((offer) => (
-                  <SwapOfferCard
-                    key={offer.id}
-                    offer={offer}
-                    onAction={onExchangeOfferAction}
-                    actionPending={exchangeOfferActionId === offer.id}
-                  />
-                ))}
-              </>
+              <div className="space-y-3">
+                <p className="text-sm font-bold text-he-ink">
+                  {pendingIncomingCount > 0
+                    ? `${pendingIncomingCount} pending review${pendingIncomingCount === 1 ? '' : 's'}`
+                    : 'Incoming activity'}
+                </p>
+                <p className="text-[11px] leading-relaxed text-he-muted">
+                  {incomingRequests.length} request{incomingRequests.length === 1 ? '' : 's'}
+                  {incomingSwapOffers.length > 0
+                    ? ` · ${incomingSwapOffers.length} swap offer${incomingSwapOffers.length === 1 ? '' : 's'}`
+                    : ''}
+                </p>
+                <Button as="link" to="/requests?view=incoming" className="h-9 w-full text-[11px]">
+                  Review in Activity
+                </Button>
+              </div>
             )}
-          </div>
+          </Surface>
         </div>
+      </div>
+
+      {/* Your listings (all myItems) */}
+      <div id={MY_LISTINGS_HASH} className="scroll-mt-20 space-y-4 md:space-y-5">
+        <SectionHeading
+          title="Your listings"
+          description="Everything you have listed, including active and completed items."
+          action={<Button as="link" to="/give" variant="ghost" className="h-8 min-h-0 px-3 text-[10px]">List item</Button>}
+        />
+        {safeMyItems.length === 0 ? (
+          <EmptyState
+            icon="items"
+            title="No listings yet"
+            description="List something to share with neighbors — it will show up here."
+            action={<Button as="link" to="/give">List an item</Button>}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:gap-5 sm:grid-cols-2">
+            {safeMyItems.map((item) => (
+              <MyListingCard key={item.id} item={item} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Previous listings */}

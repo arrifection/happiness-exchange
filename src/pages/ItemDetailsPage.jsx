@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useParams } from 'react-router-dom'
 
 import ItemLocationMapModal from '../components/map/ItemLocationMapModal.jsx'
 import ImagePreviewModal, { normalizeItemImages } from '../components/ImagePreviewModal.jsx'
@@ -15,7 +15,6 @@ import { storageConditionLabel } from '../lib/categories.js'
 import { showFlash } from '../lib/flash.js'
 import { itemHasCustomImage, resolveItemImageUrl, ITEM_PLACEHOLDER_URL } from '../lib/itemImages.js'
 import { getPublicLocationLabel } from '../lib/locations.js'
-import { formatListingExpiryLabel, isListingExpired } from '../lib/listingExpiration.js'
 import { userNeedsWhatsApp } from '../lib/whatsappRequirement.js'
 import { safeString } from '../lib/safeValues.js'
 
@@ -27,6 +26,22 @@ function LocationPinIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s7-4.5 7-10a7 7 0 1 0-14 0c0 5.5 7 10 7 10Z" />
       <circle cx="12" cy="11" r="2.5" />
     </svg>
+  )
+}
+
+function formatListedDate(value) {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(parsed)
+}
+
+function MetaLine({ label, children }) {
+  return (
+    <div className="he-item-details-meta-line">
+      <span className="he-item-details-meta-label">{label}</span>
+      <span className="he-item-details-meta-value">{children}</span>
+    </div>
   )
 }
 
@@ -44,7 +59,6 @@ export default function ItemDetailsPage({
   onOpenReview,
   onDeleteItem,
   onCompleteItem,
-  onRenewItem,
   onChangeListingMode,
   ownerActionItemId,
   token,
@@ -77,6 +91,8 @@ export default function ItemDetailsPage({
   const myRequest = item ? getMyRequestForItem(item.id) : null
   const reviewContext = item ? getReviewContextForItem(item) : null
   const ownerActionPending = ownerActionItemId === item?.id
+  const listedDate = item ? formatListedDate(item.created_at) : null
+  const cityLabel = item ? getPublicLocationLabel(item) : ''
 
   if (!currentUser) {
     return <Navigate to="/login" replace />
@@ -122,21 +138,13 @@ export default function ItemDetailsPage({
   function renderPrimaryAction() {
     if (isOwner) {
       return (
-        <div className="flex flex-wrap gap-2">
+        <div className="he-item-details-action-row he-item-details-action-row--wrap">
           {item.exchange_reserved || item.status === 'exchange_reserved' ? (
             <span className="inline-flex items-center rounded-full bg-[#f8edff] px-3 py-1 text-[11px] font-bold text-[#7340d2]">
               Exchange Reserved
             </span>
           ) : null}
-          {isListingExpired(item) ? (
-            <Button
-              disabled={ownerActionPending}
-              onClick={() => onRenewItem?.(item)}
-            >
-              Renew for 14 days
-            </Button>
-          ) : null}
-          {item.status !== 'completed' && !isListingExpired(item) && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
+          {item.status !== 'completed' && (item.listing_mode || 'GIVEAWAY') !== 'EXCHANGE' ? (
             <Button
               variant="secondary"
               disabled={ownerActionPending}
@@ -145,7 +153,7 @@ export default function ItemDetailsPage({
               Change to Exchange only
             </Button>
           ) : null}
-          {item.status !== 'completed' && !isListingExpired(item) ? (
+          {item.status !== 'completed' ? (
             <Button
               variant="secondary"
               disabled={ownerActionPending}
@@ -169,6 +177,7 @@ export default function ItemDetailsPage({
     if (reviewContext && onOpenReview) {
       return (
         <Button
+          className="w-full"
           variant="secondary"
           onClick={() => {
             if (!currentUser.is_verified) {
@@ -196,10 +205,15 @@ export default function ItemDetailsPage({
       return null
     }
 
+    const showRequest = supportsGiveawayListing
+    const showExchange = supportsExchangeListing && !item.exchange_reserved && item.status !== 'exchange_reserved'
+    const sideBySide = showRequest && showExchange
+
     return (
-      <div className="flex flex-wrap gap-2">
-        {supportsGiveawayListing ? (
+      <div className={`he-item-details-action-row ${sideBySide ? 'he-item-details-action-row--split' : ''}`}>
+        {showRequest ? (
           <Button
+            className={sideBySide ? 'flex-1' : 'w-full'}
             variant="primary"
             onClick={() => {
               if (!currentUser.is_verified) {
@@ -212,16 +226,15 @@ export default function ItemDetailsPage({
             Request this item
           </Button>
         ) : null}
-        {supportsExchangeListing && !item.exchange_reserved && item.status !== 'exchange_reserved' ? (
+        {showExchange ? (
           <Button
-            variant="secondary"
+            className={sideBySide || !showRequest ? (sideBySide ? 'flex-1' : 'w-full') : 'w-full'}
+            variant={showRequest ? 'secondary' : 'primary'}
             onClick={() => {
               if (!currentUser.is_verified) {
                 showFlash('Please verify your email to propose a swap.')
                 return
               }
-              // Missing WhatsApp is handled inside ProposeSwapModal so the user
-              // stays on this listing instead of being sent backward.
               setSwapModalOpen(true)
             }}
           >
@@ -246,109 +259,66 @@ export default function ItemDetailsPage({
         </Button>
       </div>
 
-      <article className="he-item-details-hero">
-        <div className="he-item-details-image-wrap">
-          {item.status !== 'available' ? (
-            <div className="absolute left-3 top-3 z-10">
-              <StatusBadge status={item.status} />
-            </div>
-          ) : null}
+      <article className="he-item-details-card-compact">
+        <div className="he-item-details-compact-layout">
+          <div className="he-item-details-thumb">
+            {item.status !== 'available' ? (
+              <div className="absolute left-2 top-2 z-10 scale-90 origin-top-left">
+                <StatusBadge status={item.status} />
+              </div>
+            ) : null}
 
-          {hasRealImage && !imageFailed ? (
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(true)}
-              aria-label={`View larger photo of ${item.title}`}
-            >
-              <img
-                src={displayImage}
-                alt={item.title}
-                onError={() => setImageFailed(true)}
-              />
-            </button>
-          ) : (
-            <img
-              src={imageFailed ? ITEM_PLACEHOLDER_URL : displayImage}
-              alt={item.title}
-              onError={(event) => {
-                event.currentTarget.src = ITEM_PLACEHOLDER_URL
-              }}
-            />
-          )}
-        </div>
-
-        <div className="he-item-details-body">
-          <h2 className="he-item-details-title">{item.title}</h2>
-
-          <div className="he-item-details-meta">
-            <ListingModeBadge mode={item.listing_mode} />
-            <span>·</span>
-            <span>{safeString(item.category, 'Other')}</span>
-            <span>·</span>
-            <span>{safeString(item.condition, 'Good')}</span>
-            {!isOwner ? (
-              <>
-                <span>·</span>
-                <span>By {item.owner_name}</span>
-                {item.owner_badge ? (
-                  <TrustBadge
-                    level={item.owner_badge}
-                    trustScore={item.owner_trust_score || 0}
-                    showPoints={false}
-                    size="sm"
-                  />
-                ) : null}
-              </>
+            {hasRealImage && !imageFailed ? (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                aria-label={`View larger photo of ${item.title}`}
+              >
+                <img
+                  src={displayImage}
+                  alt={item.title}
+                  onError={() => setImageFailed(true)}
+                />
+              </button>
             ) : (
-              <span className="text-he-purple">Your listing</span>
+              <img
+                src={imageFailed ? ITEM_PLACEHOLDER_URL : displayImage}
+                alt={item.title}
+                onError={(event) => {
+                  event.currentTarget.src = ITEM_PLACEHOLDER_URL
+                }}
+              />
             )}
           </div>
 
-          {!isOwner ? (
-            <div className="mt-2">
-              <RatingStars
-                rating={item.owner_average_rating || 0}
-                reviewCount={item.owner_review_count || 0}
-              />
+          <div className="he-item-details-compact-body">
+            <div className="he-item-details-compact-heading">
+              <h2 className="he-item-details-title">{item.title}</h2>
+              <ListingModeBadge mode={item.listing_mode} />
             </div>
-          ) : null}
 
-          <div className="he-item-details-actions">
-            {renderPrimaryAction()}
+            <div className="he-item-details-meta-lines">
+              <MetaLine label="Condition">{safeString(item.condition, 'Good')}</MetaLine>
+              <MetaLine label="Category">{safeString(item.category, 'Other')}</MetaLine>
+              <MetaLine label="City">{cityLabel || 'Location not listed'}</MetaLine>
+            </div>
+
+            <div className="he-item-details-actions">
+              {renderPrimaryAction()}
+            </div>
           </div>
         </div>
       </article>
 
-      <div className="he-item-details-location">
-        <div className="he-item-details-location-label">
-          <p>Pickup area</p>
-          <p>{getPublicLocationLabel(item)}</p>
-        </div>
-        <button
-          type="button"
-          className="he-item-details-map-btn"
-          onClick={() => setMapOpen(true)}
-        >
-          <LocationPinIcon />
-          View on map
-        </button>
-      </div>
+      <section className="he-item-details-below">
+        <div className="he-item-details-card">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Description</h3>
+          <p className="mt-2 text-sm leading-relaxed text-he-muted">
+            {safeString(item.description, 'No description provided.')}
+          </p>
 
-      <section className="he-item-details-card">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Description</h3>
-        <p className="mt-2 text-sm leading-relaxed text-he-muted">
-          {safeString(item.description, 'No description provided.')}
-        </p>
-
-        <div className="he-item-details-tags">
-          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
-            {safeString(item.category, 'Uncategorized')}
-          </span>
-          <span className="rounded-full border border-he-border bg-he-surface-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-he-soft">
-            {safeString(item.condition, 'Condition not listed')}
-          </span>
           {item.category === 'Food' && (item.expiry_date || item.sealed_packaging != null || item.storage_condition) ? (
-            <>
+            <div className="he-item-details-tags">
               {item.expiry_date ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   Expires {item.expiry_date}
@@ -364,7 +334,52 @@ export default function ItemDetailsPage({
                   {storageConditionLabel(item.storage_condition)}
                 </span>
               ) : null}
-            </>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="he-item-details-location">
+          <div className="he-item-details-location-label">
+            <p>Pickup area</p>
+            <p>{cityLabel || 'Location not listed'}</p>
+          </div>
+          <button
+            type="button"
+            className="he-item-details-map-btn"
+            onClick={() => setMapOpen(true)}
+          >
+            <LocationPinIcon />
+            View on map
+          </button>
+        </div>
+
+        <div className="he-item-details-card he-item-details-owner">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-he-soft">Listed by</h3>
+          {isOwner ? (
+            <p className="mt-2 text-sm font-bold text-he-purple">Your listing</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-sm font-bold text-he-ink">{item.owner_name}</p>
+              {item.owner_badge ? (
+                <TrustBadge
+                  level={item.owner_badge}
+                  trustScore={item.owner_trust_score || 0}
+                  showPoints={false}
+                  size="sm"
+                />
+              ) : null}
+            </div>
+          )}
+          {!isOwner ? (
+            <div className="mt-2">
+              <RatingStars
+                rating={item.owner_average_rating || 0}
+                reviewCount={item.owner_review_count || 0}
+              />
+            </div>
+          ) : null}
+          {listedDate ? (
+            <p className="mt-2 text-[11px] text-he-muted">Listed {listedDate}</p>
           ) : null}
         </div>
       </section>

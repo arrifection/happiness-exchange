@@ -1,8 +1,28 @@
 # Performance & Scalability Notes
 
-Last updated: 2026-05-30
+Last updated: 2026-09-18
 
 ## Improvements shipped
+
+### Status endpoint is side-effect free (2026-09-18)
+
+`GET /api/status/` no longer schedules exchange-offer expiration. Expiration runs from the FastAPI lifespan loop in production (~every 10 minutes). Keep-alive health checks stay O(1) reads.
+
+### Notification badge polling (2026-09-18)
+
+Logged-in clients poll `GET /api/notifications/unread-count` every 30s (visible tabs only). Full `GET /api/notifications` loads only when the bell dropdown opens.
+
+### Community impact TTL cache (2026-09-18)
+
+`GET /api/community/impact` uses a 60s in-process cache with a lock + double-check. No Redis.
+
+### Geo browse candidate cap (already documented below)
+
+Hard cap of 1000 candidates after Mongo bounding-box prefilter; index `status_latitude_longitude` supports the geo path.
+
+### Mongo pool sizing
+
+`AsyncIOMotorClient(..., maxPoolSize=50)` — sized for a single uvicorn worker.
 
 ### Reputation query batching (`GET /api/items`)
 
@@ -58,8 +78,29 @@ This happens because the unique partial index uses `{ reference_id: { $exists: t
 1. **Single-worker uvicorn** — concurrent requests queue on one process; HF Spaces free tier saturates under ~50–100 warm users.
 2. **Atlas latency** — M0 shared cluster adds round-trip time on every query batch.
 3. **Geo browse** — radius filtering still scans up to 1000 candidates in memory before paginating (acceptable for MVP scale).
-4. **No response caching** — reputation and browse responses are computed fresh each request.
+4. **Browse/reputation still uncached** — community impact is TTL-cached; browse page-1 and reputation lookups are still computed fresh each request.
 5. **Client-side browse filters** — search/category filters apply to the current page only; server pagination covers location/status.
+
+## Worker / HF deployment configuration
+
+**Current (do not change blindly):** single uvicorn worker in `Dockerfile`:
+
+```
+CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "7860"]
+```
+
+**Why not `--workers N` yet:**
+
+| Concern | Detail |
+|---|---|
+| Rate limits | `app/core/rate_limit.py` and SlowAPI use **process-local** memory — limits would not be shared |
+| Community cache | In-process TTL cache would fragment across workers |
+| Expiration loop | Lifespan starts one offer-expiration task **per process** → duplicate sweeps |
+| Mongo connections | Each worker opens its own pool (`maxPoolSize=50`) → N×50 against Atlas M0 |
+
+**Recommended before multi-worker:** shared rate-limit storage (e.g. Redis), single job leader / external cron for expiration, then start with `--workers 2` on a paid always-on host and monitor Atlas connections.
+
+Exact HF CPU/RAM SKU remains **UNKNOWN** from public Space metadata.
 
 ## Future caching opportunities
 
