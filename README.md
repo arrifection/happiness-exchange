@@ -1,3 +1,13 @@
+---
+title: Happiness Exchange
+emoji: 🦀
+colorFrom: red
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # Happiness Exchange
 
 A full-stack community platform designed to connect donors with individuals in need through structured requests, approvals, and management workflows.
