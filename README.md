@@ -63,22 +63,6 @@ Local email testing (Mailpit, dummy users, optional verification bypass): see [d
 
 ---
 
-## 📸 Screenshots
-
-### 🏠 Landing Page
-
-![Landing Page](./landing.png)
-
-### 📊 Dashboard
-
-![Dashboard](./dashboard.png)
-
-### 📄 Request Management
-
-![Requests](./requests.png)
-
----
-
 ## ⚙️ Getting Started
 
 ### Frontend Setup
